@@ -194,6 +194,7 @@ in
                 chmod +x automate-eGPU.sh
                 echo "Executing with root privileges ..."
                 sudo ./automate-eGPU.sh
+                rm automate-eGPU.sh
                 scheduleReboot=1
             else
                 clear
@@ -326,6 +327,7 @@ in
                 rm ~/Desktop/NVDAEGPU.zip
                 mv ~/Desktop/$appName ~/Desktop/NVDAEGPUSupport.pkg
                 sudo installer -pkg ~/Desktop/NVDAEGPUSupport.pkg -target /
+                rm ~/Desktop/NVDAEGPUSupport.pkg
                 scheduleReboot=1
             else
                 clear
@@ -363,6 +365,7 @@ in
                     rm ~/Desktop/NVDAEGPU.zip
                     mv ~/Desktop/$appName ~/Desktop/NVDAEGPUSupport.pkg
                     sudo installer -pkg ~/Desktop/NVDAEGPUSupport.pkg -target /
+                    rm ~/Desktop/NVDAEGPUSupport.pkg
                     scheduleReboot=1
                 else
                     clear

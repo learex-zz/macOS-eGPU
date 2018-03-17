@@ -1,6 +1,10 @@
 # macOS-eGPU
 Setup/Update Nvidia eGPUs on a mac with macOS Sierra (10.12) or High Sierra (10.13)
 
+## Howto
+Simply execute the following Terminal command:
+`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`
+
 ## Requirements
 - macOS 10.12 or 10.13 (≤10.13.3)
 - enabled unsigned kext
@@ -8,7 +12,7 @@ Setup/Update Nvidia eGPUs on a mac with macOS Sierra (10.12) or High Sierra (10.
 If you haven’t enabled unsigned kexts or disabled SIP entirely follow the following steps:
 1. Reboot your Mac into recovery mode ([Howto][1])
 2. Open Terminal (Utilities -\> Terminal)
-3. Execute: csrutil enable --without kext; reboot;
+3. Execute: `csrutil enable --without kext; reboot;`
 
 ## External Content
 This script may use some of the following external content:
@@ -30,6 +34,9 @@ An uninstaller is currently not available.
 To do it manually:
 - delete „/Library/Extensions/NVDAEGPUSupport.kext“
 - remove the Nvidia drivers
+
+\———————————
+An uninstall option is being coded soon.
 
 
 [1]:	https://support.apple.com/HT201314 "macOS-Recovery"
