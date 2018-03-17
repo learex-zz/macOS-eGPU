@@ -311,7 +311,7 @@ in
                 ;;
             esac
         fi
-        if [ "$driver" == 1] && [ "$enabler" == 1]
+        if [ "$driver" == 1 ] && [ "$enabler" == 1 ]
         then
             echo "Proceeding with the ""$author""'s eGPU-enabler and Benjamin Dobell's nvidia-driver script ..."
             read -p "Do you wish to continue? [y]es [n]o "  -n 1 -r
