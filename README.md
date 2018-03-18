@@ -5,6 +5,22 @@ Setup/Update Nvidia eGPUs on a mac with macOS Sierra (10.12) or High Sierra (10.
 Simply execute the following Terminal command:
 `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`
 
+### Options
+-install (default)
+If neither install nor uninstall is set as an option, install will be used.
+-uninstall
+
+-enabler (default)
+-driver (default)
+If neither enabler nor driver nor cuda is set as an option, enabler and driver will be used.
+-cuda (Only the CUDA driver; no toolkit)
+
+Example: `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -install -enabler -driver - cuda`
+
+**Uninstall is OS-sensitive:**
+
+You cannot use this script to undo changes done on macOS Sierra while running on macOS High Sierra. Uninstall first, then upgrade, then install!
+
 ## Requirements
 - macOS 10.12 or 10.13 (≤10.13.3)
 - enabled unsigned kext
@@ -23,20 +39,6 @@ This script may use some of the following external content:
 
 The external content above may download additional content.
 All external content may be subject to different licenses.
-
-## Uninstall
-### macOS Sierra:
-Use the -uninstall option on the automate-eGPU script
-You may still need to remove the Nvidia drivers manually.
-
-### macOS High Sierra:
-An uninstaller is currently not available.
-To do it manually:
-- delete „/Library/Extensions/NVDAEGPUSupport.kext“
-- remove the Nvidia drivers
-
-\———————————
-An uninstall option is being coded soon.
 
 
 [1]:	https://support.apple.com/HT201314 "macOS-Recovery"

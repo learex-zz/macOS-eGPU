@@ -27,12 +27,13 @@ read -p "Do you agree with the license terms and do you know that your system wi
 echo
 if [ "$REPLY" != "y" ]
 then
-    clear
+    echo
     echo "The script has stopped. Nothing has been changed."
     exit
 fi
 
-clear
+echo
+echo
 
 #set all given input parameters
 install=0
@@ -40,13 +41,12 @@ uninstall=0
 enabler=0
 driver=0
 cuda=0
-download=0
 for options in "$@"
 do
     case "$options"
     in
     "-install")
-        if [ "$uninstall" == 1 ] || [ "$download" == 1 ]
+        if [ "$uninstall" == 1 ]
         then
             echo "Conflicting arguments."
             echo "The script has failed. Nothing has been changed."
@@ -55,7 +55,7 @@ do
         install=1
         ;;
     "-uninstall")
-        if [ "$install" == 1 ] || [ "$download" == 1 ]
+        if [ "$install" == 1 ]
         then
             echo "Conflicting arguments."
             echo "The script has failed. Nothing has been changed."
@@ -63,20 +63,16 @@ do
         fi
         uninstall=1
         ;;
-    "-download")
-        if [ "$install" == 1 ] || [ "$uninstall" == 1 ]
-        then
-            echo "Conflicting arguments."
-            echo "The script has failed. Nothing has been changed."
-            exit
-        fi
-        download=1
+    "-driver")
+        driver=1
         ;;
+    "-enabler")
+        enabler=1
     "-cuda")
         cuda=1
         ;;
     *)
-        clear
+        echo
         echo "unkown argument given"
         echo "The script has failed. Nothing has been changed."
         exit
@@ -85,7 +81,7 @@ do
 done
 
 #set standards
-if [ "$install" == 0 ] && [ "$uninstall" == 0 ] && [ "$download" == 0 ]
+if [ "$install" == 0 ] && [ "$uninstall" == 0 ]
 then
     install=1
 fi
@@ -96,15 +92,9 @@ then
     driver=1
 fi
 
-if [ "$uninstall" != 0] || [ "$download" != 0 ] || [ "$cuda" != 0 ]
-then
-    clear
-    echo "This parameter configuration is currently unsupported."
-    echo "The script has failed. Nothing has been changed."
-    exit
-fi
+echo
+echo
 
-clear
 echo "Fetching system information ..."
 #fetch system information
 os="$(sw_vers -productVersion)"
@@ -164,7 +154,8 @@ fi
 #check SIP
 if [ "$statSIP" != 31 ]
 then
-    clear
+    echo
+    echo
     echo "The script has failed. Nothing has been changed."
     echo "System Integrity Protection (SIP) is not set correctly."
     echo "Please boot into recovery mode and execute:"
@@ -173,7 +164,7 @@ then
 fi
 
 scheduleReboot=0
-#check if system is compatible with script | drivers and enabler only
+#check if system is compatible with script and execute commands
 case "${os::5}"
 in
 "10.12")
@@ -182,50 +173,90 @@ in
     then
         if [ "$driver" == 1 ] && [ "&enabler" == 1 ]
         then
-            echo "Proceeding with goalque's automate-eGPU script ..."
-            read -p "Do you wish to continue? [y]es [n]o "  -n 1 -r
             echo
-            if [ "$REPLY" == "y" ]
+            echo "Downloading and preparing goalque's automate-eGPU script ..."
+            curl -o ~/Desktop/automate-eGPU.sh https://raw.githubusercontent.com/goalque/automate-eGPU/master/automate-eGPU.sh
+            cd ~/Desktop/
+            chmod +x automate-eGPU.sh
+            echo "Executing goalque's automate-eGPU script with root privileges ..."
+            sudo ./automate-eGPU.sh
+            rm automate-eGPU.sh
+            scheduleReboot=1
+        else
+            if [ "$driver" == 1 ]
             then
-                clear
+                echo
+                echo "Downloading and executing Benjamin Dobell's nvidia-driver script ..."
+                bash <(curl -s https://raw.githubusercontent.com/Benjamin-Dobell/nvidia-update/master/nvidia-update.sh)
+                scheduleReboot=1
+            else
+                if [ "$enabler" == 1 ]
+                then
+                    echo
+                    echo
+                    echo "This parameter configuration is currently unsupported."
+                    echo "The script has failed."
+                    if [ "$scheduleReboot" == 1 ]
+                    then
+                        echo "Some configurations have been changed."
+                    else
+                        echo "Nothing has been changed."
+                    fi
+                    exit
+                fi
+            fi
+        fi
+        if [ "$cuda" == 1 ]
+        then
+            echo
+            echo "Downloading and preparing cuda installer ..."
+            curl -o ~/Desktop/cudaDriver.dmg http://us.download.nvidia.com/Mac/cuda_387/cudadriver_387.99_macos.dmg
+            hdiutil attach ~/Desktop/cudaDriver.dmg
+            cp /Volumes/CUDADriver/CUDADriver.pkg ~/Desktop/CUDADriver.pkg
+            hdiutil detach /Volumes/CUDADriver/
+            rm ~/Desktop/cudaDriver.dmg
+            echo "Executing cuda installer with root privileges ..."
+            sudo installer -pkg ~/Desktop/CUDADriver.pkg -target /
+            rm ~/Desktop/CUDADriver.pkg
+            scheduleReboot=1
+        fi
+    else
+        if [ "$uninstall" == 1 ]
+        then
+            if [ "$enabler" == 1 ]
+            then
+                echo
                 echo "Downloading and preparing goalque's automate-eGPU script ..."
                 curl -o ~/Desktop/automate-eGPU.sh https://raw.githubusercontent.com/goalque/automate-eGPU/master/automate-eGPU.sh
                 cd ~/Desktop/
                 chmod +x automate-eGPU.sh
-                echo "Executing with root privileges ..."
-                sudo ./automate-eGPU.sh
+                echo "Executing goalque's automate-eGPU script with root privileges and uninstall parameter..."
+                sudo ./automate-eGPU.sh -uninstall
                 rm automate-eGPU.sh
                 scheduleReboot=1
-            else
-                clear
-                echo "The script has stopped. Nothing has been changed."
-                exit
             fi
-        else
             if [ "$driver" == 1 ]
             then
-                echo "Proceeding with Benjamin Dobell's nvidia-driver script ..."
-                read -p "Do you wish to continue? [y]es [n]o "  -n 1 -r
                 echo
-                if [ "$REPLY" == "y" ]
-                then
-                    clear
-                    echo "Downloading and executing Benjamin Dobell's nvidia-driver script ..."
-                    bash <(curl -s https://raw.githubusercontent.com/Benjamin-Dobell/nvidia-update/master/nvidia-update.sh)
-                    scheduleReboot=1
-                else
-                    clear
-                    echo "The script has stopped. Nothing has been changed."
-                    exit
-                fi
+                echo "Executing NVIDIA Driver uninstaller with root privileges ..."
+                sudo installer -pkg /Library/PreferencePanes/NVIDIA\ Driver\ Manager.prefPane/Contents/MacOS/NVIDIA\ Web\ Driver\ Uninstaller.app/Contents/Resources/NVUninstall.pkg -target /
+                scheduleReboot=1
+            fi
+            if [ "$cuda" == 1 ]
+            then
+                echo
+                echo "Executing cuda uninstall script with root privileges ..."
+                sudo perl /usr/local/bin/uninstall_cuda_drv.pl
+                scheduleReboot=1
+            fi
+        else
+            echo "An unexpected error has occured."
+            echo "The script has failed."
+            if [ "$scheduleReboot" == 1 ]
+            then
+                echo "Some configurations have been changed."
             else
-                if [ "$enabler" == 1 ]
-                then
-                    clear
-                    echo "This parameter configuration is currently unsupported."
-                    echo "The script has failed. Nothing has been changed."
-                    exit
-                fi
+                echo "Nothing has been changed."
             fi
         fi
     fi
@@ -234,6 +265,13 @@ in
     echo "macOS 10.13 High Sierra (build: $build) has been detected"
     if [ "$install" == 1 ]
     then
+        if [ "$driver" == 1 ]
+        then
+            echo
+            echo "Downloading and executing Benjamin Dobell's nvidia-driver script ..."
+            bash <(curl -s https://raw.githubusercontent.com/Benjamin-Dobell/nvidia-update/master/nvidia-update.sh)
+            scheduleReboot=1
+        fi
         if [ "$enabler" == 1 ]
         then
             case "$build"
@@ -304,80 +342,77 @@ in
                 author="devild"
                 ;;
             *)
+                echo
+                echo
                 echo "You have an unsupported build of macOS High Sierra."
                 echo "This may change in the future, so try again in a few days."
                 echo "The script has failed. Nothing has been changed."
                 exit
                 ;;
             esac
-        fi
-        if [ "$driver" == 1 ] && [ "$enabler" == 1 ]
-        then
-            echo "Proceeding with the ""$author""'s eGPU-enabler and Benjamin Dobell's nvidia-driver script ..."
-            read -p "Do you wish to continue? [y]es [n]o "  -n 1 -r
             echo
-            if [ "$REPLY" == "y" ]
-            then
-                clear
-                echo "Downloading and executing Benjamin Dobell's nvidia-driver script ..."
-                bash <(curl -s https://raw.githubusercontent.com/Benjamin-Dobell/nvidia-update/master/nvidia-update.sh)
-                echo "Downloading and installing ""$author""'s eGPU-enabler ..."
-                curl -o ~/Desktop/NVDAEGPU.zip "$downPath"
-                unzip ~/Desktop/NVDAEGPU.zip -d ~/Desktop/
-                rm ~/Desktop/NVDAEGPU.zip
-                mv ~/Desktop/$appName ~/Desktop/NVDAEGPUSupport.pkg
-                sudo installer -pkg ~/Desktop/NVDAEGPUSupport.pkg -target /
-                rm ~/Desktop/NVDAEGPUSupport.pkg
-                scheduleReboot=1
-            else
-                clear
-                echo "The script has stopped. Nothing has been changed."
-                exit
-            fi
-        else
-            if [ "$driver" == 1 ]
-            then
-                echo "Proceeding with Benjamin Dobell's nvidia-driver script ..."
-                read -p "Do you wish to continue? [y]es [n]o "  -n 1 -r
-                echo
-                if [ "$REPLY" == "y" ]
-                then
-                    clear
-                    echo "Downloading and executing Benjamin Dobell's nvidia-driver script ..."
-                    bash <(curl -s https://raw.githubusercontent.com/Benjamin-Dobell/nvidia-update/master/nvidia-update.sh)
-                    scheduleReboot=1
-                else
-                    clear
-                    echo "The script has stopped. Nothing has been changed."
-                    exit
-                fi
-            fi
+            echo "Downloading and installing ""$author""'s eGPU-enabler ..."
+            curl -o ~/Desktop/NVDAEGPU.zip "$downPath"
+            unzip ~/Desktop/NVDAEGPU.zip -d ~/Desktop/
+            rm ~/Desktop/NVDAEGPU.zip
+            mv ~/Desktop/$appName ~/Desktop/NVDAEGPUSupport.pkg
+            sudo installer -pkg ~/Desktop/NVDAEGPUSupport.pkg -target /
+            rm ~/Desktop/NVDAEGPUSupport.pkg
+            scheduleReboot=1
+        fi
+        if [ "$cuda" == 1 ]
+        then
+            echo
+            echo "Downloading and preparing cuda installer ..."
+            curl -o ~/Desktop/cudaDriver.dmg http://us.download.nvidia.com/Mac/cuda_387/cudadriver_387.128_macos.dmg
+            hdiutil attach ~/Desktop/cudaDriver.dmg
+            cp /Volumes/CUDADriver/CUDADriver.pkg ~/Desktop/CUDADriver.pkg
+            hdiutil detach /Volumes/CUDADriver/
+            rm ~/Desktop/cudaDriver.dmg
+            echo "Executing cuda installer with root privileges ..."
+            sudo installer -pkg ~/Desktop/CUDADriver.pkg -target /
+            rm ~/Desktop/CUDADriver.pkg
+            scheduleReboot=1
+        fi
+    else
+        if [ "$uninstall" == 1 ]
+        then
             if [ "$enabler" == 1 ]
             then
-                echo "Proceeding with ""$author""'s eGPU-enabler ..."
-                read -p "Do you wish to continue? [y]es [n]o "  -n 1 -r
                 echo
-                if [ "$REPLY" == "y" ]
-                then
-                    echo "Downloading and installing ""$author""'s eGPU-enabler ..."
-                    curl -o ~/Desktop/NVDAEGPU.zip "$downPath"
-                    unzip ~/Desktop/NVDAEGPU.zip -d ~/Desktop/
-                    rm ~/Desktop/NVDAEGPU.zip
-                    mv ~/Desktop/$appName ~/Desktop/NVDAEGPUSupport.pkg
-                    sudo installer -pkg ~/Desktop/NVDAEGPUSupport.pkg -target /
-                    rm ~/Desktop/NVDAEGPUSupport.pkg
-                    scheduleReboot=1
-                else
-                    clear
-                    echo "The script has stopped. Nothing has been changed."
-                    exit
-                fi
+                echo "Removing enabler (root privileges needed) ..."
+                sudo rm /Library/Extensions/NVDAEGPUSupport.kext
+                scheduleReboot=1
+            fi
+            if [ "$driver" == 1 ]
+            then
+                echo
+                echo "Executing NVIDIA Driver uninstaller with root privileges ..."
+                sudo installer -pkg /Library/PreferencePanes/NVIDIA\ Driver\ Manager.prefPane/Contents/MacOS/NVIDIA\ Web\ Driver\ Uninstaller.app/Contents/Resources/NVUninstall.pkg -target /
+                scheduleReboot=1
+            fi
+            if [ "$cuda" == 1 ]
+            then
+                echo
+                echo "Executing cuda uninstall script with root privileges ..."
+                sudo perl /usr/local/bin/uninstall_cuda_drv.pl
+                scheduleReboot=1
+            fi
+        else
+            echo "An unexpected error has occured."
+            echo "The script has failed."
+            if [ "$scheduleReboot" == 1 ]
+            then
+                echo "Some configurations have been changed."
+            else
+                echo "Nothing has been changed."
             fi
         fi
     fi
     ;;
 "10.14")
-    clear
+    echo
+    echo
     echo "Your OS is to new."
     echo "There is no enabler currently available."
     echo "This may change in the future, so try again in a few days."
@@ -385,7 +420,8 @@ in
     exit
     ;;
 *)
-    clear
+    echo
+    echo
     echo "Your OS version is to old."
     echo "It is unlikely that a tool will be available."
     echo "Try updating your OS instead."
@@ -398,43 +434,3 @@ if [ "$scheduleReboot" == 1 ]
 then
     sudo reboot
 fi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
