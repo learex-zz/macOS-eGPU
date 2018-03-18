@@ -55,6 +55,11 @@ This script may use some of the following external content:
 The external content above may download additional content.
 All external content may be subject to different licenses.
 
+Should the script fail for any reason, downloaded contents would not be deleted. They are located here:  
+\~/Desktop/macOSeGPU\*/
+
+**DO NOT DELETE ANY FILES IN THIS DIRECTORY DURING EXECUTION!**
+**DO NOT DETACH ANY MOUNTED .DMGs DURING EXECUTION!**
 
 [1]:	https://support.apple.com/HT201314 "macOS-Recovery"
 [2]:	https://github.com/goalque/automate-eGPU "automate-eGPU"
