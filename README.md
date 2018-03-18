@@ -15,7 +15,7 @@ If neither install nor uninstall is set as an option, install will be used.
 If neither enabler nor driver nor cuda is set as an option, enabler and driver will be used.
 -cuda (Only the CUDA driver; no toolkit)
 
-Example: `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -install -enabler -driver - cuda`
+Example: `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -install -enabler -driver -cuda`
 
 **Uninstall is OS-sensitive:**
 
