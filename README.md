@@ -6,22 +6,22 @@ Simply execute the following Terminal command:
 `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`
 
 ### Options
--install (default)  
--uninstall
+`-install` (default)  
+`-uninstall`
 
--enabler (default)  
--driver (default)  
--cuda (using the standard driver files)  
--cudaD (using driver files from toolkit)  
--cudaT (toolkit)  
--cudaS (samples)
+`-enabler` (default)  
+`-driver` (default)  
+`-cuda` (using the standard driver files)  
+`-cudaD` (using driver files from toolkit)  
+`-cudaT` (toolkit)  
+`-cudaS` (samples)
 
-If neither install nor uninstall is set as an option, install will be used.  
-If neither enabler/driver/cuda/cudaD/cudaT/cudaS is set as an option, enabler and driver will be used.
+If neither `-install` nor `-uninstall` is set, `-install` will be used.  
+If neither `-enabler`/`-driver`/`-cuda`/`-cudaD`/`-cudaT`/-`cudaS` is set as an option, `-enabler` and `-driver` will be used.
 
 The dependency graph of the CUDA options is:  
-*cudaS* -\> *cudaT* -\> *cudaD*  
-Should you execute `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -install -cudaT` this also implies `-cudaD` but not `-cudaS`.  
+`-cuda` -\> `-cudaT` -\> `-cudaD`  
+`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -install -cudaT` also implies `-cudaD` but not `-cudaS`.  
 The uninstall option reverses that:  
 `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -uninstall -cudaT` also implies `-cudaS` but not `-cudaD`.
 
@@ -29,7 +29,7 @@ The uninstall option reverses that:
 
 `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -install -enabler -driver -cudaT` installs the enabler, the Nvidia drivers as well as the CUDA driver and toolkit.
 
-**-uninstall is OS-sensitive:**
+**`-uninstall` is OS-sensitive:**
 
 You cannot use this script to undo changes done on macOS Sierra while running on macOS High Sierra. Uninstall first, then upgrade, then install!
 
