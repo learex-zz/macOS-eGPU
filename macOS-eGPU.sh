@@ -296,7 +296,6 @@ function installCudaToolkit {
     downloadCudaToolkit
     hdiutil attach ~/Desktop/cudaToolkit.dmg
     echo "Executing cuda toolkit installer with elevated privileges ..."
-    sudo installer -pkg /Volumes/CUDADriver/CUDADriver.pkg -target /
     if [ "$cuda" == 2 ]
     then
     sudo /Volumes/CUDAMacOSXInstaller/CUDAMacOSXInstaller.app/Contents/MacOS/CUDAMacOSXInstaller --accept-eula --silent --no-window --install-package="cuda-driver"
