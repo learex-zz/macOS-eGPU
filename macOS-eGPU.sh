@@ -426,14 +426,14 @@ function uninstallNvidiaDriver {
     scheduleReboot=1
 }
 
-fuction uninstallCudaDriver {
+function uninstallCudaDriver {
     echo
     echo "Executing cuda driver uninstall script with elevated privileges ..."
     sudo perl /usr/local/bin/uninstall_cuda_drv.pl
     scheduleReboot=1
 }
 
-fuction uninstallCudaToolkit {
+function uninstallCudaToolkit {
     cudaVersion="$(cat /usr/local/cuda/version.txt)"
     cudaVersion="${cudaVersion::16}"
     cudaVersion="${cudaVersion: -3}"
