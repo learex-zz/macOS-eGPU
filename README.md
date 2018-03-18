@@ -7,13 +7,23 @@ Simply execute the following Terminal command:
 
 ### Options
 -install (default)  
-If neither install nor uninstall is set as an option, install will be used.  
 -uninstall
 
 -enabler (default)  
 -driver (default)  
-If neither enabler nor driver nor cuda is set as an option, enabler and driver will be used.  
--cuda (Only the CUDA driver; no toolkit)
+-cuda (using the standard driver files)  
+-cudaD (using driver files from toolkit)  
+-cudaT (toolkit)  
+-cudaS (samples)
+
+If neither install nor uninstall is set as an option, install will be used.  
+If neither enabler/driver/cuda/cudaD/cudaT/cudaS is set as an option, enabler and driver will be used.
+
+The dependency graph of the CUDA options is:  
+cudaS -\> cudaT -\> cudaD  
+Should you execute `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -install -cudaT` this also implies `-cudaD` but not `-cudaS`.
+The uninstall option reverses that:  
+`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -uninstall -cudaT` also implies `-cudaS` but not `-cudaD`.
 
 Example: `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -install -enabler -driver -cuda`
 
