@@ -578,6 +578,8 @@ rm -d ~/Desktop/"$dirName"/
 
 if [ "$scheduleReboot" == 1 ]
 then
+    echo "reboot"
+    exit
     sudo reboot
 fi
 #end
