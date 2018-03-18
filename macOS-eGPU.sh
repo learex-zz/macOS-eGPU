@@ -305,14 +305,17 @@ function installCudaToolkit {
     echo "Executing cuda toolkit installer with elevated privileges ..."
     if [ "$cuda" == 2 ]
     then
+    echo
 ##    sudo /Volumes/CUDAMacOSXInstaller/CUDAMacOSXInstaller.app/Contents/MacOS/CUDAMacOSXInstaller --accept-eula --silent --no-window --install-package="cuda-driver"
     fi
     if [ "$cuda" == 3 ]
     then
+    echo
 ##        sudo /Volumes/CUDAMacOSXInstaller/CUDAMacOSXInstaller.app/Contents/MacOS/CUDAMacOSXInstaller --accept-eula --silent --no-window --install-package="cuda-driver" --install-package="cuda-toolkit"
     fi
     if [ "$cuda" == 4 ]
     then
+    echo
 ##        sudo /Volumes/CUDAMacOSXInstaller/CUDAMacOSXInstaller.app/Contents/MacOS/CUDAMacOSXInstaller --accept-eula --silent --no-window --install-package="cuda-driver" --install-package="cuda-toolkit" --install-package="cuda-samples"
     fi
     hdiutil detach /Volumes/CUDAMacOSXInstaller/
