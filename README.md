@@ -16,14 +16,12 @@ Simply execute the following Terminal command:
 `-cudaT` (toolkit)  
 `-cudaS` (samples)
 
-If neither `-install` nor `-uninstall` is set, `-install` will be used.  
-If neither `-enabler`/`-driver`/`-cuda`/`-cudaD`/`-cudaT`/-`cudaS` is set as an option, `-enabler` and `-driver` will be used.
+Using neither `-install` nor `-uninstall`, implies `-install`.  
+Using none of the following options `-enabler`/`-driver`/`-cuda`/`-cudaD`/`-cudaT`/-`cudaS`, implies`-enabler` and `-driver`.
 
 The dependency graph of the CUDA options is:  
 `-cuda` -\> `-cudaT` -\> `-cudaD`  
-`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -install -cudaT` also implies `-cudaD` but not `-cudaS`.  
-The uninstall option reverses that:  
-`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -uninstall -cudaT` also implies `-cudaS` but not `-cudaD`.
+Therefore, `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -install -cudaT` implies `-cudaD` but not `-cudaS` and `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -uninstall -cudaT` also implies `-cudaS` but not `-cudaD`.
 
 **Example:**
 
@@ -59,7 +57,7 @@ Should the script fail for any reason, downloaded contents would not be deleted.
 \~/Desktop/macOSeGPU\*/
 
 **DO NOT DELETE ANY FILES IN THIS DIRECTORY DURING EXECUTION!**
-**DO NOT DETACH ANY MOUNTED .DMGs DURING EXECUTION!**
+**DO NOT DETACH ANY MOUNTED DMGs DURING EXECUTION!**
 
 [1]:	https://support.apple.com/HT201314 "macOS-Recovery"
 [2]:	https://github.com/goalque/automate-eGPU "automate-eGPU"
