@@ -243,7 +243,7 @@ function installAutomateeGPU {
     cd ~/Desktop/"$dirName"/
     chmod +x automate-eGPU.sh
     echo "Executing goalque's automate-eGPU script with elevated privileges ..."
-##    sudo ./automate-eGPU.sh
+    sudo ./automate-eGPU.sh
     rm automate-eGPU.sh
     scheduleReboot=1
 }
@@ -276,7 +276,7 @@ function installCudaDriver {
     downloadCudaDriver
     hdiutil attach ~/Desktop/"$dirName"/cudaDriver.dmg
     echo "Executing cuda installer with elevated privileges ..."
-##    sudo installer -pkg /Volumes/CUDADriver/CUDADriver.pkg -target /
+    sudo installer -pkg /Volumes/CUDADriver/CUDADriver.pkg -target /
     hdiutil detach /Volumes/CUDADriver/
     rm ~/Desktop/"$dirName"/cudaDriver.dmg
     scheduleReboot=1
@@ -305,18 +305,15 @@ function installCudaToolkit {
     echo "Executing cuda toolkit installer with elevated privileges ..."
     if [ "$cuda" == 2 ]
     then
-    echo
-##    sudo /Volumes/CUDAMacOSXInstaller/CUDAMacOSXInstaller.app/Contents/MacOS/CUDAMacOSXInstaller --accept-eula --silent --no-window --install-package="cuda-driver"
+        sudo /Volumes/CUDAMacOSXInstaller/CUDAMacOSXInstaller.app/Contents/MacOS/CUDAMacOSXInstaller --accept-eula --silent --no-window --install-package="cuda-driver"
     fi
     if [ "$cuda" == 3 ]
     then
-    echo
-##        sudo /Volumes/CUDAMacOSXInstaller/CUDAMacOSXInstaller.app/Contents/MacOS/CUDAMacOSXInstaller --accept-eula --silent --no-window --install-package="cuda-driver" --install-package="cuda-toolkit"
+        sudo /Volumes/CUDAMacOSXInstaller/CUDAMacOSXInstaller.app/Contents/MacOS/CUDAMacOSXInstaller --accept-eula --silent --no-window --install-package="cuda-driver" --install-package="cuda-toolkit"
     fi
     if [ "$cuda" == 4 ]
     then
-    echo
-##        sudo /Volumes/CUDAMacOSXInstaller/CUDAMacOSXInstaller.app/Contents/MacOS/CUDAMacOSXInstaller --accept-eula --silent --no-window --install-package="cuda-driver" --install-package="cuda-toolkit" --install-package="cuda-samples"
+        sudo /Volumes/CUDAMacOSXInstaller/CUDAMacOSXInstaller.app/Contents/MacOS/CUDAMacOSXInstaller --accept-eula --silent --no-window --install-package="cuda-driver" --install-package="cuda-toolkit" --install-package="cuda-samples"
     fi
     hdiutil detach /Volumes/CUDAMacOSXInstaller/
     rm ~/Desktop/"$dirName"/cudaToolkit.dmg
@@ -411,7 +408,7 @@ function installEnabler {
     curl -o ~/Desktop/"$dirName"/NVDAEGPU.zip "$downPath"
     unzip ~/Desktop/"$dirName"/NVDAEGPU.zip -d ~/Desktop/"$dirName"/
     rm ~/Desktop/"$dirName"/NVDAEGPU.zip
-##    sudo installer -pkg ~/Desktop/"$dirName"/"$appName" -target /
+    sudo installer -pkg ~/Desktop/"$dirName"/"$appName" -target /
     rm ~/Desktop/"$dirName"/"$appName"
     scheduleReboot=1
 }
@@ -423,7 +420,7 @@ function uninstallAutomateeGPU {
     cd ~/Desktop/"$dirName"/
     chmod +x automate-eGPU.sh
     echo "Executing goalque's automate-eGPU script with elevated privileges and uninstall parameter..."
-##    sudo ./automate-eGPU.sh -uninstall
+    sudo ./automate-eGPU.sh -uninstall
     rm automate-eGPU.sh
     scheduleReboot=1
 }
@@ -431,14 +428,14 @@ function uninstallAutomateeGPU {
 function uninstallNvidiaDriver {
     echo
     echo "Executing NVIDIA Driver uninstaller with elevated privileges ..."
-##    sudo installer -pkg /Library/PreferencePanes/NVIDIA\ Driver\ Manager.prefPane/Contents/MacOS/NVIDIA\ Web\ Driver\ Uninstaller.app/Contents/Resources/NVUninstall.pkg -target /
+    sudo installer -pkg /Library/PreferencePanes/NVIDIA\ Driver\ Manager.prefPane/Contents/MacOS/NVIDIA\ Web\ Driver\ Uninstaller.app/Contents/Resources/NVUninstall.pkg -target /
     scheduleReboot=1
 }
 
 function uninstallCudaDriver {
     echo
     echo "Executing cuda driver uninstall script with elevated privileges ..."
-##    sudo perl /usr/local/bin/uninstall_cuda_drv.pl
+    sudo perl /usr/local/bin/uninstall_cuda_drv.pl
     scheduleReboot=1
 }
 
@@ -450,18 +447,18 @@ function uninstallCudaToolkit {
     then
         echo "Executing cuda samples uninstall script with elevated privileges ..."
         cd /Developer/NVIDIA/CUDA-$cudaVersion/bin/
-##        sudo perl uninstall_cuda_$cudaVersion.pl --manifest=.cuda_samples_uninstall_manifest_do_not_delete.txt
+        sudo perl uninstall_cuda_$cudaVersion.pl --manifest=.cuda_samples_uninstall_manifest_do_not_delete.txt
     else
         if [[ "$cuda" > 2 ]]
         then
             echo "Executing cuda toolkit uninstall script with elevated privileges (samples will be uninstalled as well) ..."
-##            sudo perl /Developer/NVIDIA/CUDA-$cudaVersion/bin/uninstall_cuda_$cudaVersion.pl
+            sudo perl /Developer/NVIDIA/CUDA-$cudaVersion/bin/uninstall_cuda_$cudaVersion.pl
         else
             if [[ "$cuda" > 1 ]]
             then
                 echo "Executing all cuda uninstall scripts with elevated privileges (samples & toolkit & driver) ..."
-##                sudo perl /usr/local/bin/uninstall_cuda_drv.pl
-##                sudo perl /Developer/NVIDIA/CUDA-$cudaVersion/bin/uninstall_cuda_$cudaVersion.pl
+                sudo perl /usr/local/bin/uninstall_cuda_drv.pl
+                sudo perl /Developer/NVIDIA/CUDA-$cudaVersion/bin/uninstall_cuda_$cudaVersion.pl
             else
                 unsupportedError "unex"
             fi
@@ -483,7 +480,7 @@ function uninstallCuda {
 function uninstallEnabler {
     echo
     echo "Removing enabler (elevated privileges needed) ..."
-##    sudo rm /Library/Extensions/NVDAEGPUSupport.kext
+    sudo rm /Library/Extensions/NVDAEGPUSupport.kext
     scheduleReboot=1
 }
 
@@ -582,6 +579,6 @@ rm -d ~/Desktop/"$dirName"/
 if [ "$scheduleReboot" == 1 ]
 then
     echo "The system will now reboot ..."
-##    sudo reboot
+    sudo reboot
 fi
 #end
