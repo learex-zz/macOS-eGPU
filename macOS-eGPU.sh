@@ -196,6 +196,13 @@ then
     exit
 fi
 
+#create unique temporary directory
+dirName="$(date)"
+dirName="$(echo $dirName | shasum)"
+dirName="macOSeGPU""${dirName%? *}"
+mkdir ~/Desktop/"$dirName"/
+
+
 scheduleReboot=0
 #define functions
 function unsupportedError {
@@ -231,8 +238,8 @@ function unsupportedError {
 function installAutomateeGPU {
     echo
     echo "Downloading and preparing goalque's automate-eGPU script ..."
-    curl -o ~/Desktop/automate-eGPU.sh https://raw.githubusercontent.com/goalque/automate-eGPU/master/automate-eGPU.sh
-    cd ~/Desktop/
+    curl -o ~/Desktop/"$dirName"/automate-eGPU.sh https://raw.githubusercontent.com/goalque/automate-eGPU/master/automate-eGPU.sh
+    cd ~/Desktop/"$dirName"/
     chmod +x automate-eGPU.sh
     echo "Executing goalque's automate-eGPU script with elevated privileges ..."
     sudo ./automate-eGPU.sh
@@ -251,10 +258,10 @@ function downloadCudaDriver {
     case "${os::5}"
     in
     "10.12")
-        curl -o ~/Desktop/cudaDriver.dmg http://us.download.nvidia.com/Mac/cuda_387/cudadriver_387.99_macos.dmg
+        curl -o ~/Desktop/"$dirName"/cudaDriver.dmg http://us.download.nvidia.com/Mac/cuda_387/cudadriver_387.99_macos.dmg
         ;;
     "10.13")
-        curl -o ~/Desktop/cudaDriver.dmg http://us.download.nvidia.com/Mac/cuda_387/cudadriver_387.128_macos.dmg
+        curl -o ~/Desktop/"$dirName"/cudaDriver.dmg http://us.download.nvidia.com/Mac/cuda_387/cudadriver_387.128_macos.dmg
         ;;
     *)
         unsupportedError "unsupOS"
@@ -266,11 +273,11 @@ function installCudaDriver {
     echo
     echo "Downloading and preparing cuda installer ..."
     downloadCudaDriver
-    hdiutil attach ~/Desktop/cudaDriver.dmg
+    hdiutil attach ~/Desktop/"$dirName"/cudaDriver.dmg
     echo "Executing cuda installer with elevated privileges ..."
     sudo installer -pkg /Volumes/CUDADriver/CUDADriver.pkg -target /
     hdiutil detach /Volumes/CUDADriver/
-    rm ~/Desktop/cudaDriver.dmg
+    rm ~/Desktop/"$dirName"/cudaDriver.dmg
     scheduleReboot=1
 }
 
@@ -278,10 +285,10 @@ function downloadCudaToolkit {
     case "${os::5}"
     in
     "10.12")
-        curl -o ~/Desktop/cudaToolkit.dmg -L https://developer.nvidia.com/compute/cuda/9.0/Prod/local_installers/cuda_9.0.176_mac-dmg
+        curl -o ~/Desktop/"$dirName"/cudaToolkit.dmg -L https://developer.nvidia.com/compute/cuda/9.0/Prod/local_installers/cuda_9.0.176_mac-dmg
         ;;
     "10.13")
-        curl -o ~/Desktop/cudaToolkit.dmg -L https://developer.nvidia.com/compute/cuda/9.1/Prod/local_installers/cuda_9.1.128_mac
+        curl -o ~/Desktop/"$dirName"/cudaToolkit.dmg -L https://developer.nvidia.com/compute/cuda/9.1/Prod/local_installers/cuda_9.1.128_mac
         ;;
     *)
         unsupportedError "unsupOS"
@@ -293,7 +300,7 @@ function installCudaToolkit {
     echo
     echo "Downloading and preparing cuda toolkit installer ... (~1.5GB)"
     downloadCudaToolkit
-    hdiutil attach ~/Desktop/cudaToolkit.dmg
+    hdiutil attach ~/Desktop/"$dirName"/cudaToolkit.dmg
     echo "Executing cuda toolkit installer with elevated privileges ..."
     sudo installer -pkg /Volumes/CUDADriver/CUDADriver.pkg -target /
     if [ "$cuda" == 2 ]
@@ -309,7 +316,7 @@ function installCudaToolkit {
         sudo /Volumes/CUDAMacOSXInstaller/CUDAMacOSXInstaller.app/Contents/MacOS/CUDAMacOSXInstaller --accept-eula --silent --no-window --install-package="cuda-driver" --install-package="cuda-toolkit" --install-package="cuda-samples"
     fi
     hdiutil detach /Volumes/CUDAMacOSXInstaller/
-    rm ~/Desktop/cudaToolkit.dmg
+    rm ~/Desktop/"$dirName"/cudaToolkit.dmg
     scheduleReboot=1
 }
 
@@ -398,19 +405,19 @@ function installEnabler {
     esac
     echo
     echo "Downloading and installing ""$author""'s eGPU-enabler ..."
-    curl -o ~/Desktop/NVDAEGPU.zip "$downPath"
-    unzip ~/Desktop/NVDAEGPU.zip -d ~/Desktop/
-    rm ~/Desktop/NVDAEGPU.zip
-    sudo installer -pkg ~/Desktop/$appName -target /
-    rm ~/Desktop/$appName
+    curl -o ~/Desktop/"$dirName"/NVDAEGPU.zip "$downPath"
+    unzip ~/Desktop/"$dirName"/NVDAEGPU.zip -d ~/Desktop/"$dirName"/
+    rm ~/Desktop/"$dirName"/NVDAEGPU.zip
+    sudo installer -pkg ~/Desktop/"$dirName"/"$appName" -target /
+    rm ~/Desktop/"$dirName"/"$appName"
     scheduleReboot=1
 }
 
 function uninstallAutomateeGPU {
     echo
     echo "Downloading and preparing goalque's automate-eGPU script ..."
-    curl -o ~/Desktop/automate-eGPU.sh https://raw.githubusercontent.com/goalque/automate-eGPU/master/automate-eGPU.sh
-    cd ~/Desktop/
+    curl -o ~/Desktop/"$dirName"/automate-eGPU.sh https://raw.githubusercontent.com/goalque/automate-eGPU/master/automate-eGPU.sh
+    cd ~/Desktop/"$dirName"/
     chmod +x automate-eGPU.sh
     echo "Executing goalque's automate-eGPU script with elevated privileges and uninstall parameter..."
     sudo ./automate-eGPU.sh -uninstall
@@ -566,6 +573,8 @@ in
     unsupportedError "unsupOS"
     ;;
 esac
+
+rm -d ~/Desktop/"$dirName"/
 
 if [ "$scheduleReboot" == 1 ]
 then
