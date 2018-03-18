@@ -68,6 +68,7 @@ do
         ;;
     "-enabler")
         enabler=1
+        ;;
     "-cuda")
         if [ "$cuda" != 0 ]
         then
