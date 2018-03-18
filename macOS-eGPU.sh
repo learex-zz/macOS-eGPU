@@ -303,7 +303,6 @@ function installCudaToolkit {
     downloadCudaToolkit
     hdiutil attach ~/Desktop/"$dirName"/cudaToolkit.dmg
     echo "Executing cuda toolkit installer with elevated privileges ..."
-    sudo installer -pkg /Volumes/CUDADriver/CUDADriver.pkg -target /
     if [ "$cuda" == 2 ]
     then
     sudo /Volumes/CUDAMacOSXInstaller/CUDAMacOSXInstaller.app/Contents/MacOS/CUDAMacOSXInstaller --accept-eula --silent --no-window --install-package="cuda-driver"
@@ -433,14 +432,14 @@ function uninstallNvidiaDriver {
     scheduleReboot=1
 }
 
-fuction uninstallCudaDriver {
+function uninstallCudaDriver {
     echo
     echo "Executing cuda driver uninstall script with elevated privileges ..."
     sudo perl /usr/local/bin/uninstall_cuda_drv.pl
     scheduleReboot=1
 }
 
-fuction uninstallCudaToolkit {
+function uninstallCudaToolkit {
     cudaVersion="$(cat /usr/local/cuda/version.txt)"
     cudaVersion="${cudaVersion::16}"
     cudaVersion="${cudaVersion: -3}"
