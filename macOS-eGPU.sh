@@ -325,7 +325,7 @@ function installCuda {
     then
         installCudaDriver
     fi
-    if [ "$cuda" > 1 ]
+    if [[ "$cuda" > 1 ]]
     then
         installCudaToolkit
     fi
@@ -443,18 +443,18 @@ function uninstallCudaToolkit {
     cudaVersion="$(cat /usr/local/cuda/version.txt)"
     cudaVersion="${cudaVersion::16}"
     cudaVersion="${cudaVersion: -3}"
-    if [ "$cuda" > 3 ]
+    if [[ "$cuda" > 3 ]]
     then
         echo "Executing cuda samples uninstall script with elevated privileges ..."
         cd /Developer/NVIDIA/CUDA-$cudaVersion/bin/
         sudo perl uninstall_cuda_$cudaVersion.pl --manifest=.cuda_samples_uninstall_manifest_do_not_delete.txt
     else
-        if [ "$cuda" > 2 ]
+        if [[ "$cuda" > 2 ]]
         then
             echo "Executing cuda toolkit uninstall script with elevated privileges (samples will be uninstalled as well) ..."
             sudo perl /Developer/NVIDIA/CUDA-$cudaVersion/bin/uninstall_cuda_$cudaVersion.pl
         else
-            if [ "$cuda" > 1 ]
+            if [[ "$cuda" > 1 ]]
             then
                 echo "Executing all cuda uninstall scripts with elevated privileges (samples & toolkit & driver) ..."
                 sudo perl /usr/local/bin/uninstall_cuda_drv.pl
@@ -471,7 +471,7 @@ function uninstallCuda {
     then
         uninstallCudaDriver
     fi
-    if [ "$cuda" > 1 ]
+    if [[ "$cuda" > 1 ]]
     then
         uninstallCudaToolkit
     fi
