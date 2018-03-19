@@ -259,7 +259,7 @@ function downloadCudaDriver {
     case "${os::5}"
     in
     "10.12")
-        curl -o ~/Desktop/"$dirName"/cudaDriver.dmg http://us.download.nvidia.com/Mac/cuda_387/cudadriver_387.99_macos.dmg
+        curl -o ~/Desktop/"$dirName"/cudaDriver.dmg http://us.download.nvidia.com/Mac/Quadro_Certified/9.0.197/cudadriver-9.0.197-macos.dmg
         ;;
     "10.13")
         curl -o ~/Desktop/"$dirName"/cudaDriver.dmg http://us.download.nvidia.com/Mac/cuda_387/cudadriver_387.128_macos.dmg
@@ -446,19 +446,19 @@ function uninstallCudaToolkit {
     if [[ "$cuda" > 3 ]]
     then
         echo "Executing cuda samples uninstall script with elevated privileges ..."
-        cd /Developer/NVIDIA/CUDA-$cudaVersion/bin/
-        sudo perl uninstall_cuda_$cudaVersion.pl --manifest=.cuda_samples_uninstall_manifest_do_not_delete.txt
+        cd /Developer/NVIDIA/CUDA-"$cudaVersion"/bin/
+        sudo perl uninstall_cuda_"$cudaVersion".pl --manifest=.cuda_samples_uninstall_manifest_do_not_delete.txt
     else
         if [[ "$cuda" > 2 ]]
         then
             echo "Executing cuda toolkit uninstall script with elevated privileges (samples will be uninstalled as well) ..."
-            sudo perl /Developer/NVIDIA/CUDA-$cudaVersion/bin/uninstall_cuda_$cudaVersion.pl
+            sudo perl /Developer/NVIDIA/CUDA-"$cudaVersion"/bin/uninstall_cuda_"$cudaVersion".pl
         else
             if [[ "$cuda" > 1 ]]
             then
                 echo "Executing all cuda uninstall scripts with elevated privileges (samples & toolkit & driver) ..."
                 sudo perl /usr/local/bin/uninstall_cuda_drv.pl
-                sudo perl /Developer/NVIDIA/CUDA-$cudaVersion/bin/uninstall_cuda_$cudaVersion.pl
+                sudo perl /Developer/NVIDIA/CUDA-"$cudaVersion"/bin/uninstall_cuda_"$cudaVersion".pl
             else
                 unsupportedError "unex"
             fi

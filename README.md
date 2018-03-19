@@ -12,7 +12,7 @@ Simply execute the following Terminal command:
 `-enabler` (default)  
 `-driver` (default)  
 `-cuda` (using the standard driver files)  
-`-cudaD` (using driver files from toolkit)  
+`-cudaD` (using driver files from toolkit, *should* be equivalent to `-cuda`)  
 `-cudaT` (toolkit)  
 `-cudaS` (samples)
 
@@ -20,7 +20,7 @@ Using neither `-install` nor `-uninstall`, implies `-install`.
 Using none of the following options `-enabler`/`-driver`/`-cuda`/`-cudaD`/`-cudaT`/-`cudaS`, implies`-enabler` and `-driver`.
 
 The dependency graph of the CUDA options is:  
-`-cudaS` -\> `-cudaT` -\> `-cudaD`  
+`-cudaS` -\> `-cudaT` -\> `-cudaD`/`-cuda`  
 Therefore, `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -install -cudaT` implies `-cudaD` but not `-cudaS` and `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -uninstall -cudaT` also implies `-cudaS` but not `-cudaD`.
 
 **Example:**
