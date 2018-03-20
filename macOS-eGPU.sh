@@ -27,12 +27,40 @@ clear
 
 
 #define all settings variables
+scheduleReboot=0
+
+install=0
+uninstall=0
+update=0
+enabler=0
+driver=0
+cuda=0
+determine=0
+
+noReboot=0
+silent=0
+license=0
+errorCont=0
+forceNew=0
+
+#already installed
+cudaVersionInstalled=0
+cudaDriverInstalled=0
+cudaToolkitInstalled=0
+cudaSamplesInstalled=0
+nvidiaDriversInstalled=0
+eGPUenablerInstalled=0
+
+#freshly installed
 doneSomething=0
 installedNvidiaDrivers=0
 installedEnabler=0
-installedCuda=0
+installedCudaDriver=0
+installedCudaToolkit=0
+installedCudaSamples=0
 
 waitTime=15
+priorWaitTime=10
 
 #define error functions and messages and end functions
 
@@ -43,7 +71,10 @@ function printChanges {
 }
 
 function rebootSystem {
-    if [ "$noReboot" == 1 ]
+    if [ "$scheduleReboot" == 0 ]
+    then
+        exit
+    elif [ "$noReboot" == 1 ]
     then
         echo "A reboot of the system is recommended."
     else
@@ -207,21 +238,166 @@ function contError {
     esac
     if [ "$fail" == 1 ]
     then
-        echo "Continuation might result in failure!"
+        cont "error" "Continue?" "The script will try to execute the rest of the queue ..."
     fi
-    cont "ask" "Continue?" "The script will try to execute the rest of the queue ..."
     echo "The script will still try to continue executing ..."
 }
 
+#extract parameters
+for options in "$@"
+do
+    case "$options"
+    in
+    "--install" | "-i")
+        if [ "$uninstall" != 0 ] || [ "$update" != 0 ]
+        then
+            iruptError "conflicArg"
+        fi
+        install=1
+        ;;
+    "--uninstall" | "-u")
+        if [ "$install" != 0 ] || [ "$update" != 0 ] || [ "$forceNew" != 0 ]
+        then
+            iruptError "conflicArg"
+        fi
+        uninstall=1
+        ;;
+    "--update" | "-r")
+        if [ "$install" != 0 ] || [ "$uninstall" != 0 ]
+        then
+            iruptError "conflicArg"
+        fi
+        update=1
+        ;;
+    "--driver" | "-d")
+        if  [ "$update" != 0 ]
+        then
+            iruptError "conflicArg"
+        fi
+        driver=1
+        ;;
+    "--forceNewest" | "-f")
+        if [ "$uninstall" != 0 ]
+        then
+            iruptError "conflicArg"
+        fi
+        forceNew=1
+        ;;
+    "--enabler" | "-e")
+        if  [ "$update" != 0 ]
+        then
+            iruptError "conflicArg"
+        fi
+        enabler=1
+        ;;
+    "--cuda" | "-c")
+        if [ "$cuda" != 0 ] || [ "$update" != 0 ]
+        then
+            iruptError "conflicArg"
+        fi
+        cuda=1
+        ;;
+    "--cudaDriver" | "-v")
+        if [ "$cuda" != 0 ] || [ "$update" != 0 ]
+        then
+            iruptError "conflicArg"
+        fi
+        cuda=2
+        ;;
+    "--cudaToolkit" | "-t")
+        if [ "$cuda" != 0 ] || [ "$update" != 0 ]
+        then
+            iruptError "conflicArg"
+        fi
+        cuda=3
+        ;;
+    "--cudaSamples" | "-a")
+        if [ "$cuda" != 0 ] || [ "$update" != 0 ]
+        then
+            iruptError "conflicArg"
+        fi
+        cuda=4
+        ;;
+    "--noReboot" | "-n")
+        noReboot=1
+        ;;
+    "--silent" | "-s")
+        silent=1
+        ;;
+    "--acceptLicenseTerms")
+        license=1
+        ;;
+    "--errorContinue")
+        if [ "$errorCont" != 0 ]
+        then
+            iruptError "conflicArg"
+        fi
+        errorCont=1
+        ;;
+    "--errorBreakSilence")
+        if [ "$errorCont" != 0 ]
+        then
+            iruptError "conflicArg"
+        fi
+        errorCont=2
+        ;;
+    "--errorStop")
+        if [ "$errorCont" != 0 ]
+        then
+            iruptError "conflicArg"
+        fi
+        errorCont=3
+        ;;
+    *)
+        iruptError "unknwnArg"
+        ;;
+    esac
+done
 
+if [ "$silent" == 1 ] && [ "$license" == 0 ]
+then
+    echo "Silent execution requires explicit acceptance of the licensing terms."
+    echo "To accept them and run the script in silent mode add the parameter --acceptLicenseTerms"
+    finish
+fi
 
+if [ "$silent" == 0 ] && [ "$errorCont" != 0 ]
+then
+    echo "Error handling options can only be used in conjunction with --silent."
+    finish
+fi
 
+#display warning
+if [ "$noReboot" == 0 ]
+then
+    echo "The system will reboot after successfull completion."
+    if [ "$priorWaitTime" == 1 ]
+    then
+        echo "You have 1 second to abort the script (⇧ C) ..."
+    elif [ "$priorWaitTime" == 0 ]
+        echo "The script will continue now ..."
+    else
+        echo "You have $priorWaitTime seconds to abort the script (⇧ C) ..."
+    fi
+    sleep "$priorWaitTime"
+fi
 
+#ask license question
+if [ "$silent" == 0 ] && [ "$license" == 0 ]
+then
+    cont "ask" "Do you agree with the license terms?" "Any further execution requires acceptance of the licensing terms..."
+fi
 
+#set standards
+if [ "$install" == 0 ] && [ "$uninstall" == 0 ] && [ "$update" == 0 ]
+then
+    update=1
+fi
 
-
-
-
+if [ "$enabler" == 0 ] && [ "$driver" == 0 ] && [ "$cuda" == 0 ]
+then
+    determine=1
+fi
 
 
 
