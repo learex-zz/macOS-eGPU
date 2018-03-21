@@ -19,6 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+#begining of script
 
 #create blank screen
 clear
@@ -27,8 +28,7 @@ clear
 #define all paths and URLs
 #directory handling
 dirName="$(uuidgen)"
-dirName="$TMPDIR""macOSeGPU""$dirName"
-
+dirName="$TMPDIR""macOS.eGPU.""$dirName"
 #tempdir creator
 function mktmpdir {
     if ! [ -d "$dirName" ]
@@ -131,91 +131,21 @@ automateeGPUInstalled=0
 
 #freshly installed
 doneSomething=0
-installedNvidiaDrivers=0
-installedEnabler=0
-installedCudaDriver=0
-installedCudaToolkit=0
-installedCudaSamples=0
+listOfChanges="A list of what has been done:\n"
 
 waitTime=7
 priorWaitTime=5
 
 #define error functions and messages and end functions
 function printChanges {
-    case "$installedNvidiaDrivers"
-    in
-    "1")
-        echo "Nvidia drivers have been installed."
-        ;;
-    "0")
-        echo "Nvidia drivers have not been changed."
-        ;;
-    "-1")
-        echo "Nvidia drivers have been uninstalled."
-        ;;
-    *)
-        ;;
-    esac
-    case "$installedEnabler"
-    in
-    "1")
-        echo "The eGPU enabler has been installed."
-        ;;
-    "0")
-        echo "The eGPU enabler has not been changed."
-        ;;
-    "-1")
-        echo "The eGPU enabler has been uninstalled."
-        ;;
-    *)
-        ;;
-    esac
-    case "$installedCudaDriver"
-    in
-    "1")
-        echo "CUDA drivers have been installed."
-        ;;
-    "0")
-        echo "CUDA drivers have not been changed."
-        ;;
-    "-1")
-        echo "CUDA drivers have been uninstalled."
-        ;;
-    *)
-        ;;
-    esac
-    case "$installedCudaToolkit"
-    in
-    "1")
-        echo "The CUDA toolkit has been installed."
-        ;;
-    "0")
-        echo "The CUDA toolkit has not been changed."
-        ;;
-    "-1")
-        echo "The CUDA toolkit has been uninstalled."
-        ;;
-    *)
-        ;;
-    esac
-    case "$installedCudaSamples"
-    in
-    "1")
-        echo "The CUDA samples have been installed."
-        ;;
-    "0")
-        echo "The CUDA samples have not been changed."
-        ;;
-    "-1")
-        echo "The CUDA samples have been uninstalled."
-        ;;
-    *)
-        ;;
-esac
+    echo
+    echo
+    echo -e "$listOfChanges"
 }
 
 function rebootSystem {
     cleantmpdir
+    echo
     if [ "$scheduleReboot" == 0 ]
     then
         exit
@@ -350,7 +280,7 @@ function cont {
     esac
     if [ "$silent" == 0 ]
     then
-        read -p "$2"" [y]es [n]o : " -n 1 -r
+        read -p "$2"" [y]es [n]o : " -r
         echo
         if [ "$REPLY" != "y" ]
         then
@@ -383,7 +313,7 @@ function contError {
         echo "No CUDA driver was found."
         ;;
     "unEnabler")
-        echo "No nvidia eGPU enabler was found."
+        echo "No NVIDIA eGPU enabler was found."
         ;;
     "cudaVersion")
         echo "Multiple CUDA versions were detected."
@@ -401,8 +331,12 @@ function contError {
     "noCUDAdriver")
         echo "No CUDA driver was found for your version of macOS."
         ;;
+    "noEnabler")
+        echo "No eGPU Support was found for your version of macOS."
+        echo "This may change in the future, so try again in a few hours."
+        ;;
     "noNvidiaDriver")
-        echo "No nvidia driver was found for your version of macOS."
+        echo "No NVIDIA driver was found for your version of macOS."
         echo "Falling back to latest release."
         ;;
     *)
@@ -465,28 +399,28 @@ do
         enabler=1
         ;;
     "--cuda" | "-c")
-        if [ "$cuda" != 0 ] || [ "$update" != 0 ]
+        if [ "$cuda" != 0 ]
         then
             iruptError "conflicArg"
         fi
         cuda=1
         ;;
     "--cudaDriver" | "-v")
-        if [ "$cuda" != 0 ] || [ "$update" != 0 ]
+        if [ "$cuda" != 0 ]
         then
             iruptError "conflicArg"
         fi
         cuda=2
         ;;
     "--cudaToolkit" | "-t")
-        if [ "$cuda" != 0 ] || [ "$update" != 0 ]
+        if [ "$cuda" != 0 ]
         then
             iruptError "conflicArg"
         fi
         cuda=3
         ;;
     "--cudaSamples" | "-a")
-        if [ "$cuda" != 0 ] || [ "$update" != 0 ]
+        if [ "$cuda" != 0 ]
         then
             iruptError "conflicArg"
         fi
@@ -540,7 +474,7 @@ fi
 
 if [ "$silent" == 0 ] && [ "$errorCont" != 0 ]
 then
-    echo "Error handling options can only be used in conjunction with --silent."
+    echo "Error handling options can only be used in conjunction with --silent | -s."
     finish
 fi
 
@@ -579,11 +513,15 @@ fi
 
 #define system info functions
 function fetchOSinfo {
+    echo
+    echo "Fetching system information ..."
     os="$(sw_vers -productVersion)"
     build="$(sw_vers -buildVersion)"
 }
 
 function fetchSIPstat {
+    echo
+    echo "Fetching System Integrity Protection (SIP) status ..."
     SIP="$(csrutil status)"
     if [ "${SIP: -2}" == "d." ]
     then
@@ -657,6 +595,8 @@ fi
 
 #define software check function
 function checkCudaInstall {
+    echo
+    echo "Searching for CUDA installations ..."
     if [ -e "$cudaVersionPath" ]
     then
         cudaVersionInstalled=1
@@ -701,6 +641,8 @@ function checkCudaInstall {
 }
 
 function checkNvidiaDriverInstall {
+    echo
+    echo "Searching for NVIDIA drivers ..."
     if [ -e "$nvidiaDriverUnInstallPath" ]
     then
         nvidiaDriversInstalled=1
@@ -711,6 +653,8 @@ function checkNvidiaDriverInstall {
 }
 
 function checkAutomateeGPUInstall {
+    echo
+    echo "Searching for installed eGPU support (Sierra) ..."
     if [ -d "$automateeGPUPath" ] || [ -e "$automateeGPUScriptPath" ]
     then
         automateeGPUInstalled=1
@@ -718,6 +662,8 @@ function checkAutomateeGPUInstall {
 }
 
 function checkeGPUEnablerInstall {
+    echo
+    echo "Searching for installed eGPU support (High Sierra) ..."
     if [ -e "$enablerKextPath" ]
     then
         eGPUenablerInstalled=1
@@ -739,6 +685,8 @@ function uninstallAutomateeGPU {
     if [ "$automateeGPUInstalled" == 1 ]
     then
         echo
+        echo "Uninstalling eGPU support (Sierra) ..."
+        echo
         echo "Downloading and preparing goalque's automate-eGPU script ..."
         mktmpdir
         curl -o "$dirName"/automate-eGPU.sh "$automateeGPUScriptPath"
@@ -749,9 +697,10 @@ function uninstallAutomateeGPU {
         rm automate-eGPU.sh
         scheduleReboot=1
         doneSomething=1
-        installedEnabler=-1
+        listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) has been uninstalled"
     else
         contError "noEnabler"
+        listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) was not found"
     fi
 }
 
@@ -764,10 +713,11 @@ function uninstallCuda {
         then
             echo "Uninstalling CUDA Drivers (elevated privileges needed)"
 ###            sudo perl "$cudaDriverUnInstallScriptPath"
-            installedCudaDriver=-1
+            listOfChanges="$listOfChanges""\n""-CUDA drivers have been uninstalled"
             doneSomething=1
         else
             contError "unCudaDriver"
+            listOfChanges="$listOfChanges""\n""-CUDA drivers were not found"
         fi
         checkCudaInstall
         while read -r version
@@ -780,9 +730,10 @@ function uninstallCuda {
             then
                 echo "Uninstalling CUDA $version toolkit and samples (elevated privileges needed)"
 ###                sudo perl "$cudaToolkitUnInstallScriptPath"
-                installedCudaToolkit=-1
+                listOfChanges="$listOfChanges""\n""-CUDA $version toolkit has been uninstalled"
                 doneSomething=1
             else
+                listOfChanges="$listOfChanges""\n""-CUDA $version toolkit could not be uninstalled"
                 echo "Unable to uninstall CUDA $version."
             fi
         done <<< "$cudaVersionsInstalled"
@@ -791,48 +742,55 @@ function uninstallCuda {
         then
             if [ "$cudaToolkitInstalled" == 1 ]
             then
-                echo "Uninstalling CUDA toolkit and samples (elevated privileges needed)"
+                echo "Uninstalling CUDA toolkit and samples (elevated privileges needed) ..."
 ###                sudo perl "$cudaToolkitUnInstallScriptPath"
-                installedCudaToolkit=-1
+                listOfChanges="$listOfChanges""\n""-CUDA toolkit has been uninstalled"
                 doneSomething=1
             else
                 contError "unCudaSamples"
                 contError "unCudaToolkit"
+                listOfChanges="$listOfChanges""\n""-CUDA samples were not found"
+                listOfChanges="$listOfChanges""\n""-CUDA toolkit was not found"
             fi
             if [ -e "$cudaDriverUnInstallScriptPath" ]
             then
-                echo "Uninstalling CUDA Drivers (elevated privileges needed)"
+                echo "Uninstalling CUDA Drivers (elevated privileges needed) ..."
 ###                sudo perl "$cudaDriverUnInstallScriptPath"
-                installedCudaDriver=-1
+                listOfChanges="$listOfChanges""\n""-CUDA drivers have been uninstalled"
                 doneSomething=1
             else
                 contError "unCudaDriver"
+                listOfChanges="$listOfChanges""\n""-CUDA drivers were not found"
             fi
         fi
         if [ "$cuda" == 3 ]
         then
             if [ "$cudaToolkitInstalled" == 1 ]
             then
-                echo "Uninstalling CUDA toolkit and samples (elevated privileges needed)"
+                echo "Uninstalling CUDA toolkit and samples (elevated privileges needed) ..."
 ###                sudo perl "$cudaToolkitUnInstallScriptPath"
-                installedCudaToolkit=-1
+                listOfChanges="$listOfChanges""\n""-CUDA toolkit has been uninstalled"
+                listOfChanges="$listOfChanges""\n""-CUDA samples have been uninstalled"
                 doneSomething=1
             else
                 contError "unCudaSamples"
                 contError "unCudaToolkit"
+                listOfChanges="$listOfChanges""\n""-CUDA samples were not found"
+                listOfChanges="$listOfChanges""\n""-CUDA toolkit was not found"
             fi
         fi
         if [ "$cuda" == 4 ]
         then
             if [ "$cudaToolkitInstalled" == 1 ] && [ "$cudaSamplesInstalled" == 1 ]
             then
-                echo "Uninstalling CUDA samples (elevated privileges needed)"
+                echo "Uninstalling CUDA samples (elevated privileges needed) ..."
                 cd "$cudaToolkitUnInstallDir"
 ###                sudo perl "$cudaToolkitUnInstallScriptPath" --manifest=.cuda_samples_uninstall_manifest_do_not_delete.txt
-                installedCudaSamples=-1
+                listOfChanges="$listOfChanges""\n""-CUDA samples have been uninstalled"
                 doneSomething=1
             else
                 contError "unCudaSamples"
+                listOfChanges="$listOfChanges""\n""-CUDA samples were not found"
             fi
         fi
     fi
@@ -845,11 +803,12 @@ function uninstallEnabler {
         echo
         echo "Removing enabler (elevated privileges needed) ..."
 ###        sudo rm "$enablerKextPath"
-        installedEnabler=-1
+        listOfChanges="$listOfChanges""\n""-eGPU support (High Sierra) has been uninstalled"
         scheduleReboot=1
         doneSomething=1
     else
         contError "unEnabler"
+        listOfChanges="$listOfChanges""\n""-eGPU support (High Sierra) was not found"
     fi
 }
 
@@ -860,11 +819,12 @@ function uninstallNvidiaDriver {
         echo
         echo "Executing NVIDIA Driver uninstaller with elevated privileges ..."
 ###        sudo installer -pkg "$nvidiaDriverUnInstallPath" -target /
-        installedNvidiaDrivers=-1
+        listOfChanges="$listOfChanges""\n""-NVIDIA drivers have been uninstalled"
         scheduleReboot=1
         doneSomething=1
     else
         contError "unNvidiaDriver"
+        listOfChanges="$listOfChanges""\n""-NVIDIA drivers were not found"
     fi
 }
 
@@ -879,6 +839,7 @@ function unInstalleGPUSupport {
         uninstallAutomateeGPU
     else
         contError "unEnabler"
+        listOfChanges="$listOfChanges""\n""-eGPU support was not found"
     fi
 }
 
@@ -895,6 +856,8 @@ function installAutomateeGPU {
         echo "eGPU is already enabled."
         echo "If it does not work, try uninstalling first."
     else
+        echo
+        echo "Installing eGPU support (Sierra) ..."
         echo
         echo "Downloading and preparing goalque's automate-eGPU script ..."
         mktmpdir
@@ -913,7 +876,7 @@ function installAutomateeGPU {
         rm automate-eGPU.sh
         scheduleReboot=1
         doneSomething=1
-        installedEnabler=1
+        listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) has been installed"
     fi
 }
 
@@ -925,6 +888,8 @@ function installCudaDriver {
     fi
     checkCudaInstall
     mktmpdir
+    echo
+    echo "Downloading latest CUDA driver information ..."
     curl -o "$dirName""/cudaDriverList.plist" "$cudaDriverListOnline"
     cudaDriverList="$dirName""/cudaDriverList.plist"
     drivers=$("$pbuddy" -c "Print $forceNew:" "$cudaDriverList" | grep "OS" | awk '{print $3}')
@@ -960,10 +925,11 @@ function installCudaDriver {
             rm "$dirName"/cudaDriver.dmg
             scheduleReboot=1
             doneSomething=1
-            installedCudaDriver=1
+            listOfChanges="$listOfChanges""\n""-CUDA drivers have been installed"
         fi
     else
         errorCont "noCUDAdriver"
+        listOfChanges="$listOfChanges""\n""-No matching CUDA drivers were found"
     fi
 }
 
@@ -975,6 +941,8 @@ function installCudaToolkit {
     fi
     checkCudaInstall
     mktmpdir
+    echo
+    echo "Downloading latest CUDA toolkit information ..."
     curl -o "$dirName""/cudaDriverList.plist" "$cudaToolkitListOnline"
     cudaToolkitList="$dirName""/cudaDriverList.plist"
     drivers=$("$pbuddy" -c "Print $forceNew:" "$cudaToolkitList" | grep "OS" | awk '{print $3}')
@@ -1007,27 +975,29 @@ function installCudaToolkit {
             echo "Executing cuda toolkit installer with elevated privileges ..."
             if [ "$cuda" == 2 ]
             then
-                echo
+                listOfChanges="$listOfChanges""\n""-CUDA drivers have been installed"
 ###                sudo "$cudaToolkitVolPath""$cudaToolkitPKGName" --accept-eula --silent --no-window --install-package="cuda-driver"
             fi
             if [ "$cuda" == 3 ]
             then
-                echo
+                listOfChanges="$listOfChanges""\n""-CUDA drivers have been installed"
+                listOfChanges="$listOfChanges""\n""-CUDA toolkit has been installed"
 ###                sudo "$cudaToolkitVolPath""$cudaToolkitPKGName" --accept-eula --silent --no-window --install-package="cuda-driver" --install-package="cuda-toolkit"
             fi
             if [ "$cuda" == 4 ]
             then
-                echo
+                listOfChanges="$listOfChanges""\n""-CUDA drivers have been installed"
+                listOfChanges="$listOfChanges""\n""-CUDA toolkit has been installed"
+                listOfChanges="$listOfChanges""\n""-CUDA samples have been installed"
 ###                sudo "$cudaToolkitVolPath""$cudaToolkitPKGName" --accept-eula --silent --no-window --install-package="cuda-driver" --install-package="cuda-toolkit" --install-package="cuda-samples"
             fi
             hdiutil detach "$cudaToolkitVolPath"
             rm "$dirName"/cudaToolkit.dmg
             scheduleReboot=1
             doneSomething=1
-            installedCudaToolkit=1
         fi
     else
-        errorCont "noCUDAdriver"
+        listOfChanges="$listOfChanges""\n""-No matching CUDA drivers were found"
     fi
 }
 
@@ -1070,27 +1040,35 @@ function installNvidiaDriver {
             then
                 if [ "$nvidiaDriverBuildVersion" == "$build" ] && [ "$nvidiaDriverDownloadVersion" == "$nvidiaDriverVersion" ]
                 then
-                    echo "The best nvidia driver is already installed."
+                    echo "The best NVIDIA driver is already installed."
                 else
+                    echo
+                    echo "Downloading and executing Benjamin Dobell's NVIDIA driver script ..."
 ###                    bash <(curl -s "$nvidiaUpdateScriptDPath") --force "$nvidiaDriverDownloadVersion"
                     doneSomething=1
-                    installedNvidiaDrivers=1
+                    listOfChanges="$listOfChanges""\n""-NVIDIA drivers have been installed"
                     scheduleReboot=1
                 fi
             else
+                echo
+                echo "Downloading and executing Benjamin Dobell's NVIDIA driver script ..."
 ###                bash <(curl -s "$nvidiaUpdateScriptDPath") --force "$nvidiaDriverDownloadVersion"
                 doneSomething=1
-                installedNvidiaDrivers=1
+                listOfChanges="$listOfChanges""\n""-NVIDIA drivers have been installed"
                 scheduleReboot=1
             fi
         else
             contError "noNvidiaDriver"
+            echo
+            echo "Downloading and executing Benjamin Dobell's NVIDIA driver script ..."
 ###            bash <(curl -s "$nvidiaUpdateScriptDPath")
             doneSomething=1
-            installedNvidiaDrivers=1
+            listOfChanges="$listOfChanges""\n""-NVIDIA drivers have been installed"
             scheduleReboot=1
         fi
     else
+        echo
+        echo "Downloading and executing Benjamin Dobell's NVIDIA driver script ..."
         if [ "$nvidiaDriversInstalled" == 1 ]
         then
             nvidiaDriverVersionTemp="$nvidiaDriverVersion"
@@ -1099,13 +1077,13 @@ function installNvidiaDriver {
             if [ "$nvidiaDriverVersionTemp" != "$nvidiaDriverVersion" ]
             then
                 doneSomething=1
-                installedNvidiaDrivers=1
+                listOfChanges="$listOfChanges""\n""-NVIDIA drivers have been installed"
                 scheduleReboot=1
             fi
         else
 ###            bash <(curl -s "$nvidiaUpdateScriptDPath")
             doneSomething=1
-            installedNvidiaDrivers=1
+            listOfChanges="$listOfChanges""\n""-NVIDIA drivers have been installed"
             scheduleReboot=1
         fi
     fi
@@ -1135,6 +1113,7 @@ function enablerInstaller {
     rm "$eGPUEnablerList"
     if "$foundMatch"
     then
+        echo
         echo "Downloading and installing ""$eGPUEnablerAuthor""'s eGPU-enabler ..."
         curl -o "$dirName""/NVDAEGPU.zip" "$eGPUEnablerDPath"
         unzip "$dirName""/NVDAEGPU.zip" -d "$dirName""/"
@@ -1143,7 +1122,10 @@ function enablerInstaller {
         rm "$dirName""/""$eGPUEnablerPKGName"
         scheduleReboot=1
         doneSomething=1
-        installedEnabler=1
+        listOfChanges="$listOfChanges""\n""-eGPU support (High Sierra) has been installed"
+    else
+        contError "noEnabler"
+        listOfChanges="$listOfChanges""\n""-eGPU support (High Sierra) could not be installed"
     fi
 }
 
@@ -1184,6 +1166,7 @@ function installeGPUSupport {
 
 
 function fetchInstalledProgramms {
+    echo
     echo "Fetching installed apps. This might take a few moments ..."
     appListPaths="$(find /Applications/ -iname *.app)"
     appList=""
@@ -1199,12 +1182,15 @@ function fetchInstalledProgramms {
 
 function deduceCudaNeedsInstall {
     fetchInstalledProgramms
+    echo
     echo "Fetching CUDA requiring apps ..."
     mktmpdir
     curl -o "$dirName""/CUDAApp.plist" "$CUDAAppListOnline"
     CUDAAppList="$dirName""/CUDAApp.plist"
     apps=$("$pbuddy" -c "Print apps:" "$CUDAAppList" | grep "name" | awk '{print $3}')
     appCount=$(echo "$apps" | wc -l | xargs)
+    echo
+    echo "Checking if installed apps require CUDA to run on eGPU ..."
     for index in `seq 0 $(expr $appCount - 1)`
     do
         appNameTemp=$("$pbuddy" -c "Print apps:$index:name" "$CUDAAppList")
@@ -1230,6 +1216,7 @@ function deduceCudaNeedsInstall {
             esac
         fi
     done
+    rm "$CUDAAppList"
 }
 
 function deduceUserWish {
@@ -1240,6 +1227,18 @@ function deduceUserWish {
         then
             enabler=1
             driver=1
+            if [ "$cudaDriverInstalled" == 1 ]
+            then
+                cuda=1
+            fi
+            if [ "$cudaToolkitInstalled" == 1 ]
+            then
+                cuda=3
+            fi
+            if [ "$cudaSamplesInstalled" == 1 ]
+            then
+                cuda=4
+            fi
             if [ "$minimal" == 0 ]
             then
                 deduceCudaNeedsInstall
@@ -1335,9 +1334,5 @@ then
     fi
 fi
 
-
-
-
-
-
-
+finish
+#end of script
