@@ -25,8 +25,8 @@ All external content may be subject to different licenses.
 
 ## Parameters
 ### Standard
-`--install | -i`  
-Installs software. If not specified otherwise, the script will determine itself what to install.
+`--install | -i` (default)  
+Installs software. If not specified otherwise, the script will determine itself what to install. If some software is already installed, it will be updated.
 
 `--uninstall | -u`  
 Uninstalls software. If not specified otherwise, the script will try to uninstall the nvidia drivers, the eGPU support and all CUDA installations.
