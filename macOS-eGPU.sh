@@ -657,7 +657,7 @@ fi
 
 #define software check function
 function checkCudaInstall {
-    if [ -f "$cudaVersionPath" ]
+    if [ -e "$cudaVersionPath" ]
     then
         cudaVersionInstalled=1
         cudaVersionFull="$(cat $cudaVersionPath)"
@@ -688,20 +688,20 @@ function checkCudaInstall {
             then
                 cudaSamplesInstalled=1
             fi
-            if [ -f "$cudaToolkitUnInstallScriptPath" ]
+            if [ -e "$cudaToolkitUnInstallScriptPath" ]
             then
                 cudaToolkitInstalled=1
             fi
         fi
     fi
-    if [ -f "$cudaDriverUnInstallScriptPath" ]
+    if [ -e "$cudaDriverUnInstallScriptPath" ]
     then
         cudaDriverInstalled=1
     fi
 }
 
 function checkNvidiaDriverInstall {
-    if [ -f "$nvidiaDriverUnInstallPath" ]
+    if [ -e "$nvidiaDriverUnInstallPath" ]
     then
         nvidiaDriversInstalled=1
         nvidiaDriverVersion=$("$pbuddy" -c "Print CFBundleGetInfoString" "$nvidiaDriverVersionPath")
@@ -711,14 +711,14 @@ function checkNvidiaDriverInstall {
 }
 
 function checkAutomateeGPUInstall {
-    if [ -d "$automateeGPUPath" ] || [ -f "$automateeGPUScriptPath" ]
+    if [ -d "$automateeGPUPath" ] || [ -e "$automateeGPUScriptPath" ]
     then
         automateeGPUInstalled=1
     fi
 }
 
 function checkeGPUEnablerInstall {
-    if [ -f "$enablerKextPath" ]
+    if [ -e "$enablerKextPath" ]
     then
         eGPUenablerInstalled=1
         eGPUenablerBuildVersion=$("$pbuddy" -c "Print IOKitPersonalities:NVDAStartup:NVDARequiredOS" "$eGPUBuildVersionPath")
@@ -760,7 +760,7 @@ function uninstallCuda {
     if [[ "$cudaVersions" > 1 ]]
     then
         contError "cudaVersion"
-        if [ -f "$cudaDriverUnInstallScriptPath" ]
+        if [ -e "$cudaDriverUnInstallScriptPath" ]
         then
             echo "Uninstalling CUDA Drivers (elevated privileges needed)"
 ###            sudo perl "$cudaDriverUnInstallScriptPath"
@@ -776,7 +776,7 @@ function uninstallCuda {
             cudaToolkitUnInstallDir="/Developer/NVIDIA/CUDA-""$cudaVersion""/bin/"
             cudaToolkitUnInstallScript="uninstall_cuda_""$cudaVersion"".pl"
             cudaToolkitUnInstallScriptPath="$cudaToolkitUnInstallDir""$cudaToolkitUnInstallScript"
-            if [ -f "$cudaToolkitUnInstallScriptPath" ]
+            if [ -e "$cudaToolkitUnInstallScriptPath" ]
             then
                 echo "Uninstalling CUDA $version toolkit and samples (elevated privileges needed)"
 ###                sudo perl "$cudaToolkitUnInstallScriptPath"
@@ -799,7 +799,7 @@ function uninstallCuda {
                 contError "unCudaSamples"
                 contError "unCudaToolkit"
             fi
-            if [ -f "$cudaDriverUnInstallScriptPath" ]
+            if [ -e "$cudaDriverUnInstallScriptPath" ]
             then
                 echo "Uninstalling CUDA Drivers (elevated privileges needed)"
 ###                sudo perl "$cudaDriverUnInstallScriptPath"
@@ -1203,13 +1203,13 @@ function deduceCudaNeedsInstall {
     mktmpdir
     curl -o "$dirName""/CUDAApp.plist" "$CUDAAppListOnline"
     CUDAAppList="$dirName""/CUDAApp.plist"
-    apps=$("$pbuddy" -c "Print updates:" "$CUDAAppList" | grep "OS" | awk '{print $3}')
+    apps=$("$pbuddy" -c "Print apps:" "$CUDAAppList" | grep "name" | awk '{print $3}')
     appCount=$(echo "$apps" | wc -l | xargs)
     for index in `seq 0 $(expr $appCount - 1)`
     do
         appNameTemp=$("$pbuddy" -c "Print apps:$index:name" "$CUDAAppList")
         driverNeedsTemp=$("$pbuddy" -c "Print apps:$index:requirement" "$CUDAAppList")
-        if [ "$programmList[@]" =~ "$appNameTemp" ]
+        if [[ "$programmList[@]" =~ "$appNameTemp" ]]
         then
             case "$driverNeedsTemp"
             in
