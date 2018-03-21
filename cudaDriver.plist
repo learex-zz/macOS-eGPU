@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>newest</key>
+	<array>
+		<dict>
+			<key>version</key>
+			<string>9.1.128</string>
+			<key>downloadURL</key>
+			<string>http://us.download.nvidia.com/Mac/cuda_387/cudadriver_387.128_macos.dmg</string>
+			<key>OS</key>
+			<string>10.13</string>
+		</dict>
+		<dict>
+			<key>version</key>
+			<string>9.1.128</string>
+			<key>downloadURL</key>
+			<string>http://us.download.nvidia.com/Mac/cuda_387/cudadriver_387.128_macos.dmg</string>
+			<key>OS</key>
+			<string>10.12</string>
+		</dict>
+	</array>
+	<key>stable</key>
+	<array>
+		<dict>
+			<key>version</key>
+			<string>9.1.128</string>
+			<key>downloadURL</key>
+			<string>http://us.download.nvidia.com/Mac/cuda_387/cudadriver_387.128_macos.dmg</string>
+			<key>OS</key>
+			<string>10.13</string>
+		</dict>
+		<dict>
+			<key>version</key>
+			<string>9.0.197</string>
+			<key>downloadURL</key>
+			<string>http://us.download.nvidia.com/Mac/Quadro_Certified/9.0.197/cudadriver-9.0.197-macos.dmg</string>
+			<key>OS</key>
+			<string>10.12</string>
+		</dict>
+	</array>
+</dict>
+</plist>
