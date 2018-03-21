@@ -4,8 +4,19 @@ Setup/Update/Uninstall Nvidia eGPU Support on a mac with macOS Sierra (10.12) or
 
 ## Howto
 Simply execute the following Terminal command:  
-`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`  
+`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`
+**DO NOT DETACH ANY MOUNTED DMGs DURING EXECUTION!**
+  
 Advanced users may want to take a look at the parameters below.
+
+## Requirements
+- macOS 10.12 or 10.13 (≤10.13.3)
+- enabled unsigned kext
+
+If you haven’t enabled unsigned kexts or disabled SIP entirely follow the following steps:
+1. Reboot your Mac into recovery mode ([Howto][1])
+2. Open Terminal (Utilities -\> Terminal)
+3. Execute: `csrutil enable --without kext; reboot;`
 
 ## Example
 On an already working eGPU system you might want to execute  
@@ -14,11 +25,11 @@ in order to update the installed eGPU software.
 
 ## External Content
 This script may use some of the following external content:
-- goalque's automate-eGPU ([Link][1])
-- benjamin dobell’s nvidia-update ([Link][2])
-- NVDAEGPUSupport by devild/ricosuave0922 ([Link][3])
-- CUDA Drivers ([Link][4])
-- CUDA Toolkit ([Link][5])
+- goalque's automate-eGPU ([Link][2])
+- Benjamin Dobell’s nvidia-update ([Link][3])
+- NVDAEGPUSupport by devild/ricosuave0922 ([Link][4])
+- CUDA Drivers ([Link][5])
+- CUDA Toolkit ([Link][6])
 
 The external content above may download additional content.
 All external content may be subject to different licenses.
@@ -89,11 +100,9 @@ Can only be used in silent mode. If a non fatal error occurs, ask user whether t
 `--errorStop`  
 Can only be used in silent mode. If a non fatal error occurs, stop the script.
 
-
-**DO NOT DETACH ANY MOUNTED DMGs DURING EXECUTION!**
-
-[1]:	https://github.com/goalque/automate-eGPU "automate-eGPU"
-[2]:	https://github.com/Benjamin-Dobell/nvidia-update "nvidia-update"
-[3]:	https://egpu.io/forums/mac-setup/wip-nvidia-egpu-support-for-high-sierra/#post-22370 "NVDAEGPUSupport"
-[4]:	http://www.nvidia.com/object/mac-driver-archive.html "CUDA Driver"
-[5]:	https://developer.nvidia.com/cuda-toolkit-archive "Cuda Toolkit"
+[1]:	https://support.apple.com/HT201314%20%22macOS-Recovery%22 "Guide to boot into recovery mode"
+[2]:	https://github.com/goalque/automate-eGPU "goalque's automate-eGPU"
+[3]:	https://github.com/Benjamin-Dobell/nvidia-update "Benjamin Dobell’s nvidia-update"
+[4]:	https://egpu.io/forums/mac-setup/wip-nvidia-egpu-support-for-high-sierra/#post-22370 "NVDAEGPUSupport"
+[5]:	http://www.nvidia.com/object/mac-driver-archive.html "CUDA Driver Archive"
+[6]:	https://developer.nvidia.com/cuda-toolkit-archive "Cuda Toolkit Archive"
