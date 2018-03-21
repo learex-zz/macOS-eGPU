@@ -939,8 +939,8 @@ function installCudaToolkit {
     mktmpdir
     echo
     echo "Downloading latest CUDA toolkit information ..."
-    curl -o "$dirName""/cudaDriverList.plist" "$cudaToolkitListOnline"
-    cudaToolkitList="$dirName""/cudaDriverList.plist"
+    curl -o "$dirName""/cudaToolkitList.plist" "$cudaToolkitListOnline"
+    cudaToolkitList="$dirName""/cudaToolkitList.plist"
     drivers=$("$pbuddy" -c "Print $forceNew:" "$cudaToolkitList" | grep "OS" | awk '{print $3}')
     driverCount=$(echo "$drivers" | wc -l | xargs)
     foundMatch=false
@@ -957,7 +957,7 @@ function installCudaToolkit {
             foundMatch=true
         fi
     done
-    rm "$cudaDriverList"
+    rm "$cudaToolkitList"
     if "$foundMatch"
     then
         if [ "$cudaDownloadVersion" == "$cudaVersionFull" ]
