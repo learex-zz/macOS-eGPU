@@ -4,7 +4,7 @@ Setup/Update/Uninstall Nvidia eGPU Support on a mac with macOS Sierra (10.12) or
 
 ## Howto
 Simply execute the following Terminal command:  
-`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`
+`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`  
 **DO NOT DETACH ANY MOUNTED DMGs DURING EXECUTION!**
   
 Advanced users may want to take a look at the parameters below.
