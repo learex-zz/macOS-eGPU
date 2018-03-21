@@ -20,7 +20,7 @@ If you haven’t enabled unsigned kexts or disabled SIP entirely follow the foll
 
 ## Example
 On an already working eGPU system you might want to execute  
-`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/newFunctionality/macOS-eGPU.sh) -r`  
+`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -r`  
 in order to update the installed eGPU software.
 
 ## External Content
