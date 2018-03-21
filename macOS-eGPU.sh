@@ -888,8 +888,8 @@ function installCudaDriver {
     if [[ "$cudaVersions" > 1 ]]
     then
         uninstallCuda
+        checkCudaInstall
     fi
-    checkCudaInstall
     mktmpdir
     echo
     echo "Downloading latest CUDA driver information ..."
@@ -919,6 +919,14 @@ function installCudaDriver {
             echo
             echo "CUDA drivers are up to date."
         else
+            if [ "$cudaDriverInstalled" == 1 ] || [ "$cudaToolkitInstalled" == 1 ] || [ "$cudaSamplesInstalled" == 1 ]
+            then
+                cudaTemp="$cuda"
+                cuda=1
+                uninstallCuda
+                cuda="$cudaTemp"
+                checkCudaInstall
+            fi
             echo
             echo "Downloading and preparing cuda installer ..."
             curl -o "$dirName"/cudaDriver.dmg "$cudaDriverDPath"
@@ -942,8 +950,8 @@ function installCudaToolkit {
     if [[ "$cudaVersions" > 1 ]]
     then
         uninstallCuda
+        checkCudaInstall
     fi
-    checkCudaInstall
     mktmpdir
     echo
     echo "Downloading latest CUDA toolkit information ..."
@@ -972,6 +980,14 @@ function installCudaToolkit {
             echo
             echo "CUDA drivers are up to date."
         else
+            if [ "$cudaDriverInstalled" == 1 ] || [ "$cudaToolkitInstalled" == 1 ] || [ "$cudaSamplesInstalled" == 1 ]
+            then
+                cudaTemp="$cuda"
+                cuda=1
+                uninstallCuda
+                cuda="$cudaTemp"
+                checkCudaInstall
+            fi
             echo
             echo "Downloading and preparing cuda installer ..."
             curl -o "$dirName"/cudaToolkit.dmg -L "$cudaToolkitDPath"
