@@ -595,7 +595,6 @@ fi
 
 #define software check function
 function checkCudaInstall {
-    echo
     echo "Searching for CUDA installations ..."
     if [ -e "$cudaVersionPath" ]
     then
@@ -641,7 +640,6 @@ function checkCudaInstall {
 }
 
 function checkNvidiaDriverInstall {
-    echo
     echo "Searching for NVIDIA drivers ..."
     if [ -e "$nvidiaDriverUnInstallPath" ]
     then
@@ -653,7 +651,6 @@ function checkNvidiaDriverInstall {
 }
 
 function checkAutomateeGPUInstall {
-    echo
     echo "Searching for installed eGPU support (Sierra) ..."
     if [ -d "$automateeGPUPath" ] || [ -e "$automateeGPUScriptPath" ]
     then
@@ -662,7 +659,6 @@ function checkAutomateeGPUInstall {
 }
 
 function checkeGPUEnablerInstall {
-    echo
     echo "Searching for installed eGPU support (High Sierra) ..."
     if [ -e "$enablerKextPath" ]
     then
