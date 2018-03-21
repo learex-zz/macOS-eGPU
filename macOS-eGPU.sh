@@ -25,7 +25,6 @@ clear
 
 
 #define all paths and URLs
-####
 #directory handling
 dirName="$(uuidgen)"
 dirName="$TMPDIR""macOSeGPU""$dirName"
@@ -47,15 +46,17 @@ function cleantmpdir {
 
 pbuddy="/usr/libexec/PlistBuddy"
 
+####
+branch="newFunctionality"
+
 #download
 automateeGPUScriptDPath="https://raw.githubusercontent.com/goalque/automate-eGPU/master/automate-eGPU.sh"
 nvidiaUpdateScriptDPath="https://raw.githubusercontent.com/Benjamin-Dobell/nvidia-update/master/nvidia-update.sh"
 nvidiaDriverListOnline="https://gfe.nvidia.com/mac-update"
-cudaDriverListOnline="https://raw.githubusercontent.com/learex/macOS-eGPU/master/cudaDriver.plist"
-cudaToolkitListOnline="https://raw.githubusercontent.com/learex/macOS-eGPU/master/cudaToolkit.plist"
-eGPUEnablerListOnline="https://raw.githubusercontent.com/learex/macOS-eGPU/master/eGPUenabler.plist"
-####
-CUDAAppListOnline="https://raw.githubusercontent.com/learex/macOS-eGPU/master/eGPUenabler.plist"
+cudaDriverListOnline="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch""/cudaDriver.plist"
+cudaToolkitListOnline="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch""/cudaToolkit.plist"
+eGPUEnablerListOnline="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch""/eGPUenabler.plist"
+CUDAAppListOnline="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch""/CUDAApps.plist"
 eGPUEnablerDPath=""
 eGPUEnablerAuthor=""
 eGPUEnablerPKGName=""
@@ -103,6 +104,7 @@ noReboot=0
 silent=0
 license=0
 errorCont=0
+minimal=0
 forceNew="stable"
 
 os=0
@@ -490,6 +492,9 @@ do
         fi
         cuda=4
         ;;
+    "--mininmal" | "-m")
+        minimal=1
+        ;;
     "--noReboot" | "-n")
         noReboot=1
         ;;
@@ -564,7 +569,7 @@ fi
 #set standards
 if [ "$install" == 0 ] && [ "$uninstall" == 0 ] && [ "$update" == 0 ]
 then
-    update=1
+    install=1
 fi
 
 if [ "$enabler" == 0 ] && [ "$driver" == 0 ] && [ "$cuda" == 0 ]
@@ -897,7 +902,12 @@ function installAutomateeGPU {
         cd "$dirName"
         chmod +x automate-eGPU.sh
         echo "Executing goalque's automate-eGPU script with elevated privileges ..."
-###        sudo ./automate-eGPU.sh -a -skip-web-driver
+        if [ "$minimal" == 1 ]
+        then
+###            sudo ./automate-eGPU.sh -a -skip-web-driver
+        else
+###            sudo ./automate-eGPU.sh -skip-web-driver
+        fi
         rm automate-eGPU.sh
         scheduleReboot=1
         doneSomething=1
@@ -1102,7 +1112,7 @@ function enablerInstaller {
     curl -o "$dirName""/eGPUenabler.plist" "$eGPUEnablerListOnline"
     eGPUEnablerList="$dirName""/eGPUenabler.plist"
     enablers=$("$pbuddy" -c "Print updates:" "$eGPUEnablerList" | grep "OS" | awk '{print $3}')
-    enablerCount=$(echo "$drivers" | wc -l | xargs)
+    enablerCount=$(echo "$enablers" | wc -l | xargs)
     for index in `seq 0 $(expr $enablerCount - 1)`
     do
         buildTemp=$("$pbuddy" -c "Print updates:$index:build" "$eGPUEnablerList")
@@ -1182,40 +1192,146 @@ function fetchInstalledProgramms {
     programmList="$(echo -e $appList)"
 }
 
-function deduceCudaNeeds {
+function deduceCudaNeedsInstall {
     fetchInstalledProgramms
     echo "Fetching CUDA requiring apps ..."
     mktmpdir
     curl -o "$dirName""/CUDAApp.plist" "$CUDAAppListOnline"
     CUDAAppList="$dirName""/CUDAApp.plist"
-####
+    apps=$("$pbuddy" -c "Print updates:" "$CUDAAppList" | grep "OS" | awk '{print $3}')
+    appCount=$(echo "$apps" | wc -l | xargs)
+    for index in `seq 0 $(expr $appCount - 1)`
+    do
+        appNameTemp=$("$pbuddy" -c "Print apps:$index:name" "$CUDAAppList")
+        driverNeedsTemp=$("$pbuddy" -c "Print apps:$index:requirement" "$CUDAAppList")
+        if [ "$programmList[@]" =~ "$appNameTemp" ]
+        then
+            case "$driverNeedsTemp"
+            in
+            "driver")
+                if [ "$cuda" == 0 ]
+                then
+                    cuda=1
+                fi
+                ;;
+            "toolkit")
+                if [[ "$cuda" < 3 ]]
+                then
+                    cuda=3
+                fi
+                ;;
+            *)
+                ;;
+            esac
+        fi
+    done
 }
 
 function deduceUserWish {
     fetchInstalledSoftware
     if [ "$determine" == 1 ]
     then
-        enabler=1
-        driver=1
-        if [ "$cudaDriverInstalled" ]
+        if [ "$install" == 1 ]
         then
-            cuda=1
-        fi
-        if [ "$cudaToolkitInstalled" ]
+            enabler=1
+            driver=1
+            if [ "$minimal" == 0 ]
+            then
+                deduceCudaNeedsInstall
+            fi
+        elif [ "$update" == 1 ]
         then
+            if [ "$eGPUenablerInstalled" == 1 ]
+            then
+                enabler=1
+            fi
+            if [ "$nvidiaDriversInstalled" == 1 ]
+            then
+                driver=1
+            fi
+            if [ "$cudaDriverInstalled" == 1 ]
+            then
+                cuda=1
+            fi
+            if [ "$cudaToolkitInstalled" == 1 ]
+            then
             cuda=3
-        fi
-        if [ "$cudaSamplesInstalled" ]
-        then
-            cuda=4
-        fi
-        if [ "$cuda" == 0 ]
-        then
-####            deduceCudaNeeds
+            fi
+            if [ "$cudaSamplesInstalled" == 1 ]
+            then
+                cuda=4
+            fi
+            if [ "$cuda" == 0 ] && [ "$minimal" == 0 ]
+            then
+                deduceCudaNeedsInstall
+            fi
+        elif [ "$uninstall" == 1 ]
+            if [ "$eGPUenablerInstalled" == 1 ]
+            then
+                enabler=1
+            fi
+            if [ "$nvidiaDriversInstalled" == 1 ]
+            then
+                driver=1
+            fi
+            if [ "$cudaDriverInstalled" == 1 ]
+            then
+                cuda=1
+            fi
+            if [ "$cudaToolkitInstalled" == 1 ]
+            then
+                cuda=3
+            fi
+            if [ "$cudaSamplesInstalled" == 1 ]
+            then
+                cuda=4
+            fi
+        else
+            iruptError "unex"
         fi
     fi
 }
 
+deduceUserWish
+
+if [ "$enabler" == 1 ]
+then
+    if [ "$install" == 1 ] || [ "$uninstall" == 1 ]
+    then
+        installeGPUSupport
+    elif [ "$uninstall" == 1 ]
+    then
+        unInstalleGPUSupport
+    else
+        iruptError "unex"
+    fi
+fi
+
+if [ "$driver" == 1 ]
+then
+    if [ "$install" == 1 ] || [ "$uninstall" == 1 ]
+    then
+        installNvidiaDriver
+    elif [ "$uninstall" == 1 ]
+    then
+        uninstallNvidiaDriver
+    else
+        iruptError "unex"
+    fi
+fi
+
+if [ "$cuda" != 0 ]
+then
+    if [ "$install" == 1 ] || [ "$uninstall" == 1 ]
+    then
+        installCuda
+    elif [ "$uninstall" == 1 ]
+    then
+        uninstallCuda
+    else
+        iruptError "unex"
+    fi
+fi
 
 
 
