@@ -960,6 +960,9 @@ function installCudaToolkit {
     rm "$cudaToolkitList"
     if "$foundMatch"
     then
+        echo "test"
+        echo "$cudaDownloadVersion"
+        echo "$cudaVersionFull"
         if [ "$cudaDownloadVersion" == "$cudaVersionFull" ]
         then
             echo "CUDA drivers are up to date."
