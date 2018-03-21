@@ -1,6 +1,6 @@
 
 # BRANCH fullCudaUninstall
-This is an experimental branch. Use with caution!
+**This is an experimental branch. Use with caution!**
 
 # macOS-eGPU
 Setup/Update/Uninstall Nvidia eGPU Support on a mac with macOS Sierra (10.12) or High Sierra (10.13).
