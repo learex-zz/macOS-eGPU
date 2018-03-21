@@ -727,7 +727,7 @@ function uninstallCudaDriver {
         fi
         if [ -e "$cudaDriverLaunchAgentPath" ]
         then
-            sudo launchctl unload -w "$cudaDriverLaunchAgentPath"
+            sudo launchctl unload -F "$cudaDriverLaunchAgentPath"
             sudo rm -rf "$cudaDriverLaunchAgentPath"
         fi
         if [ -e "$cudaDriverPrefPane" ]
