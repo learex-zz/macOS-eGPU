@@ -550,12 +550,12 @@ then
     echo "The system will reboot after successfull completion."
     if [ "$priorWaitTime" == 1 ]
     then
-        echo "You have 1 second to abort the script (⇧ C) ..."
+        echo "You have 1 second to abort the script (^C) ..."
     elif [ "$priorWaitTime" == 0 ]
     then
         echo "The script will continue now ..."
     else
-        echo "You have $priorWaitTime seconds to abort the script (⇧ C) ..."
+        echo "You have $priorWaitTime seconds to abort the script (^C) ..."
     fi
     sleep "$priorWaitTime"
 fi
@@ -1260,10 +1260,6 @@ function deduceUserWish {
             if [ "$cudaSamplesInstalled" == 1 ]
             then
                 cuda=4
-            fi
-            if [ "$cuda" == 0 ] && [ "$minimal" == 0 ]
-            then
-                deduceCudaNeedsInstall
             fi
         elif [ "$uninstall" == 1 ]
             if [ "$eGPUenablerInstalled" == 1 ]
