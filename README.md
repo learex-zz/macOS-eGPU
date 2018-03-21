@@ -60,7 +60,7 @@ CUDA developer samples
 The dependency graph of the CUDA options is:  
 Samples -\> Toolkit -\> Driver
 
-Therefore installing the toolkit will also install the drivers and uninstalling the drivers will also remove the toolkit.
+Therefore, installing the toolkit will also install the drivers and uninstalling the drivers will also remove the toolkit.
 
 ### Advanced
 The parameters in this section will change the behavior of the script.
