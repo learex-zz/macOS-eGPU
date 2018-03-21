@@ -1239,7 +1239,7 @@ function deduceUserWish {
             then
                 cuda=4
             fi
-            if [ "$minimal" == 0 ]
+            if [ "$minimal" == 0 ] && [[ "cuda" < 3 ]]
             then
                 deduceCudaNeedsInstall
             fi
