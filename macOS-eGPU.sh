@@ -63,6 +63,7 @@ eGPUEnablerPKGName=""
 cudaDriverDPath=""
 cudaToolkitDPath=""
 cudaDownloadVersion=""
+cudaToolkitDriverVersion=""
 nvidiaDriverDownloadVersion=""
 
 #install
@@ -1039,10 +1040,12 @@ function installCudaToolkit {
         osTemp=$("$pbuddy" -c "Print $forceNew:$index:OS" "$cudaToolkitList")
         cudaToolkitPathTemp=$("$pbuddy" -c "Print $forceNew:$index:downloadURL" "$cudaToolkitList")
         cudaToolkitVersionTemp=$("$pbuddy" -c "Print $forceNew:$index:version" "$cudaToolkitList")
+        cudaToolkitDriverVersionTemp=$("$pbuddy" -c "Print $forceNew:$index:driverVersion" "$cudaToolkitList")
         if [ "${os::5}" == "$osTemp" ]
         then
             cudaToolkitDPath="$cudaToolkitPathTemp"
             cudaDownloadVersion="$cudaToolkitVersionTemp"
+            cudaToolkitDriverVersion="$cudaToolkitDriverVersionTemp"
             foundMatch=true
         fi
     done
@@ -1053,8 +1056,8 @@ function installCudaToolkit {
         then
             echo
             echo "CUDA drivers are up to date."
-        elif
-        then [ "$cudaDownloadVersion" == "$cudaDriverVersion" ] && [[ "$cuda" < 3 ]]
+        elif [ "$cudaToolkitDriverVersion" == "$cudaDriverVersion" ] && [[ "$cuda" < 3 ]]
+        then
             echo
             echo "CUDA drivers are up to date."
         else
