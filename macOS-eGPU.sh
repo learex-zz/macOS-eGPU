@@ -47,7 +47,7 @@ function cleantmpdir {
 pbuddy="/usr/libexec/PlistBuddy"
 
 
-branch="master"
+branch="fullCudaUninstall"
 
 #download
 automateeGPUScriptDPath="https://raw.githubusercontent.com/goalque/automate-eGPU/master/automate-eGPU.sh"
@@ -76,14 +76,23 @@ programmList=""
 
 #uninstall
 nvidiaDriverUnInstallPath="/Library/PreferencePanes/NVIDIA Driver Manager.prefPane/Contents/MacOS/NVIDIA Web Driver Uninstaller.app/Contents/Resources/NVUninstall.pkg"
+cudaDriverVersion=""
+cudaDriverVersionPath="/Library/Frameworks/CUDA.framework/Versions/A/Resources/Info.plist"
 cudaVersionPath="/usr/local/cuda/version.txt"
-cudaDriverUnInstallScriptPath="/usr/local/bin/uninstall_cuda_drv.pl"
+cudaUserPath="/usr/local/cuda"
+cudaDeveloperDriverUnInstallScriptPath="/usr/local/bin/uninstall_cuda_drv.pl"
+cudaDriverFrameworkPath="/Library/Frameworks/CUDA.framework"
+cudaDriverLaunchAgentPath="/Library/LaunchAgents/com.nvidia.CUDASoftwareUpdate.plist"
+cudaDriverPrefPane="/Library/PreferencePanes/CUDA/Preferences.prefPane"
+cudaDriverStartupItemPath="/System/Library/StartupItems/CUDA/"
+cudaDriverKEXTPath="/System/Library/Extensions/CUDA.kext"
 cudaToolkitUnInstallDir=""
 cudaToolkitUnInstallScript=""
 cudaDeveloperDirPath="/Developer/NVIDIA/"
 enablerKextPath="/Library/Extensions/NVDAEGPUSupport.kext"
 automateeGPUPath="/Library/Application Support/Automate-eGPU/"
 automateeGPUScriptPath="/usr/local/bin/automate-eGPU.sh"
+
 
 #info
 nvidiaDriverVersionPath="/Library/Extensions/NVDAStartupWeb.kext/Contents/Info.plist"
@@ -123,6 +132,7 @@ cudaVersions=0
 #already installed
 cudaVersionInstalled=0
 cudaDriverInstalled=0
+cudaDeveloperDriverInstalled=0
 cudaToolkitInstalled=0
 cudaSamplesInstalled=0
 nvidiaDriversInstalled=0
@@ -633,8 +643,13 @@ function checkCudaInstall {
             fi
         fi
     fi
-    if [ -e "$cudaDriverUnInstallScriptPath" ]
+    if [ -e "$cudaDeveloperDriverUnInstallScriptPath" ]
     then
+        cudaDeveloperDriverInstalled=1
+    fi
+    if [ -e "$cudaDriverFrameworkPath" ] || [ -e "$cudaDriverLaunchAgentPath" ] || [ -e "$cudaDriverPrefPane" ] || [ -e "$cudaDriverStartupItemPath" ] || [ -e "$cudaDriverKEXTPath" ]
+    then
+        cudaDriverVersion=$("$pbuddy" -c "Print CFBundleVersion" "$cudaDriverVersionPath")
         cudaDriverInstalled=1
     fi
 }
@@ -700,21 +715,71 @@ function uninstallAutomateeGPU {
     fi
 }
 
+function uninstallCudaDriver {
+    if [ "$cudaDriverInstalled" == 1 ]
+    then
+        echo
+        echo "Uninstalling CUDA driver (elevated privileges needed) ..."
+        if [ -e "$cudaDriverFrameworkPath" ]
+        then
+            sudo rm -rf "$cudaDriverFrameworkPath"
+        fi
+        if [ -e "$cudaDriverLaunchAgentPath" ]
+        then
+            sudo launchctl unload -w "$cudaDriverLaunchAgentPath"
+            sudo rm -rf "$cudaDriverLaunchAgentPath"
+        fi
+        if [ -e "$cudaDriverPrefPane" ]
+        then
+            sudo rm -rf "$cudaDriverPrefPane"
+        fi
+        if [ -e "$cudaDriverStartupItemPath" ]
+        then
+            sudo rm -rf "$cudaDriverStartupItemPath"
+        fi
+        if [ -e "$cudaDriverKEXTPath" ]
+        then
+            sudo rm -rf "$cudaDriverKEXTPath"
+        fi
+        listOfChanges="$listOfChanges""\n""-CUDA drivers have been uninstalled"
+        doneSomething=1
+        scheduleReboot=1
+    else
+        contError "unCudaDriver"
+        listOfChanges="$listOfChanges""\n""-CUDA drivers were not found"
+    fi
+}
+
+function uninstallCudaToolkitRemains {
+    if [ -d "$cudaDeveloperDirPath" ] || [ -d "$cudaUserPath" ]
+    then
+        echo "Uninstalling remains of CUDA toolkit installation (elevated privileges needed)..."
+        if [ -d "$cudaDeveloperDirPath" ]
+        then
+            sudo rm -rf "$cudaDeveloperDirPath"
+        fi
+        if [ -d "$cudaUserPath" ]
+        then
+            sudo rm -rf "$cudaUserPath"
+        fi
+    fi
+}
+
 function uninstallCuda {
     checkCudaInstall
     if [[ "$cudaVersions" > 1 ]]
     then
         contError "cudaVersion"
-        if [ -e "$cudaDriverUnInstallScriptPath" ]
+        if [ -e "$cudaDeveloperDriverUnInstallScriptPath" ]
         then
             echo
-            echo "Uninstalling CUDA Drivers (elevated privileges needed)"
-            sudo perl "$cudaDriverUnInstallScriptPath"
-            listOfChanges="$listOfChanges""\n""-CUDA drivers have been uninstalled"
+            echo "Uninstalling CUDA developer drivers (elevated privileges needed)"
+            sudo perl "$cudaDeveloperDriverUnInstallScriptPath"
+            listOfChanges="$listOfChanges""\n""-CUDA developer drivers have been uninstalled"
             doneSomething=1
         else
             contError "unCudaDriver"
-            listOfChanges="$listOfChanges""\n""-CUDA drivers were not found"
+            listOfChanges="$listOfChanges""\n""-CUDA developer drivers were not found"
         fi
         checkCudaInstall
         while read -r version
@@ -732,9 +797,15 @@ function uninstallCuda {
                 doneSomething=1
             else
                 listOfChanges="$listOfChanges""\n""-CUDA $version toolkit could not be uninstalled"
-                echo "Unable to uninstall CUDA $version."
+                echo "Unable to uninstall CUDA $version toolkit."
             fi
         done <<< "$cudaVersionsInstalled"
+        uninstallCudaToolkitRemains
+        checkCudaInstall
+        if [ "$cudaDriverInstalled" == 1 ]
+        then
+            uninstallCudaDriver
+        fi
     else
         if [ "$cuda" == 1 ] || [ "$cuda" == 2 ]
         then
@@ -751,17 +822,19 @@ function uninstallCuda {
                 listOfChanges="$listOfChanges""\n""-CUDA samples were not found"
                 listOfChanges="$listOfChanges""\n""-CUDA toolkit was not found"
             fi
-            if [ -e "$cudaDriverUnInstallScriptPath" ]
+            if [ -e "$cudaDeveloperDriverUnInstallScriptPath" ]
             then
                 echo
-                echo "Uninstalling CUDA Drivers (elevated privileges needed) ..."
-                sudo perl "$cudaDriverUnInstallScriptPath"
-                listOfChanges="$listOfChanges""\n""-CUDA drivers have been uninstalled"
+                echo "Uninstalling CUDA developer drivers (elevated privileges needed) ..."
+                sudo perl "$cudaDeveloperDriverUnInstallScriptPath"
+                listOfChanges="$listOfChanges""\n""-CUDA developer drivers have been uninstalled"
                 doneSomething=1
             else
                 contError "unCudaDriver"
-                listOfChanges="$listOfChanges""\n""-CUDA drivers were not found"
+                listOfChanges="$listOfChanges""\n""-CUDA developer drivers were not found"
             fi
+            uninstallCudaToolkitRemains
+            uninstallCudaDriver
         fi
         if [ "$cuda" == 3 ]
         then
@@ -779,6 +852,7 @@ function uninstallCuda {
                 listOfChanges="$listOfChanges""\n""-CUDA samples were not found"
                 listOfChanges="$listOfChanges""\n""-CUDA toolkit was not found"
             fi
+            uninstallCudaToolkitRemains
         fi
         if [ "$cuda" == 4 ]
         then
@@ -914,12 +988,12 @@ function installCudaDriver {
     rm "$cudaDriverList"
     if "$foundMatch"
     then
-        if [ "$cudaDownloadVersion" == "$cudaVersionFull" ]
+        if [ "$cudaDownloadVersion" == "$cudaDriverVersion" ]
         then
             echo
             echo "CUDA drivers are up to date."
         else
-            if [ "$cudaDriverInstalled" == 1 ] || [ "$cudaToolkitInstalled" == 1 ] || [ "$cudaSamplesInstalled" == 1 ]
+            if [ "$cudaDriverInstalled" == 1 ] || [ "$cudaDeveloperDriverInstalled" == 1 ] || [ "$cudaToolkitInstalled" == 1 ] || [ "$cudaSamplesInstalled" == 1 ]
             then
                 cudaTemp="$cuda"
                 cuda=1
@@ -975,12 +1049,16 @@ function installCudaToolkit {
     rm "$cudaToolkitList"
     if "$foundMatch"
     then
-        if [ "$cudaDownloadVersion" == "$cudaVersionFull" ]
+        if [ "$cudaDownloadVersion" == "$cudaVersionFull" ] && [[ "$cuda" > 2 ]]
         then
             echo
             echo "CUDA drivers are up to date."
+        elif
+        then [ "$cudaDownloadVersion" == "$cudaDriverVersion" ] && [[ "$cuda" < 3 ]]
+            echo
+            echo "CUDA drivers are up to date."
         else
-            if [ "$cudaDriverInstalled" == 1 ] || [ "$cudaToolkitInstalled" == 1 ] || [ "$cudaSamplesInstalled" == 1 ]
+            if [ "$cudaDriverInstalled" == 1 ] || [ "$cudaDeveloperDriverInstalled" == 1 ] || [ "$cudaToolkitInstalled" == 1 ] || [ "$cudaSamplesInstalled" == 1 ]
             then
                 cudaTemp="$cuda"
                 cuda=1
@@ -1256,6 +1334,10 @@ function deduceUserWish {
             then
                 cuda=1
             fi
+            if [ "$cudaDeveloperDriverInstalled" == 1 ]
+            then
+                cuda=2
+            fi
             if [ "$cudaToolkitInstalled" == 1 ]
             then
                 cuda=3
@@ -1282,9 +1364,13 @@ function deduceUserWish {
             then
                 cuda=1
             fi
+            if [ "$cudaDeveloperDriverInstalled" == 1 ]
+            then
+                cuda=2
+            fi
             if [ "$cudaToolkitInstalled" == 1 ]
             then
-            cuda=3
+                cuda=3
             fi
             if [ "$cudaSamplesInstalled" == 1 ]
             then
@@ -1308,6 +1394,10 @@ function deduceUserWish {
             if [ "$cudaToolkitInstalled" == 1 ]
             then
                 cuda=3
+            fi
+            if [ "$cudaDeveloperDriverInstalled" == 1 ]
+            then
+                cuda=2
             fi
             if [ "$cudaDriverInstalled" == 1 ]
             then
