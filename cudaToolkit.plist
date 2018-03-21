@@ -5,12 +5,16 @@
 	<key>newest</key>
 	<array>
 		<dict>
+			<key>version</key>
+			<string>9.1.128</string>
 			<key>downloadURL</key>
 			<string>https://developer.nvidia.com/compute/cuda/9.1/Prod/local_installers/cuda_9.1.128_mac</string>
 			<key>OS</key>
 			<string>10.13</string>
 		</dict>
 		<dict>
+			<key>version</key>
+			<string>9.1.128</string>
 			<key>downloadURL</key>
 			<string>https://developer.nvidia.com/compute/cuda/9.1/Prod/local_installers/cuda_9.1.128_mac</string>
 			<key>OS</key>
@@ -20,12 +24,16 @@
 	<key>stable</key>
 	<array>
 		<dict>
+			<key>version</key>
+			<string>9.1.128</string>
 			<key>downloadURL</key>
 			<string>https://developer.nvidia.com/compute/cuda/9.1/Prod/local_installers/cuda_9.1.128_mac</string>
 			<key>OS</key>
 			<string>10.13</string>
 		</dict>
 		<dict>
+			<key>version</key>
+			<string>9.0.176</string>
 			<key>downloadURL</key>
 			<string>https://developer.nvidia.com/compute/cuda/9.0/Prod/local_installers/cuda_9.0.176_mac-dmg</string>
 			<key>OS</key>
