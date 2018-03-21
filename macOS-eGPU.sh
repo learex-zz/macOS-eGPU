@@ -949,7 +949,9 @@ function installCudaToolkit {
         osTemp=$("$pbuddy" -c "Print $forceNew:$index:OS" "$cudaToolkitList")
         cudaToolkitPathTemp=$("$pbuddy" -c "Print $forceNew:$index:downloadURL" "$cudaToolkitList")
         cudaToolkitVersionTemp=$("$pbuddy" -c "Print $forceNew:$index:version" "$cudaToolkitList")
-
+        echo "tmp"
+        echo "$cudaToolkitPathTemp"
+        echo "$cudaToolkitVersionTemp"
         if [ "${os::5}" == "$osTemp" ]
         then
             cudaToolkitDPath="$cudaDriverPathTemp"
@@ -969,7 +971,7 @@ function installCudaToolkit {
         else
             echo
             echo "Downloading and preparing cuda installer ..."
-            curl -o "$dirName"/cudaToolkit.dmg "$cudaToolkitDPath"
+            curl -o "$dirName"/cudaToolkit.dmg -L "$cudaToolkitDPath"
             hdiutil attach "$dirName"/cudaToolkit.dmg
             echo "Executing cuda toolkit installer with elevated privileges ..."
             if [ "$cuda" == 2 ]
