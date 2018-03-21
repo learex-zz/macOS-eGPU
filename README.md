@@ -66,7 +66,7 @@ Only tweak the system as little as possible. This may not work in all cases.
 Omit the otherwise obligatory reboot at the end of the script.
 
 `--silent | -s`  
-Automatically answer every question with yes. Can only be used in conjunction with `--acceptLicenseTerms`
+Automatically answer every question with yes. Can only be used in conjunction with `--acceptLicenseTerms`.
 
 `--acceptLicenseTerms`  
 Answer the question of whether to accept the license terms with yes.

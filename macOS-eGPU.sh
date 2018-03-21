@@ -904,8 +904,10 @@ function installAutomateeGPU {
         echo "Executing goalque's automate-eGPU script with elevated privileges ..."
         if [ "$minimal" == 1 ]
         then
+            echo
 ###            sudo ./automate-eGPU.sh -a -skip-web-driver
         else
+            echo
 ###            sudo ./automate-eGPU.sh -skip-web-driver
         fi
         rm automate-eGPU.sh
@@ -1005,14 +1007,17 @@ function installCudaToolkit {
             echo "Executing cuda toolkit installer with elevated privileges ..."
             if [ "$cuda" == 2 ]
             then
+                echo
 ###                sudo "$cudaToolkitVolPath""$cudaToolkitPKGName" --accept-eula --silent --no-window --install-package="cuda-driver"
             fi
             if [ "$cuda" == 3 ]
             then
+                echo
 ###                sudo "$cudaToolkitVolPath""$cudaToolkitPKGName" --accept-eula --silent --no-window --install-package="cuda-driver" --install-package="cuda-toolkit"
             fi
             if [ "$cuda" == 4 ]
             then
+                echo
 ###                sudo "$cudaToolkitVolPath""$cudaToolkitPKGName" --accept-eula --silent --no-window --install-package="cuda-driver" --install-package="cuda-toolkit" --install-package="cuda-samples"
             fi
             hdiutil detach "$cudaToolkitVolPath"
