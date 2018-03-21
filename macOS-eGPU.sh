@@ -1267,6 +1267,7 @@ function deduceUserWish {
                 cuda=4
             fi
         elif [ "$uninstall" == 1 ]
+        then
             if [ "$eGPUenablerInstalled" == 1 ]
             then
                 enabler=1
