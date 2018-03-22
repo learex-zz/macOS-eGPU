@@ -751,10 +751,10 @@ function uninstallCudaDriver {
     fi
 }
 
-function uninstallCudaToolkitRemains {
+function uninstallCudaToolkitResidue {
     if [ -d "$cudaDeveloperDirPath" ] || [ -d "$cudaUserPath" ]
     then
-        echo "Uninstalling remains of CUDA toolkit installation (elevated privileges needed)..."
+        echo "Uninstalling residue of CUDA toolkit installation (elevated privileges needed)..."
         if [ -d "$cudaDeveloperDirPath" ]
         then
             sudo rm -rf "$cudaDeveloperDirPath"
@@ -801,7 +801,7 @@ function uninstallCuda {
                 echo "Unable to uninstall CUDA $version toolkit."
             fi
         done <<< "$cudaVersionsInstalled"
-        uninstallCudaToolkitRemains
+        uninstallCudaToolkitResidue
         checkCudaInstall
         if [ "$cudaDriverInstalled" == 1 ]
         then
@@ -834,7 +834,7 @@ function uninstallCuda {
                 contError "unCudaDriver"
                 listOfChanges="$listOfChanges""\n""-CUDA developer drivers were not found"
             fi
-            uninstallCudaToolkitRemains
+            uninstallCudaToolkitResidue
             uninstallCudaDriver
         fi
         if [ "$cuda" == 3 ]
@@ -853,7 +853,7 @@ function uninstallCuda {
                 listOfChanges="$listOfChanges""\n""-CUDA samples were not found"
                 listOfChanges="$listOfChanges""\n""-CUDA toolkit was not found"
             fi
-            uninstallCudaToolkitRemains
+            uninstallCudaToolkitResidue
         fi
         if [ "$cuda" == 4 ]
         then
@@ -1301,14 +1301,20 @@ function deduceCudaNeedsInstall {
     do
         appNameTemp=$("$pbuddy" -c "Print apps:$index:name" "$CUDAAppList")
         driverNeedsTemp=$("$pbuddy" -c "Print apps:$index:requirement" "$CUDAAppList")
-        if [[ "$programmList[@]" =~ "$appNameTemp" ]]
+        if [[ "$programmList[@]" =~ $appNameTemp ]]
         then
             case "$driverNeedsTemp"
             in
             "driver")
-                if [ "$cuda" == 0 ]
+                if [[ "$cuda" < 1 ]]
                 then
                     cuda=1
+                fi
+                ;;
+            "developerDriver")
+                if [[ "$cuda" < 2 ]]
+                then
+                    cuda=2
                 fi
                 ;;
             "toolkit")
@@ -1317,6 +1323,11 @@ function deduceCudaNeedsInstall {
                     cuda=3
                 fi
                 ;;
+            "samples")
+                if [[ "$cuda" < 4 ]]
+                then
+                    cuda=4
+                fi
             *)
                 ;;
             esac
@@ -1454,4 +1465,5 @@ then
 fi
 
 finish
+
 #end of script
