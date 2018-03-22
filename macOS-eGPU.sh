@@ -1328,6 +1328,7 @@ function deduceCudaNeedsInstall {
                 then
                     cuda=4
                 fi
+                ;;
             *)
                 ;;
             esac
