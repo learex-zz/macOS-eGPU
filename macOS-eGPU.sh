@@ -93,6 +93,7 @@ cudaDeveloperDirPath="/Developer/NVIDIA/"
 enablerKextPath="/Library/Extensions/NVDAEGPUSupport.kext"
 automateeGPUPath="/Library/Application Support/Automate-eGPU/"
 automateeGPUScriptPath="/usr/local/bin/automate-eGPU.sh"
+rastafabisEnablerUninstallerPath="/Applications/Uninstall Rastafabi's eGPU Enabler.app"
 
 
 #info
@@ -139,6 +140,7 @@ cudaSamplesInstalled=0
 nvidiaDriversInstalled=0
 eGPUenablerInstalled=0
 automateeGPUInstalled=0
+rastafabisEnablerInstalled=0
 
 #freshly installed
 doneSomething=0
@@ -674,6 +676,14 @@ function checkAutomateeGPUInstall {
     fi
 }
 
+function checkRastafabisEnablerInstall {
+    echo "Searching for installed eGPU support (Sierra (2)) ..."
+    if [ -e "$rastafabisEnablerUninstallerPath" ]
+    then
+        rastafabisEnablerInstalled=1
+    fi
+}
+
 function checkeGPUEnablerInstall {
     echo "Searching for installed eGPU support (High Sierra) ..."
     if [ -e "$enablerKextPath" ]
@@ -688,6 +698,7 @@ function fetchInstalledSoftware {
     checkNvidiaDriverInstall
     checkAutomateeGPUInstall
     checkeGPUEnablerInstall
+    checkRastafabisEnablerInstall
 }
 
 
@@ -709,6 +720,22 @@ function uninstallAutomateeGPU {
         rm automate-eGPU.sh
         scheduleReboot=1
         doneSomething=1
+        listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) has been uninstalled"
+    else
+        contError "noEnabler"
+        listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) was not found"
+    fi
+}
+
+function uninstallRastafabisEnabler {
+    checkRastafabisEnablerInstall
+    if [ "$rastafabisEnablerInstalled" == 1 ]
+    then
+        echo
+        echo "Uninstalling eGPU support (Sierra) ..."
+        echo
+        echo "Executing Rastafabi's Enabler Uninstaller (elevated privileges needed) ..."
+        sudo installer -pkg "$rastafabisEnablerUninstallerPath" -target /
         listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) has been uninstalled"
     else
         contError "noEnabler"
@@ -908,12 +935,16 @@ function uninstallNvidiaDriver {
 function unInstalleGPUSupport {
     checkeGPUEnablerInstall
     checkAutomateeGPUInstall
+    checkRastafabisEnablerInstall
     if [ "$eGPUenablerInstalled" == 1 ]
     then
         uninstallEnabler
     elif [ "$automateeGPUInstalled" == 1 ]
     then
         uninstallAutomateeGPU
+    elif [ "$rastafabisEnablerInstalled" == 1 ]
+    then
+        uninstallRastafabisEnabler
     else
         contError "unEnabler"
         listOfChanges="$listOfChanges""\n""-eGPU support was not found"
@@ -924,9 +955,17 @@ function unInstalleGPUSupport {
 function installAutomateeGPU {
     checkAutomateeGPUInstall
     checkeGPUEnablerInstall
+    checkRastafabisEnablerInstall
     if [ "$eGPUenablerInstalled" == 1 ]
     then
+        echo
+        echo "Removing previous eGPU enablers ..."
         uninstallEnabler
+    elif [ "$rastafabisEnablerInstalled" == 1 ]
+    then
+        echo
+        echo "Removing previous eGPU enablers ..."
+        uninstallRastafabisEnabler
     fi
     if [ "$automateeGPUInstalled" == 1 ]
     then
@@ -1235,11 +1274,17 @@ function enablerInstaller {
 function installEnabler {
     checkAutomateeGPUInstall
     checkeGPUEnablerInstall
+    checkRastafabisEnablerInstall
     if [ "$automateeGPUInstalled" == 1 ]
     then
         echo
         echo "Removing previous eGPU enablers ..."
         uninstallAutomateeGPU
+    elif [ "$rastafabisEnablerInstalled" == 1 ]
+    then
+        echo
+        echo "Removing previous eGPU enablers ..."
+        uninstallRastafabisEnabler
     fi
     if [ "$eGPUenablerInstalled" == 1 ]
     then
