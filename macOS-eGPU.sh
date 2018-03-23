@@ -1421,6 +1421,43 @@ function deduceUserWish {
         else
             iruptError "unex"
         fi
+    else
+        if [ "$update" == 1 ]
+        then
+            if [ "$enabler" == 1 ] && [ "$eGPUenablerInstalled" == 0 ] && ["$automateeGPUInstalled" == 0 ]
+            then
+                enabler=0
+                contError "unEnabler"
+                listOfChanges="$listOfChanges""\n""-eGPU support could not be updated, no installation has been found."
+            fi
+            if [ "$driver" == 1 ] && [ "$nvidiaDriversInstalled" == 0 ]
+            then
+                driver=0
+                contError "unEnabler"
+                listOfChanges="$listOfChanges""\n""-NVIDIA driver could not be updated, no installation has been found."
+            fi
+            if [[ "$cuda" > 0 ]] && [ "$cudaDriverInstalled" == 0 ]
+            then
+                if [[ "$cuda" > 1 ]] && [ "$cudaDeveloperDriverInstalled" == 0 ]
+                then
+                    if [[ "$cuda" > 2 ]] && [ "$cudaToolkitInstalled" == 0 ]
+                    then
+                        if [[ "$cuda" > 3 ]] && [ "$cudaSamplesInstalled" == 0 ]
+                        then
+                            contError "unCudaSamples"
+                            listOfChanges="$listOfChanges""\n""-CUDA samples could not be updated, no installation has been found."
+                        fi
+                        contError "unCudaToolkit"
+                        listOfChanges="$listOfChanges""\n""-CUDA toolkit could not be updated, no installation has been found."
+                    fi
+                    contError "unCudaDriver"
+                    listOfChanges="$listOfChanges""\n""-CUDA driver could not be updated, no installation has been found."
+                fi
+                cuda=0
+                contError "unCudaDriver"
+                listOfChanges="$listOfChanges""\n""-CUDA driver could not be updated, no installation has been found."
+            fi
+        fi
     fi
 }
 
