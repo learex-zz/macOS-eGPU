@@ -5,6 +5,8 @@
 	<key>newest</key>
 	<array>
 		<dict>
+			<key>driverVersion</key>
+			<string>387.128</string>
 			<key>version</key>
 			<string>9.1.128</string>
 			<key>downloadURL</key>
@@ -13,6 +15,8 @@
 			<string>10.13</string>
 		</dict>
 		<dict>
+			<key>driverVersion</key>
+			<string>387.128</string>
 			<key>version</key>
 			<string>9.1.128</string>
 			<key>downloadURL</key>
@@ -24,6 +28,8 @@
 	<key>stable</key>
 	<array>
 		<dict>
+			<key>driverVersion</key>
+			<string>387.128</string>
 			<key>version</key>
 			<string>9.1.128</string>
 			<key>downloadURL</key>
@@ -32,6 +38,8 @@
 			<string>10.13</string>
 		</dict>
 		<dict>
+			<key>driverVersion</key>
+			<string>9.0.176</string>
 			<key>version</key>
 			<string>9.0.176</string>
 			<key>downloadURL</key>

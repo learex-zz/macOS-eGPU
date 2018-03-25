@@ -6,7 +6,7 @@
 	<array>
 		<dict>
 			<key>version</key>
-			<string>9.1.128</string>
+			<string>387.128</string>
 			<key>downloadURL</key>
 			<string>http://us.download.nvidia.com/Mac/cuda_387/cudadriver_387.128_macos.dmg</string>
 			<key>OS</key>
@@ -14,7 +14,7 @@
 		</dict>
 		<dict>
 			<key>version</key>
-			<string>9.1.128</string>
+			<string>387.128</string>
 			<key>downloadURL</key>
 			<string>http://us.download.nvidia.com/Mac/cuda_387/cudadriver_387.128_macos.dmg</string>
 			<key>OS</key>
@@ -25,7 +25,7 @@
 	<array>
 		<dict>
 			<key>version</key>
-			<string>9.1.128</string>
+			<string>387.128</string>
 			<key>downloadURL</key>
 			<string>http://us.download.nvidia.com/Mac/cuda_387/cudadriver_387.128_macos.dmg</string>
 			<key>OS</key>
