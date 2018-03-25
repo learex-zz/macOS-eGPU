@@ -13,10 +13,19 @@ Advanced users may want to take a look at the parameters below.
 - macOS 10.12 or 10.13 (≤10.13.3)
 - enabled unsigned kext
 
-If you haven’t enabled unsigned kexts or disabled SIP entirely follow the following steps:
+If you haven’t enabled unsigned kexts or disabled **S**ystem **I**ntegrity **P**rotection (SIP) entirely follow the following steps:
 1. Reboot your Mac into recovery mode ([Howto][1])
 2. Open Terminal (Utilities -\> Terminal)
 3. Execute: `csrutil enable --without kext; reboot;`
+
+If you have installed some sort of eGPU solution beforehand with entirely disabled SIP, try following the following steps:
+1. Follow the guide above to set SIP correctly.
+2. Execute:  
+	`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -u`  
+	This will purge your system of the most common eGPU solutions, the drivers, and CUDA installations. Please let the system reboot afterwards.
+3. Execute:  
+	`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`  
+	This will then try to install eGPU support on your system.
 
 ## Example
 On an already working eGPU system you might want to execute  
