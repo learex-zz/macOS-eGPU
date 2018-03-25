@@ -722,7 +722,7 @@ function uninstallAutomateeGPU {
         doneSomething=1
         listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) has been uninstalled"
     else
-        contError "noEnabler"
+        contError "unEnabler"
         listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) was not found"
     fi
 }
@@ -738,7 +738,7 @@ function uninstallRastafabisEnabler {
         sudo installer -pkg "$rastafabisEnablerUninstallerPath" -target /
         listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) has been uninstalled"
     else
-        contError "noEnabler"
+        contError "unEnabler"
         listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) was not found"
     fi
 }
