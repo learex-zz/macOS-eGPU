@@ -1,13 +1,10 @@
 
-# BRANCH fullCudaUninstall
-**THIS IS AN EXPERIMENTAL BRANCH. USE WITH CAUTION!**
-
 # macOS-eGPU
 Setup/Update/Uninstall Nvidia eGPU Support on a mac with macOS Sierra (10.12) or High Sierra (10.13).
 
 ## Howto
 Simply execute the following Terminal command:  
-`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/fullCudaUninstall/macOS-eGPU.sh)`  
+`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`  
 **DO NOT DETACH ANY MOUNTED DMGs DURING EXECUTION!**
   
 Advanced users may want to take a look at the parameters below.
@@ -23,7 +20,7 @@ If you haven’t enabled unsigned kexts or disabled SIP entirely follow the foll
 
 ## Example
 On an already working eGPU system you might want to execute  
-`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/fullCudaUninstall/macOS-eGPU.sh) -r`  
+`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -r`  
 in order to update the installed eGPU software.
 
 ## External Content

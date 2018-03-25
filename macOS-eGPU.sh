@@ -47,7 +47,7 @@ function cleantmpdir {
 pbuddy="/usr/libexec/PlistBuddy"
 
 
-branch="fullCudaUninstall"
+branch="master"
 
 #download
 automateeGPUScriptDPath="https://raw.githubusercontent.com/goalque/automate-eGPU/master/automate-eGPU.sh"
