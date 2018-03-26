@@ -156,6 +156,23 @@ function printChanges {
     echo -e "$listOfChanges"
 }
 
+function printInformation {
+    echo
+    echo
+    echo "Information:"
+    echo "If the current cofiguration does not work, try:"
+    echo "1.  Changing SIP to:"
+    echo "1.1 csrutil enable --without kext"
+    echo "1.2 csrutil disable"
+    echo "2.  Using the newest driver, instead of the most stable:"
+    echo "2.1 [bash <(... maxOS-eGPU.sh)] -i -d -f"
+    echo "2.2 [bash <(... maxOS-eGPU.sh)] -i -d (revert 2.1)"
+    echo "3.  Only using HDMI as output"
+    echo "4.  Booting procedure:"
+    echo "4.1 Boot with eGPU attached"
+    echo "4.2 Boot without eGPU attached, hotplug, logout, login"
+}
+
 function rebootSystem {
     cleantmpdir
     echo
@@ -197,10 +214,13 @@ function irupt {
 function finish {
     cleantmpdir
     echo
+    echo
+    echo
     echo "The script has finished successfully."
     if [ "$doneSomething" == 1 ]
     then
         printChanges
+        printInformation
         rebootSystem
     else
         echo "Nothing has been changed."
@@ -533,9 +553,11 @@ fi
 #define system info functions
 function fetchOSinfo {
     echo
+    echo
     echo "Fetching system information ..."
     os="$(sw_vers -productVersion)"
     build="$(sw_vers -buildVersion)"
+    echo "OS version: $os (build: $build)"
 }
 
 function fetchSIPstat {
@@ -584,6 +606,7 @@ function fetchSIPstat {
             p="$(expr $p \* 2)"
         done
     fi
+    echo "SIP status: $statSIP"
 }
 
 #execute and check if script is compatible with os
@@ -614,13 +637,24 @@ fi
 
 #define software check function
 function checkCudaInstall {
+    echo
     echo "Searching for CUDA installations ..."
+    cudaVersionInstalled=0
+    cudaVersionFull=""
+    cudaVersion=""
+    cudaVersionsInstalled=""
+    cudaVersions=0
+    cudaToolkitInstalled=0
+    cudaSamplesInstalled=0
+    cudaDeveloperDriverInstalled=0
+    cudaDriverInstalled=0
     if [ -e "$cudaVersionPath" ]
     then
         cudaVersionInstalled=1
         cudaVersionFull="$(cat $cudaVersionPath)"
         cudaVersionFull="${cudaVersionFull##CUDA Version }"
         cudaVersion="${cudaVersionFull%.*}"
+        echo "CUDA version: $cudaVersionFull"
     fi
     if [ -d "$cudaDeveloperDirPath" ]
     then
@@ -636,6 +670,9 @@ function checkCudaInstall {
         cudaVersionsInstalled="${cudaVersionsInstalled//;/\n}"
         cudaVersionsInstalled="$(echo -e $cudaVersionsInstalled)"
         cudaVersions="$(echo $cudaVersionsInstalled | wc -l | xargs)"
+        echo "Number of CUDA versions installed: $cudaVersions"
+        echo "List of all CUDA versions:"
+        echo "$cudaVersionsInstalled"
         if [ "$cudaVersionInstalled" == 1 ]
         then
             cudaToolkitUnInstallDir="/Developer/NVIDIA/CUDA-""$cudaVersion""/bin/"
@@ -659,52 +696,73 @@ function checkCudaInstall {
     if [ -e "$cudaDriverFrameworkPath" ] || [ -e "$cudaDriverLaunchAgentPath" ] || [ -e "$cudaDriverPrefPane" ] || [ -e "$cudaDriverStartupItemPath" ] || [ -e "$cudaDriverKEXTPath" ]
     then
         cudaDriverVersion=$("$pbuddy" -c "Print CFBundleVersion" "$cudaDriverVersionPath")
+        echo "CUDA driver version: $cudaDriverVersion"
         cudaDriverInstalled=1
     fi
+    echo "CUDA installation status: $(expr $cudaDriverInstalled + $cudaDeveloperDriverInstalled \* 2 + $cudaToolkitInstalled \* 4 + $cudaSamplesInstalled \* 8)"
 }
 
 function checkNvidiaDriverInstall {
+    echo
     echo "Searching for NVIDIA drivers ..."
+    nvidiaDriversInstalled=0
+    nvidiaDriverVersion=""
+    nvidiaDriverBuildVersion=""
     if [ -e "$nvidiaDriverUnInstallPath" ]
     then
         nvidiaDriversInstalled=1
         nvidiaDriverVersion=$("$pbuddy" -c "Print CFBundleGetInfoString" "$nvidiaDriverVersionPath")
         nvidiaDriverVersion="${nvidiaDriverVersion##* }"
         nvidiaDriverBuildVersion=$("$pbuddy" -c "Print IOKitPersonalities:NVDAStartup:NVDARequiredOS" "$nvidiaDriverVersionPath")
+        echo "NVIDIA driver version: $nvidiaDriverVersion (build: $nvidiaDriverBuildVersion)"
+    else
+        echo "No NVIDIA drivers found"
     fi
 }
 
 function checkAutomateeGPUInstall {
-    echo "Searching for installed eGPU support (Sierra) ..."
+    echo
+    echo "Searching for installed eGPU support (Sierra, goalque) ..."
+    automateeGPUInstalled=0
     if [ -d "$automateeGPUPath" ] || [ -e "$automateeGPUScriptPath" ]
     then
         automateeGPUInstalled=1
     fi
+    echo "eGPU Support status: $(expr $automateeGPUInstalled + $rastafabisEnablerInstalled \* 2 + $eGPUenablerInstalled \* 4)"
 }
 
 function checkRastafabisEnablerInstall {
-    echo "Searching for installed eGPU support (Sierra (2)) ..."
+    echo
+    echo "Searching for installed eGPU support (Sierra, rastafabi) ..."
+    rastafabisEnablerInstalled=0
     if [ -e "$rastafabisEnablerUninstallerPath" ]
     then
         rastafabisEnablerInstalled=1
     fi
+    echo "eGPU Support status: $(expr $automateeGPUInstalled + $rastafabisEnablerInstalled \* 2 + $eGPUenablerInstalled \* 4)"
 }
 
 function checkeGPUEnablerInstall {
+    echo
     echo "Searching for installed eGPU support (High Sierra) ..."
+    eGPUenablerInstalled=0
+    eGPUenablerBuildVersion=""
     if [ -e "$enablerKextPath" ]
     then
         eGPUenablerInstalled=1
         eGPUenablerBuildVersion=$("$pbuddy" -c "Print IOKitPersonalities:NVDAStartup:NVDARequiredOS" "$eGPUBuildVersionPath")
+        echo "eGPU enabler build: $eGPUenablerBuildVersion"
     fi
+    echo "eGPU Support status: $(expr $automateeGPUInstalled + $rastafabisEnablerInstalled \* 2 + $eGPUenablerInstalled \* 4)"
 }
 
 function fetchInstalledSoftware {
+    echo
     checkCudaInstall
     checkNvidiaDriverInstall
     checkAutomateeGPUInstall
-    checkeGPUEnablerInstall
     checkRastafabisEnablerInstall
+    checkeGPUEnablerInstall
 }
 
 
@@ -742,6 +800,8 @@ function uninstallRastafabisEnabler {
         echo
         echo "Executing Rastafabi's Enabler Uninstaller (elevated privileges needed) ..."
         sudo installer -pkg "$rastafabisEnablerUninstallerPath" -target /
+        scheduleReboot=1
+        doneSomething=1
         listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) has been uninstalled"
     else
         contError "unEnabler"
@@ -800,6 +860,8 @@ function uninstallCudaToolkitResidue {
 }
 
 function uninstallCuda {
+    echo
+    echo
     checkCudaInstall
     if [[ "$cudaVersions" > 1 ]]
     then
@@ -923,6 +985,8 @@ function uninstallEnabler {
 }
 
 function uninstallNvidiaDriver {
+    echo
+    echo
     checkNvidiaDriverInstall
     if [ "$nvidiaDriversInstalled" == 1 ]
     then
@@ -939,6 +1003,8 @@ function uninstallNvidiaDriver {
 }
 
 function unInstalleGPUSupport {
+    echo
+    echo
     checkeGPUEnablerInstall
     checkAutomateeGPUInstall
     checkRastafabisEnablerInstall
@@ -1148,6 +1214,8 @@ function installCudaToolkit {
 }
 
 function installCuda {
+    echo
+    echo
     if [ "$cuda" == 1 ]
     then
         installCudaDriver
@@ -1159,6 +1227,8 @@ function installCuda {
 }
 
 function installNvidiaDriver {
+    echo
+    echo
     checkNvidiaDriverInstall
     if [ "$forceNew" == "newest" ]
     then
@@ -1310,6 +1380,8 @@ function installEnabler {
 }
 
 function installeGPUSupport {
+    echo
+    echo
     case "${os::5}"
     in
     "10.12")
