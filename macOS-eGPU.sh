@@ -352,6 +352,12 @@ function contError {
         echo "No NVIDIA driver was found for your version of macOS."
         echo "Falling back to latest release."
         ;;
+    "unRecomSIP")
+        echo "You are using the script in an unrecommendend state (System Integrity Protection)."
+        echo "The recommendend state is:"
+        echo "csrutil enable --without kext"
+        fail=1
+        ;;
     *)
         echo "An unknown error as occured."
         fail=1
@@ -599,7 +605,7 @@ esac
 fetchSIPstat
 if [ "$statSIP" != 31 ] && [ "$statSIP" != 128 ]
 then
-    iruptError "SIP"
+    contError "unRecomSIP"
 elif [ "$statSIP" == 128 ]
 then
     iruptError "SIPerror"
