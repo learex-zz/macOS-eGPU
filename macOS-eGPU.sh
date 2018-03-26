@@ -223,6 +223,8 @@ function finish {
         printInformation
         rebootSystem
     else
+        printInformation
+        echo
         echo "Nothing has been changed."
     fi
     exit
