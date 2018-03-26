@@ -1510,18 +1510,6 @@ function deduceUserWish {
 
 deduceUserWish
 
-if [ "$enabler" == 1 ]
-then
-    if [ "$install" == 1 ] || [ "$update" == 1 ]
-    then
-        installeGPUSupport
-    elif [ "$uninstall" == 1 ]
-    then
-        unInstalleGPUSupport
-    else
-        iruptError "unex"
-    fi
-fi
 
 if [ "$driver" == 1 ]
 then
@@ -1531,6 +1519,20 @@ then
     elif [ "$uninstall" == 1 ]
     then
         uninstallNvidiaDriver
+    else
+        iruptError "unex"
+    fi
+fi
+
+
+if [ "$enabler" == 1 ]
+then
+    if [ "$install" == 1 ] || [ "$update" == 1 ]
+    then
+        installeGPUSupport
+    elif [ "$uninstall" == 1 ]
+    then
+        unInstalleGPUSupport
     else
         iruptError "unex"
     fi
