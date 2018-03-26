@@ -159,7 +159,7 @@ function printChanges {
 function printInformation {
     echo
     echo
-    echo "Information:"
+    echo "Information: (To show these again just execute the script once more)"
     echo "If the current cofiguration does not work, try:"
     echo "1.  Changing SIP to:"
     echo "1.1 csrutil enable --without kext"
