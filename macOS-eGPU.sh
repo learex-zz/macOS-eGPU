@@ -1523,7 +1523,6 @@ then
     fi
 fi
 
-
 if [ "$cuda" != 0 ]
 then
     if [ "$install" == 1 ] || [ "$update" == 1 ]
