@@ -1510,6 +1510,19 @@ function deduceUserWish {
 
 deduceUserWish
 
+if [ "$cuda" != 0 ]
+then
+    if [ "$install" == 1 ] || [ "$update" == 1 ]
+    then
+        installCuda
+    elif [ "$uninstall" == 1 ]
+    then
+        uninstallCuda
+    else
+        iruptError "unex"
+    fi
+fi
+
 if [ "$driver" == 1 ]
 then
     if [ "$install" == 1 ] || [ "$update" == 1 ]
@@ -1520,19 +1533,6 @@ then
         uninstallNvidiaDriver
     else
         iruptError "unex"
-    fi
-fi
-
-if [ "$cuda" != 0 ]
-then
-    if [ "$install" == 1 ] || [ "$update" == 1 ]
-    then
-        installCuda
-    elif [ "$uninstall" == 1 ]
-    then
-        uninstallCuda
-    else
-    iruptError "unex"
     fi
 fi
 
