@@ -1163,6 +1163,7 @@ function installNvidiaDriver {
         nvidiaDriverList="$dirName""/nvidiaDriver.plist"
         drivers=$("$pbuddy" -c "Print updates:" "$nvidiaDriverList" | grep "OS" | awk '{print $3}')
         driverCount=$(echo "$drivers" | wc -l | xargs)
+        foundMatch=false
         for index in `seq 0 $(expr $driverCount - 1)`
         do
             buildTemp=$("$pbuddy" -c "Print updates:$index:OS" "$nvidiaDriverList")
@@ -1238,6 +1239,7 @@ function enablerInstaller {
     eGPUEnablerList="$dirName""/eGPUenabler.plist"
     enablers=$("$pbuddy" -c "Print updates:" "$eGPUEnablerList" | grep "build" | awk '{print $3}')
     enablerCount=$(echo "$enablers" | wc -l | xargs)
+    foundMatch=false
     for index in `seq 0 $(expr $enablerCount - 1)`
     do
         buildTemp=$("$pbuddy" -c "Print updates:$index:build" "$eGPUEnablerList")
