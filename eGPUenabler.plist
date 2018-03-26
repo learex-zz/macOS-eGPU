@@ -6,21 +6,21 @@
 	<array>
 		<dict>
 			<key>build</key>
-			<string>17D102</string>
-			<key>downloadURL</key>
-			<string>https://egpu.io/wp-content/uploads/wpforo/attachments/71/4587-NVDAEGPUSupport-v7.zip</string>
-			<key>packageName</key>
-			<string>NVDAEGPUSupport-v7.pkg</string>
-			<key>author</key>
-			<string>devild</string>
-		</dict>
-		<dict>
-			<key>build</key>
 			<string>17D47</string>
 			<key>downloadURL</key>
 			<string>https://cdn.egpu.io/wp-content/uploads/wpforo/attachments/71/4376-NVDAEGPUSupport-v6.zip</string>
 			<key>packageName</key>
 			<string>NVDAEGPUSupport-v6.pkg</string>
+			<key>author</key>
+			<string>devild</string>
+		</dict>
+		<dict>
+			<key>build</key>
+			<string>17D102</string>
+			<key>downloadURL</key>
+			<string>https://egpu.io/wp-content/uploads/wpforo/attachments/71/4587-NVDAEGPUSupport-v7.zip</string>
+			<key>packageName</key>
+			<string>NVDAEGPUSupport-v7.pkg</string>
 			<key>author</key>
 			<string>devild</string>
 		</dict>

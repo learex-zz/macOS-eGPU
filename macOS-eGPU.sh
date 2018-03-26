@@ -906,7 +906,7 @@ function uninstallEnabler {
     then
         echo
         echo "Removing enabler (elevated privileges needed) ..."
-        sudo rm "$enablerKextPath"
+        sudo rm -rf "$enablerKextPath"
         listOfChanges="$listOfChanges""\n""-eGPU support (High Sierra) has been uninstalled"
         scheduleReboot=1
         doneSomething=1
