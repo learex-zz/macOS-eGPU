@@ -1510,7 +1510,6 @@ function deduceUserWish {
 
 deduceUserWish
 
-
 if [ "$driver" == 1 ]
 then
     if [ "$install" == 1 ] || [ "$update" == 1 ]
@@ -1525,19 +1524,6 @@ then
 fi
 
 
-if [ "$enabler" == 1 ]
-then
-    if [ "$install" == 1 ] || [ "$update" == 1 ]
-    then
-        installeGPUSupport
-    elif [ "$uninstall" == 1 ]
-    then
-        unInstalleGPUSupport
-    else
-        iruptError "unex"
-    fi
-fi
-
 if [ "$cuda" != 0 ]
 then
     if [ "$install" == 1 ] || [ "$update" == 1 ]
@@ -1546,6 +1532,19 @@ then
     elif [ "$uninstall" == 1 ]
     then
         uninstallCuda
+    else
+    iruptError "unex"
+    fi
+fi
+
+if [ "$enabler" == 1 ]
+then
+    if [ "$install" == 1 ] || [ "$update" == 1 ]
+    then
+        installeGPUSupport
+    elif [ "$uninstall" == 1 ]
+    then
+        unInstalleGPUSupport
     else
         iruptError "unex"
     fi
