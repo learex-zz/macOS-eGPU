@@ -1236,7 +1236,7 @@ function enablerInstaller {
     mktmpdir
     curl -o "$dirName""/eGPUenabler.plist" "$eGPUEnablerListOnline"
     eGPUEnablerList="$dirName""/eGPUenabler.plist"
-    enablers=$("$pbuddy" -c "Print updates:" "$eGPUEnablerList" | grep "OS" | awk '{print $3}')
+    enablers=$("$pbuddy" -c "Print updates:" "$eGPUEnablerList" | grep "build" | awk '{print $3}')
     enablerCount=$(echo "$enablers" | wc -l | xargs)
     for index in `seq 0 $(expr $enablerCount - 1)`
     do
