@@ -171,6 +171,11 @@ function printInformation {
     echo "4.  Booting procedure:"
     echo "4.1 Boot with eGPU attached"
     echo "4.2 Boot without eGPU attached, hotplug, logout, login"
+    echo "5.  Download https://www.titanium-software.fr/en/onyx.html"
+    echo "5.1 Go to optimize"
+    echo "5.2 Check everything"
+    echo "5.3 Execute"
+    echo "5.4 Reboot (It might take two, since a lot of caches need to be rebuild)"
 }
 
 function rebootSystem {
