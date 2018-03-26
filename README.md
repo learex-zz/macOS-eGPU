@@ -11,9 +11,10 @@ Advanced users may want to take a look at the parameters below.
 
 ## Requirements
 - macOS 10.12 or 10.13 (≤10.13.3)
-- enabled unsigned kext
+- enabled unsigned kext  
+	(other configurations are **NOT** recommended and may **not work**)
 
-If you haven’t enabled unsigned kexts or disabled **S**ystem **I**ntegrity **P**rotection (SIP) entirely follow the following steps:
+If you haven’t enabled unsigned kexts **S**ystem **I**ntegrity **P**rotection (SIP) entirely follow the following steps:
 1. Reboot your Mac into recovery mode ([Howto][1])
 2. Open Terminal (Utilities -\> Terminal)
 3. Execute: `csrutil enable --without kext; reboot;`
