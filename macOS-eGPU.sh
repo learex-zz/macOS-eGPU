@@ -633,7 +633,7 @@ in
 esac
 
 fetchSIPstat
-if [ "$statSIP" != 31 ] && [ "$statSIP" != 0 ] && [ "$statSIP" != 128 ]
+if [ "$statSIP" != 31 ] && [ "$statSIP" != 128 ]
 then
     contError "unRecomSIP"
 elif [ "$statSIP" == 128 ]
