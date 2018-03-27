@@ -159,23 +159,8 @@ function printChanges {
 function printInformation {
     echo
     echo
-    echo "Information: (To show these again just execute the script once more)"
-    echo "If the current cofiguration does not work, try:"
-    echo "1.  Changing SIP to:"
-    echo "1.1 csrutil enable --without kext"
-    echo "1.2 csrutil disable"
-    echo "2.  Using the newest driver, instead of the most stable:"
-    echo "2.1 [bash <(... maxOS-eGPU.sh)] -i -d -f"
-    echo "2.2 [bash <(... maxOS-eGPU.sh)] -i -d (revert 2.1)"
-    echo "3.  Only using HDMI as output"
-    echo "4.  Booting procedure:"
-    echo "4.1 Boot with eGPU attached"
-    echo "4.2 Boot without eGPU attached, login, hotplug, logout, login"
-    echo "5.  Download https://www.titanium-software.fr/en/onyx.html"
-    echo "5.1 Go to optimize"
-    echo "5.2 Check everything"
-    echo "5.3 Execute"
-    echo "5.4 Reboot (It might take two, since a lot of caches need to be rebuild)"
+    echo "Should the system not work see possible tweaks on the GitHub repository:"
+    echo "https://github.com/learex/macOS-eGPU#tweaks"
 }
 
 function rebootSystem {
