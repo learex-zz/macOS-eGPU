@@ -11,22 +11,32 @@ Advanced users may want to take a look at the parameters below.
 
 ## Requirements
 - macOS 10.12 or 10.13 (≤10.13.3)
-- enabled unsigned kext  
-	(other configurations are **NOT** recommended and may **not work**)
+- enabled unsigned kext/disabled SIP
 
-If you haven’t enabled unsigned kexts **S**ystem **I**ntegrity **P**rotection (SIP) entirely follow the following steps:
+Howto enable unsigned kext or disable **S**ystem **I**ntegrity **P**rotection (SIP) entirely:
 1. Reboot your Mac into recovery mode ([Howto][1])
 2. Open Terminal (Utilities -\> Terminal)
-3. Execute: `csrutil enable --without kext; reboot;`
+3. Execute:
+	1. Enable unsigned kext: `csrutil enable --without kext; reboot;`
+	2. Disable SIP: `csrutil disable; reboot;`
 
-If you have installed some sort of eGPU solution beforehand with entirely disabled SIP, try following the following steps:
-1. Follow the guide above to set SIP correctly.
-2. Execute:  
-	`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -u`  
-	This will purge your system of the most common eGPU solutions, the drivers, and CUDA installations. Please let the system reboot afterwards.
-3. Execute:  
-	`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`  
-	This will then try to install eGPU support on your system.
+## Tweaks
+1. Change SIP setting
+	1. `csrutil enable --without kext`
+	2. `csrutil disable`
+2. Using newest driver, instead of most stable:
+	1. `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -i -d -f`
+	2. `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -i -d` (to revert 2.1)
+3. Only using HDMI output
+4. Change booting procedure:
+	1. Boot with eGPU attached
+	2. Boot without eGPU attached, login, hotplug, logout, login
+5. Clean your Mac using OnyX
+	1. Download [OnyX][2]
+	2. Go to optimize
+	3. Check everything
+	4. Execute
+	5. Reboot (It might take two, since a lot of caches need to be rebuild)
 
 ## Example
 On an already working eGPU system you might want to execute  
@@ -35,11 +45,11 @@ in order to update the installed eGPU software.
 
 ## External Content
 This script may use some of the following external content:
-- goalque's automate-eGPU ([Link][2])
-- Benjamin Dobell’s nvidia-update ([Link][3])
-- NVDAEGPUSupport by devild/ricosuave0922 ([Link][4])
-- CUDA Drivers ([Link][5])
-- CUDA Toolkit ([Link][6])
+- goalque's automate-eGPU ([Link][3])
+- Benjamin Dobell’s nvidia-update ([Link][4])
+- NVDAEGPUSupport by devild/ricosuave0922 ([Link][5])
+- CUDA Drivers ([Link][6])
+- CUDA Toolkit ([Link][7])
 
 The external content above may download additional content.
 All external content may be subject to different licenses.
@@ -111,8 +121,9 @@ Can only be used in silent mode. If a non fatal error occurs, ask user whether t
 Can only be used in silent mode. If a non fatal error occurs, stop the script.
 
 [1]:	https://support.apple.com/HT201314%20%22macOS-Recovery%22 "Guide to boot into recovery mode"
-[2]:	https://github.com/goalque/automate-eGPU "goalque's automate-eGPU"
-[3]:	https://github.com/Benjamin-Dobell/nvidia-update "Benjamin Dobell’s nvidia-update"
-[4]:	https://egpu.io/forums/mac-setup/wip-nvidia-egpu-support-for-high-sierra/#post-22370 "NVDAEGPUSupport"
-[5]:	http://www.nvidia.com/object/mac-driver-archive.html "CUDA Driver Archive"
-[6]:	https://developer.nvidia.com/cuda-toolkit-archive "Cuda Toolkit Archive"
+[2]:	https://www.titanium-software.fr/en/onyx.html
+[3]:	https://github.com/goalque/automate-eGPU "goalque's automate-eGPU"
+[4]:	https://github.com/Benjamin-Dobell/nvidia-update "Benjamin Dobell’s nvidia-update"
+[5]:	https://egpu.io/forums/mac-setup/wip-nvidia-egpu-support-for-high-sierra/#post-22370 "NVDAEGPUSupport"
+[6]:	http://www.nvidia.com/object/mac-driver-archive.html "CUDA Driver Archive"
+[7]:	https://developer.nvidia.com/cuda-toolkit-archive "Cuda Toolkit Archive"

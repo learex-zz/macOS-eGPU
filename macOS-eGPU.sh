@@ -170,7 +170,7 @@ function printInformation {
     echo "3.  Only using HDMI as output"
     echo "4.  Booting procedure:"
     echo "4.1 Boot with eGPU attached"
-    echo "4.2 Boot without eGPU attached, hotplug, logout, login"
+    echo "4.2 Boot without eGPU attached, login, hotplug, logout, login"
     echo "5.  Download https://www.titanium-software.fr/en/onyx.html"
     echo "5.1 Go to optimize"
     echo "5.2 Check everything"
@@ -633,7 +633,7 @@ in
 esac
 
 fetchSIPstat
-if [ "$statSIP" != 31 ] && [ "$statSIP" != 128 ]
+if [ "$statSIP" != 31 ] && [ "$statSIP" != 0 ] && [ "$statSIP" != 128 ]
 then
     contError "unRecomSIP"
 elif [ "$statSIP" == 128 ]
