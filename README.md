@@ -21,17 +21,23 @@ Howto enable unsigned kext or disable **S**ystem **I**ntegrity **P**rotection (S
 	2. Disable SIP: `csrutil disable; reboot;`
 
 ## Tweaks
-1. Change SIP setting
+1. Execute in new order:
+	1. Uninstall everything: `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -u`
+	2. Enable SIP in recovery mode: `csrutil clear`
+	3. Install NVIDIA drivers: `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -i -d`
+	4. Disable SIP in recovery mode: `csrutil disable`
+	5. Install rest: `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`
+2. Change SIP setting
 	1. `csrutil enable --without kext`
 	2. `csrutil disable`
-2. Using newest driver, instead of most stable:
+3. Using newest driver, instead of most stable:
 	1. `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -i -d -f`
 	2. `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -i -d` (to revert 2.1)
-3. Only using HDMI output
-4. Change booting procedure:
+4. Only using HDMI output
+5. Change booting procedure:
 	1. Boot with eGPU attached
 	2. Boot without eGPU attached, login, hotplug, logout, login
-5. Clean your Mac using OnyX
+6. Clean your Mac using OnyX
 	1. Download [OnyX][2]
 	2. Go to optimize
 	3. Check everything
