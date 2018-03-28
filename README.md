@@ -33,7 +33,7 @@ Howto enable unsigned kext or disable **S**ystem **I**ntegrity **P**rotection (S
 	2. `csrutil disable`
 3. Using newest driver, instead of most stable:
 	1. `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -i -d -f`
-	2. `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -i -d` (to revert 2.1)
+	2. `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -i -d` (to revert 3.i)
 4. Only using HDMI output
 5. Change booting procedure:
 	1. Boot with eGPU attached
