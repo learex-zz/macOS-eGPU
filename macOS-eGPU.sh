@@ -105,6 +105,7 @@ scheduleReboot=0
 
 install=0
 uninstall=0
+reinstall=0
 update=0
 enabler=0
 driver=0
@@ -395,7 +396,7 @@ do
         install=1
         ;;
     "--uninstall" | "-u")
-        if [ "$install" != 0 ] || [ "$update" != 0 ] || [ "$forceNew" != "stable" ]
+        if [ "$install" != 0 ] || [ "$update" != 0 ] || [ "$forceNew" != "stable" ] || [ "$reinstall" != 0 ]
         then
             iruptError "conflicArg"
         fi
@@ -414,6 +415,13 @@ do
             iruptError "conflicArg"
         fi
         driver=1
+        ;;
+    "--forceReinstall" | "-l")
+        if [ "$uninstall" != 0 ]
+        then
+            iruptError "conflicArg"
+        fi
+        reinstall=1
         ;;
     "--forceNewest" | "-f")
         if [ "$uninstall" != 0 ]
@@ -1025,11 +1033,18 @@ function installAutomateeGPU {
         echo
         echo "Removing previous eGPU enablers ..."
         uninstallEnabler
+        checkeGPUEnablerInstall
     elif [ "$rastafabisEnablerInstalled" == 1 ]
     then
         echo
         echo "Removing previous eGPU enablers ..."
         uninstallRastafabisEnabler
+        checkRastafabisEnablerInstall
+    fi
+    if [ "$reinstall" == 1 ]
+    then
+        uninstallAutomateeGPU
+        checkAutomateeGPUInstall
     fi
     if [ "$automateeGPUInstalled" == 1 ]
     then
@@ -1208,6 +1223,15 @@ function installCudaToolkit {
 function installCuda {
     echo
     echo
+    checkCudaInstall
+    if [ "$reinstall" == 1 ]
+    then
+        cudaTemp="$cuda"
+        cuda=1
+        uninstallCuda
+        cuda="$cudaTemp"
+        checkCudaInstall
+    fi
     if [ "$cuda" == 1 ]
     then
         installCudaDriver
@@ -1222,6 +1246,11 @@ function installNvidiaDriver {
     echo
     echo
     checkNvidiaDriverInstall
+    if [ "$reinstall" == 1 ]
+    then
+        uninstallNvidiaDriver
+        checkNvidiaDriverInstall
+    fi
     if [ "$forceNew" == "newest" ]
     then
         echo
@@ -1350,11 +1379,18 @@ function installEnabler {
         echo
         echo "Removing previous eGPU enablers ..."
         uninstallAutomateeGPU
+        checkAutomateeGPUInstall
     elif [ "$rastafabisEnablerInstalled" == 1 ]
     then
         echo
         echo "Removing previous eGPU enablers ..."
         uninstallRastafabisEnabler
+        checkRastafabisEnablerInstall
+    fi
+    if [ "$reinstall" == 1 ]
+    then
+        uninstallEnabler
+        checkeGPUEnablerInstall
     fi
     if [ "$eGPUenablerInstalled" == 1 ]
     then

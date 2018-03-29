@@ -106,6 +106,10 @@ The parameters in this section will change the behavior of the script.
 `--forceNewest | -f`  
 Force the newest nvidia drivers and CUDA drivers to be used. This is not recommended. The script will automatically determine the most *stable* drivers. Cannot be used with `--uninstall | -u`.
 
+`--forceReinstall | -l`  
+Force an uninstall of installed software although the software may be up to date. Can be used to fix corrupt software installations.  
+Cannot be used with `--uninstall | -u`.
+
 `--minimal | -m`  
 Only tweak the system as little as possible. This may not work in all cases.
 
