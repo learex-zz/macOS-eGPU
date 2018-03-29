@@ -70,7 +70,12 @@ Installs software. If not specified otherwise, the script will determine itself 
 Uninstalls software. If not specified otherwise, the script will try to uninstall the nvidia drivers, the eGPU support and all CUDA installations.
 
 `--update | -r`  
-This will try update your drivers, eGPU support and CUDA installations. It will not install new software.  
+This will try update your drivers, eGPU support and CUDA installations. It will not install new software.
+
+### Check
+`--check | -h`  
+Searches for installed eGPU software and other system properties and displays information about it. No changes are being made to the system. No personal information is displayed.  
+Cannot be used with #Standard, #Packages `--forceNewest | -f`, `--forceReinstall | -l` and `--minimal | -m`.  
 
 ### Packages
 The parameters in this section will override the deductions on what to install/update/uninstall of the script.

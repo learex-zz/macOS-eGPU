@@ -111,6 +111,7 @@ enabler=0
 driver=0
 cuda=0
 determine=0
+check=0
 
 noReboot=0
 silent=0
@@ -389,83 +390,94 @@ do
     case "$options"
     in
     "--install" | "-i")
-        if [ "$uninstall" != 0 ] || [ "$update" != 0 ]
+        if [ "$uninstall" != 0 ] || [ "$update" != 0 ] || [ "$check" != 0 ]
         then
             iruptError "conflicArg"
         fi
         install=1
         ;;
     "--uninstall" | "-u")
-        if [ "$install" != 0 ] || [ "$update" != 0 ] || [ "$forceNew" != "stable" ] || [ "$reinstall" != 0 ]
+        if [ "$install" != 0 ] || [ "$update" != 0 ] || [ "$forceNew" != "stable" ] || [ "$reinstall" != 0 ] || [ "$check" != 0 ]
         then
             iruptError "conflicArg"
         fi
         uninstall=1
         ;;
+    "--check" | "-h")
+        if [ "$uninstall" != 0 ] || [ "$update" != 0 ] || [ "$install" != 0 ] || [ "$reinstall" != 0 ] || [ "$forceNew" != "stable" ] || [ "$driver" != 0 ] || [ "$reinstall" != 0 ] || [ "$cuda" != 0 ] || [ "$minimal" != 0 ] || [ "$enabler" != 0 ]
+        then
+            iruptError "conflicArg"
+        fi
+        check=1
+        ;;
     "--update" | "-r")
-        if [ "$install" != 0 ] || [ "$uninstall" != 0 ]
+        if [ "$install" != 0 ] || [ "$uninstall" != 0 ] || [ "$check" != 0 ]
         then
             iruptError "conflicArg"
         fi
         update=1
         ;;
     "--driver" | "-d")
-        if  [ "$update" != 0 ]
+        if  [ "$update" != 0 ] || [ "$check" != 0 ]
         then
             iruptError "conflicArg"
         fi
         driver=1
         ;;
     "--forceReinstall" | "-l")
-        if [ "$uninstall" != 0 ]
+        if [ "$uninstall" != 0 ] || [ "$check" != 0 ]
         then
             iruptError "conflicArg"
         fi
         reinstall=1
         ;;
     "--forceNewest" | "-f")
-        if [ "$uninstall" != 0 ]
+        if [ "$uninstall" != 0 ] || [ "$check" != 0 ]
         then
             iruptError "conflicArg"
         fi
         forceNew="newest"
         ;;
     "--enabler" | "-e")
-        if  [ "$update" != 0 ]
+        if  [ "$update" != 0 ] || [ "$check" != 0 ]
         then
             iruptError "conflicArg"
         fi
         enabler=1
         ;;
     "--cuda" | "-c")
-        if [ "$cuda" != 0 ]
+        if [ "$cuda" != 0 ] || [ "$check" != 0 ]
         then
             iruptError "conflicArg"
         fi
         cuda=1
         ;;
     "--cudaDriver" | "-v")
-        if [ "$cuda" != 0 ]
+        if [ "$cuda" != 0 ] || [ "$check" != 0 ]
         then
             iruptError "conflicArg"
         fi
         cuda=2
         ;;
     "--cudaToolkit" | "-t")
-        if [ "$cuda" != 0 ]
+        if [ "$cuda" != 0 ] || [ "$check" != 0 ]
         then
             iruptError "conflicArg"
         fi
         cuda=3
         ;;
     "--cudaSamples" | "-a")
-        if [ "$cuda" != 0 ]
+        if [ "$cuda" != 0 ] || [ "$check" != 0 ]
         then
             iruptError "conflicArg"
         fi
         cuda=4
         ;;
     "--mininmal" | "-m")
+        if [ "$check" != 0 ]
+        then
+            iruptError "conflicArg"
+        fi
         minimal=1
         ;;
     "--noReboot" | "-n")
@@ -499,6 +511,7 @@ do
         errorCont=3
         ;;
     *)
+        echo "ERROR: ""$options"
         iruptError "unknwnArg"
         ;;
     esac
@@ -518,7 +531,7 @@ then
 fi
 
 #display warning
-if [ "$noReboot" == 0 ]
+if [ "$noReboot" == 0 ] && [ "$check" == 0 ]
 then
     echo "The system will reboot after successfull completion."
     if [ "$priorWaitTime" == 1 ]
@@ -540,7 +553,7 @@ then
 fi
 
 #set standards
-if [ "$install" == 0 ] && [ "$uninstall" == 0 ] && [ "$update" == 0 ]
+if [ "$install" == 0 ] && [ "$uninstall" == 0 ] && [ "$update" == 0 ] && [ "$check" == 0 ]
 then
     install=1
 fi
@@ -1614,7 +1627,10 @@ function deduceUserWish {
     fi
 }
 
-deduceUserWish
+if [ "$check" == 0 ]
+then
+    deduceUserWish
+fi
 
 if [ "$cuda" != 0 ]
 then
@@ -1653,6 +1669,38 @@ then
     else
         iruptError "unex"
     fi
+fi
+if [ "$check" == 1 ]
+then
+    fetchInstalledSoftware
+    installedCuda=0
+    if [ "$cudaDriverInstalled" == 1 ]
+    then
+        installedCuda=1
+    fi
+    if [ "$cudaDeveloperDriverInstalled" == 1 ]
+    then
+        installedCuda=2
+    fi
+    if [ "$cudaToolkitInstalled" == 1 ]
+    then
+        installedCuda=3
+    fi
+    if [ "$cudaSamplesInstalled" == 1 ]
+    then
+        installedCuda=4
+    fi
+    deduceCudaNeedsInstall
+    if [[ "$installedCuda" < "$cuda" ]]
+    then
+        echo "The script has determined that your system lacks the reuqired CUDA installation needed in order to run certain programms on the eGPU."
+        echo "You can run the script again without any paramters to install the required CUDA software."
+    else
+        echo "Your system has the appropriate CUDA installations. No changes needed."
+        echo "There may still be programms that the script is unware of their CUDA needs."
+    fi
+    echo
+    system_profiler -detailLevel mini SPDisplaysDataType SPHardwareDataType SPThunderboltDataType
 fi
 
 finish
