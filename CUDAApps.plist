@@ -6,6 +6,12 @@
 	<array>
 		<dict>
 			<key>name</key>
+			<string>DAZStudio</string>
+			<key>requirement</key>
+			<string>driver</string>
+		</dict>
+		<dict>
+			<key>name</key>
 			<string>Mathematica</string>
 			<key>requirement</key>
 			<string>toolkit</string>
