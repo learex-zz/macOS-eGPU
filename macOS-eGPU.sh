@@ -1696,6 +1696,7 @@ then
         echo "The script has determined that your system lacks the reuqired CUDA installation needed in order to run certain programms on the eGPU."
         echo "You can run the script again without any paramters to install the required CUDA software."
     else
+        echo
         echo "Your system has the appropriate CUDA installations. No changes needed."
         echo "There may still be programms that the script is unware of their CUDA needs."
     fi

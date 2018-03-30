@@ -53,7 +53,7 @@ in order to update the installed eGPU software.
 ## External Content
 This script may use some of the following external content:
 - goalque's automate-eGPU ([Link][3])
-- Benjamin Dobell’s nvidia-update ([Link][4])
+- Benjamin Dobell’s NVIDIA-update ([Link][4])
 - NVDAEGPUSupport by devild/ricosuave0922 ([Link][5])
 - CUDA Drivers ([Link][6])
 - CUDA Toolkit ([Link][7])
@@ -67,10 +67,10 @@ All external content may be subject to different licenses.
 Installs software. If not specified otherwise, the script will determine itself what to install. If some software is already installed, it will be updated.
 
 `--uninstall | -u`  
-Uninstalls software. If not specified otherwise, the script will try to uninstall the nvidia drivers, the eGPU support and all CUDA installations.
+Uninstalls software. If not specified otherwise, the script will try to uninstall the NVIDIA drivers, the eGPU support and all CUDA installations.
 
 `--update | -r`  
-This will try update your drivers, eGPU support and CUDA installations. It will not install new software.
+This will try to update your drivers, eGPU support and CUDA installations. It will not install new software.
 
 ### Check
 `--check | -h`  
@@ -109,7 +109,7 @@ Therefore, installing the toolkit will also install the drivers and uninstalling
 The parameters in this section will change the behavior of the script.
 
 `--forceNewest | -f`  
-Force the newest nvidia drivers and CUDA drivers to be used. This is not recommended. The script will automatically determine the most *stable* drivers. Cannot be used with `--uninstall | -u`.
+Force the newest NVIDIA drivers and CUDA drivers to be used. This is not recommended. The script will automatically determine the most *stable* drivers. Cannot be used with `--uninstall | -u`.
 
 `--forceReinstall | -l`  
 Force an uninstall of installed software although the software may be up to date. Can be used to fix corrupt software installations.  

@@ -1,8 +1,9 @@
 macOS-eGPU.sh all versions
-\-----------------------------------------------------------------
+——————————————————————————————————————————————————————————————————
 Authors: learex
 Homepage: https://github.com/learex/macOS-eGPU
 License: https://github.com/learex/macOS-eGPU/License.text
+——————————————————————————————————————————————————————————————————
 
 USAGE TERMS of macOS-eGPU.sh
 1. You may use this script for personal use.
