@@ -6,6 +6,42 @@
 	<array>
 		<dict>
 			<key>name</key>
+			<string>Maya</string>
+			<key>requirement</key>
+			<string>driver</string>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>*Houdini*</string>
+			<key>requirement</key>
+			<string>driver</string>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Adobe Lightroom*</string>
+			<key>requirement</key>
+			<string>driver</string>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Adobe Premiere Pro*</string>
+			<key>requirement</key>
+			<string>driver</string>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Adobe After Effects*</string>
+			<key>requirement</key>
+			<string>driver</string>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Adobe Photoshop*</string>
+			<key>requirement</key>
+			<string>driver</string>
+		</dict>
+		<dict>
+			<key>name</key>
 			<string>DAZStudio</string>
 			<key>requirement</key>
 			<string>driver</string>
