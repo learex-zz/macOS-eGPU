@@ -170,6 +170,7 @@ function rebootSystem {
     echo
     if [ "$scheduleReboot" == 0 ]
     then
+        echo
         exit
     elif [ "$noReboot" == 1 ]
     then
@@ -187,6 +188,7 @@ function rebootSystem {
         sleep "$waitTime"
             sudo reboot
     fi
+    echo
     exit
 }
 
@@ -200,6 +202,7 @@ function irupt {
     else
         echo "Nothing has been changed."
     fi
+    echo
     exit
 }
 
@@ -219,6 +222,7 @@ function finish {
         echo
         echo "Nothing has been changed."
     fi
+    echo
     exit
 }
 
@@ -1700,6 +1704,7 @@ then
         echo "Your system has the appropriate CUDA installations. No changes needed."
         echo "There may still be programms that the script is unware of their CUDA needs."
     fi
+    echo
     echo
     system_profiler -detailLevel mini SPDisplaysDataType SPHardwareDataType SPThunderboltDataType
 fi

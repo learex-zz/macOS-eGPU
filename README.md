@@ -1,6 +1,6 @@
 
 # macOS-eGPU
-Setup/Update/Uninstall Nvidia eGPU Support on a mac with macOS Sierra (10.12) or High Sierra (10.13).
+Setup/Update/Uninstall NVIDIA eGPU Support on a mac with macOS Sierra (10.12) or High Sierra (10.13).
 
 ## Howto
 Simply execute the following Terminal command:  
@@ -53,7 +53,7 @@ in order to update the installed eGPU software.
 ## External Content
 This script may use some of the following external content:
 - goalque's automate-eGPU ([Link][3])
-- Benjamin Dobell’s NVIDIA-update ([Link][4])
+- Benjamin Dobell’s nvidia-update ([Link][4])
 - NVDAEGPUSupport by devild/ricosuave0922 ([Link][5])
 - CUDA Drivers ([Link][6])
 - CUDA Toolkit ([Link][7])
@@ -81,7 +81,7 @@ Cannot be used with #Standard, #Packages, `--forceNewest | -f`, `--forceReinstal
 The parameters in this section will override the deductions on what to install/update/uninstall of the script.
 
 `--driver | -d`  
-Nvidia GPU drivers for Mac
+NVIDIA GPU drivers for Mac
 
 `--enabler | -e`  
 Tweak to enable eGPU support on the Mac
