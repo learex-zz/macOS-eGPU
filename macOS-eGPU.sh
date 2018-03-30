@@ -48,6 +48,7 @@ pbuddy="/usr/libexec/PlistBuddy"
 
 
 branch="master"
+warningOS="10.13.4"
 
 #download
 automateeGPUScriptDPath="https://raw.githubusercontent.com/goalque/automate-eGPU/master/automate-eGPU.sh"
@@ -73,7 +74,7 @@ cudaDriverVolPath="/Volumes/CUDADriver/"
 cudaDriverPKGName="CUDADriver.pkg"
 cudaToolkitVolPath="/Volumes/CUDAMacOSXInstaller/"
 cudaToolkitPKGName="CUDAMacOSXInstaller.app/Contents/MacOS/CUDAMacOSXInstaller"
-programmList=""
+programList=""
 
 #uninstall
 nvidiaDriverUnInstallPath="/Library/PreferencePanes/NVIDIA Driver Manager.prefPane/Contents/MacOS/NVIDIA Web Driver Uninstaller.app/Contents/Resources/NVUninstall.pkg"
@@ -628,6 +629,15 @@ function fetchSIPstat {
 
 #execute and check if script is compatible with os
 fetchOSinfo
+if [ "$os" == "$warningOS" ]
+then
+    echo "You are using a version of macOS that is not supported."
+    echo "It is currently unknown if and when support will arrive."
+    echo "The current recommendation is to downgrade macOS to the previous version using Time Machine."
+    echo "To check whether the script has been updated, visit its GitHub homepage."
+    cont "ask" "Should the script still continue executing?" "NOTE: eGPU Support will not work even if the rest is executed!"
+fi
+
 case "${os::5}"
 in
     "10.12")
@@ -1441,7 +1451,7 @@ function installeGPUSupport {
 }
 
 
-function fetchInstalledProgramms {
+function fetchInstalledPrograms {
     echo
     echo "Fetching installed apps. This might take a few moments ..."
     appListPaths="$(find /Applications/ -iname *.app)"
@@ -1453,11 +1463,11 @@ function fetchInstalledProgramms {
     done <<< "$appListPaths"
     appList="${appList%;}"
     appList="${appList//;/\n}"
-    programmList="$(echo -e $appList)"
+    programList="$(echo -e $appList)"
 }
 
 function deduceCudaNeedsInstall {
-    fetchInstalledProgramms
+    fetchInstalledPrograms
     echo
     echo "Fetching CUDA requiring apps ..."
     mktmpdir
@@ -1467,35 +1477,45 @@ function deduceCudaNeedsInstall {
     appCount=$(echo "$apps" | wc -l | xargs)
     echo
     echo "Checking if installed apps require CUDA to run on eGPU ..."
+    cudaRequirementTemp=0
     for index in `seq 0 $(expr $appCount - 1)`
     do
         appNameTemp=$("$pbuddy" -c "Print apps:$index:name" "$CUDAAppList")
         driverNeedsTemp=$("$pbuddy" -c "Print apps:$index:requirement" "$CUDAAppList")
-        if [[ "$programmList[@]" =~ $appNameTemp ]]
+        if [[ "$programList[@]" =~ $appNameTemp ]]
         then
+            fullProgramNameTemp=$( echo "$programList" | grep $appNameTemp )
             case "$driverNeedsTemp"
             in
             "driver")
+                echo "$fullProgramNameTemp"" needs CUDA drivers"
                 if [[ "$cuda" < 1 ]]
                 then
+                    cudaRequirementTemp=1
                     cuda=1
                 fi
                 ;;
             "developerDriver")
+                echo "$fullProgramNameTemp"" needs CUDA developer driver"
                 if [[ "$cuda" < 2 ]]
                 then
+                    cudaRequirementTemp=2
                     cuda=2
                 fi
                 ;;
             "toolkit")
+                echo "$fullProgramNameTemp"" needs CUDA toolkit"
                 if [[ "$cuda" < 3 ]]
                 then
+                    cudaRequirementTemp=4
                     cuda=3
                 fi
                 ;;
             "samples")
+                echo "$fullProgramNameTemp"" needs CUDA samples"
                 if [[ "$cuda" < 4 ]]
                 then
+                    cudaRequirementTemp=8
                     cuda=4
                 fi
                 ;;
@@ -1504,6 +1524,7 @@ function deduceCudaNeedsInstall {
             esac
         fi
     done
+    echo "CUDA requirement status: ""$cudaRequirementTemp"
     rm "$CUDAAppList"
 }
 
@@ -1634,47 +1655,45 @@ function deduceUserWish {
 if [ "$check" == 0 ]
 then
     deduceUserWish
-fi
-
-if [ "$cuda" != 0 ]
-then
-    if [ "$install" == 1 ] || [ "$update" == 1 ]
+    if [ "$cuda" != 0 ]
     then
-        installCuda
-    elif [ "$uninstall" == 1 ]
-    then
-        uninstallCuda
-    else
-        iruptError "unex"
+        if [ "$install" == 1 ] || [ "$update" == 1 ]
+        then
+            installCuda
+        elif [ "$uninstall" == 1 ]
+        then
+            uninstallCuda
+        else
+            iruptError "unex"
+        fi
     fi
-fi
 
-if [ "$driver" == 1 ]
-then
-    if [ "$install" == 1 ] || [ "$update" == 1 ]
+    if [ "$driver" == 1 ]
     then
-        installNvidiaDriver
-    elif [ "$uninstall" == 1 ]
-    then
-        uninstallNvidiaDriver
-    else
-        iruptError "unex"
+        if [ "$install" == 1 ] || [ "$update" == 1 ]
+        then
+            installNvidiaDriver
+        elif [ "$uninstall" == 1 ]
+        then
+            uninstallNvidiaDriver
+        else
+            iruptError "unex"
+        fi
     fi
-fi
 
-if [ "$enabler" == 1 ]
-then
-    if [ "$install" == 1 ] || [ "$update" == 1 ]
+    if [ "$enabler" == 1 ]
     then
-        installeGPUSupport
-    elif [ "$uninstall" == 1 ]
-    then
-        unInstalleGPUSupport
-    else
-        iruptError "unex"
+        if [ "$install" == 1 ] || [ "$update" == 1 ]
+        then
+            installeGPUSupport
+        elif [ "$uninstall" == 1 ]
+        then
+            unInstalleGPUSupport
+        else
+            iruptError "unex"
+        fi
     fi
-fi
-if [ "$check" == 1 ]
+elif [ "$check" == 1 ]
 then
     fetchInstalledSoftware
     installedCuda=0
@@ -1697,16 +1716,18 @@ then
     deduceCudaNeedsInstall
     if [[ "$installedCuda" < "$cuda" ]]
     then
-        echo "The script has determined that your system lacks the reuqired CUDA installation needed in order to run certain programms on the eGPU."
+        echo "The script has determined that your system lacks the required CUDA installation needed in order to run certain programs on the eGPU."
         echo "You can run the script again without any paramters to install the required CUDA software."
     else
         echo
         echo "Your system has the appropriate CUDA installations. No changes needed."
-        echo "There may still be programms that the script is unware of their CUDA needs."
+        echo "There may still be programs that the script is unware of their CUDA needs."
     fi
     echo
     echo
     system_profiler -detailLevel mini SPDisplaysDataType SPHardwareDataType SPThunderboltDataType
+else
+    iruptError "unex"
 fi
 
 finish

@@ -1,6 +1,11 @@
 
 # macOS-eGPU
-Setup/Update/Uninstall NVIDIA eGPU Support on a mac with macOS Sierra (10.12) or High Sierra (10.13).
+**NOTE: THE SCRIPT DOES NOT WORK FOR 10.13.4  
+It is currently unknown if and when support will arrive.  
+The current recommendation is to downgrade macOS to 10.13.3 using Time Machine.  
+To check whether the script has been updated, visit its GitHub homepage.**
+## Purpose
+Setup/Update/Uninstall NVIDIA eGPU Support on a Mac with macOS Sierra (10.12) or High Sierra (10.13).
 
 ## Howto
 Simply execute the following Terminal command:  
