@@ -174,6 +174,7 @@ forceNew="stable"
 
 ##internal rules
 determine=0
+customDriver=0
 
 ##OS info
 os=0
