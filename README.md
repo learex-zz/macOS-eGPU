@@ -85,8 +85,8 @@ Cannot be used with #Standard, #Packages, `--forceNewest | -f`, `--forceReinstal
 ### Packages
 The parameters in this section will override the deductions on what to install/update/uninstall of the script.
 
-`--driver | -d`  
-NVIDIA GPU drivers for Mac
+`--driver [revision] | -d [revision]`  
+NVIDIA GPU drivers for Mac; you can specify the exact driver by providing the version number thereafter
 
 `--enabler | -e`  
 Tweak to enable eGPU support on the Mac
