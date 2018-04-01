@@ -2,7 +2,7 @@
 #
 # Authors: learex
 # Homepage: https://github.com/learex/macOS-eGPU
-# License: https://github.com/learex/macOS-eGPU/License.text
+# License: https://github.com/learex/macOS-eGPU/blob/master/License.txt
 #
 # USAGE TERMS of macOS-eGPU.sh
 # 1. You may use this script for personal use.
@@ -25,18 +25,23 @@
 clear
 
 
+##############################################################################################################variable preparation
+
+
 #define all paths and URLs
-#directory handling
+
+
+##directory handling
 dirName="$(uuidgen)"
 dirName="$TMPDIR""macOS.eGPU.""$dirName"
-#tempdir creator
+###tempdir creator
 function mktmpdir {
     if ! [ -d "$dirName" ]
     then
         mkdir "$dirName"
     fi
 }
-
+###tmpdir cleanup
 function cleantmpdir {
     if [ -d "$dirName" ]
     then
@@ -44,41 +49,76 @@ function cleantmpdir {
     fi
 }
 
+
+##outside programs
 pbuddy="/usr/libexec/PlistBuddy"
 
 
+##script specific information
 branch="master"
 warningOS="10.13.4"
 
-#download
+
+##static download paths
+###Sierra enabler
 automateeGPUScriptDPath="https://raw.githubusercontent.com/goalque/automate-eGPU/master/automate-eGPU.sh"
+###High Sierra enabler
+eGPUEnablerListOnline="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch""/eGPUenabler.plist"
+###NVIDIA drivers
 nvidiaUpdateScriptDPath="https://raw.githubusercontent.com/Benjamin-Dobell/nvidia-update/master/nvidia-update.sh"
 nvidiaDriverListOnline="https://gfe.nvidia.com/mac-update"
+###CUDA drivers
 cudaDriverListOnline="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch""/cudaDriver.plist"
 cudaToolkitListOnline="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch""/cudaToolkit.plist"
-eGPUEnablerListOnline="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch""/eGPUenabler.plist"
 CUDAAppListOnline="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch""/CUDAApps.plist"
+
+
+##dynamic download paths and dynamic installation info
+###High Sierra enabler
 eGPUEnablerDPath=""
 eGPUEnablerAuthor=""
 eGPUEnablerPKGName=""
+###CUDA driver
 cudaDriverDPath=""
 cudaToolkitDPath=""
 cudaDownloadVersion=""
-cudaToolkitDriverVersion=""
-nvidiaDriverDownloadVersion=""
 
-#install
-eGPUEnablerPKGName=""
-eGPUEnablerAuthor=""
+
+##system information
+###CUDA driver
+cudaDriverVersion=""
+cudaToolkitDriverVersion=""
+cudaVersionFull=""
+cudaVersion=""
+cudaVersionsInstalled=""
+cudaVersions=0
+###NVIDIA driver
+nvidiaDriverDownloadVersion=""
+nvidiaDriverVersion=""
+nvidiaDriverBuildVersion=""
+###High Sierra enabler
+eGPUenablerBuildVersion=""
+###Installed programs
+programList=""
+
+
+##system information fetch
+nvidiaDriverVersionPath="/Library/Extensions/NVDAStartupWeb.kext/Contents/Info.plist"
+eGPUBuildVersionPath="/Library/Extensions/NVDAEGPUSupport.kext/Contents/Info.plist"
+
+
+##static installation paths
+###CUDA drivers
 cudaDriverVolPath="/Volumes/CUDADriver/"
 cudaDriverPKGName="CUDADriver.pkg"
 cudaToolkitVolPath="/Volumes/CUDAMacOSXInstaller/"
 cudaToolkitPKGName="CUDAMacOSXInstaller.app/Contents/MacOS/CUDAMacOSXInstaller"
-programList=""
 
-#uninstall
+
+##static uninstallation paths
+###NVIDIA drivers
 nvidiaDriverUnInstallPath="/Library/PreferencePanes/NVIDIA Driver Manager.prefPane/Contents/MacOS/NVIDIA Web Driver Uninstaller.app/Contents/Resources/NVUninstall.pkg"
-cudaDriverVersion=""
+###CUDA drivers
 cudaDriverVersionPath="/Library/Frameworks/CUDA.framework/Versions/A/Resources/Info.plist"
 cudaVersionPath="/usr/local/cuda/version.txt"
 cudaUserPath="/usr/local/cuda"
@@ -88,32 +128,42 @@ cudaDriverLaunchAgentPath="/Library/LaunchAgents/com.nvidia.CUDASoftwareUpdate.p
 cudaDriverPrefPane="/Library/PreferencePanes/CUDA Preferences.prefPane"
 cudaDriverStartupItemPath="/System/Library/StartupItems/CUDA/"
 cudaDriverKEXTPath="/Library/Extensions/CUDA.kext"
-cudaToolkitUnInstallDir=""
-cudaToolkitUnInstallScript=""
 cudaDeveloperDirPath="/Developer/NVIDIA/"
+###High Sierra enabler
 enablerKextPath="/Library/Extensions/NVDAEGPUSupport.kext"
+###Sierra enabler
 automateeGPUPath="/Library/Application Support/Automate-eGPU/"
 automateeGPUScriptPath="/usr/local/bin/automate-eGPU.sh"
 rastafabisEnablerUninstallerPath="/Applications/Uninstall Rastafabi's eGPU Enabler.app"
 
 
-#info
-nvidiaDriverVersionPath="/Library/Extensions/NVDAStartupWeb.kext/Contents/Info.plist"
-eGPUBuildVersionPath="/Library/Extensions/NVDAEGPUSupport.kext/Contents/Info.plist"
+##dynamic uninstallation paths
+###CUDA drivers
+cudaToolkitUnInstallDir=""
+cudaToolkitUnInstallScript=""
+
+
+
 
 #define all settings and info variables
+##script finish behavior
 scheduleReboot=0
+doneSomething=0
+listOfChanges="A list of what has been done:\n"
 
+##script parameter
+###script parameter #Standard
 install=0
 uninstall=0
-reinstall=0
 update=0
+###script parameter #Packages
 enabler=0
 driver=0
 cuda=0
-determine=0
+###script parameter #Check
 check=0
-
+###script parameter #Advanced
+reinstall=0
 noReboot=0
 silent=0
 license=0
@@ -121,44 +171,49 @@ errorCont=0
 minimal=0
 forceNew="stable"
 
+
+##internal rules
+determine=0
+
+##OS info
 os=0
 build=0
 statSIP=128
 
-eGPUenablerBuildVersion=""
-nvidiaDriverVersion=""
-nvidiaDriverBuildVersion=""
-cudaVersion=0
-cudaVersionFull=0
-cudaVersionsInstalled=""
-cudaVersions=0
 
-
-#already installed
+##installed eGPU software
+###CUDA driver
 cudaVersionInstalled=0
 cudaDriverInstalled=0
 cudaDeveloperDriverInstalled=0
 cudaToolkitInstalled=0
 cudaSamplesInstalled=0
+###NVIDIA driver
 nvidiaDriversInstalled=0
+###High Sierra enabler
 eGPUenablerInstalled=0
+###Sierra enabler
 automateeGPUInstalled=0
 rastafabisEnablerInstalled=0
 
-#freshly installed
-doneSomething=0
-listOfChanges="A list of what has been done:\n"
 
+##wait times
 waitTime=7
 priorWaitTime=5
 
-#define error functions and messages and end functions
+
+##############################################################################################################error and finish handling
+
+
+#define error functions, messages and end functions
+##print all changes made to the system
 function printChanges {
     echo
     echo
     echo -e "$listOfChanges"
 }
 
+##print info about tweaking
 function printInformation {
     echo
     echo
@@ -166,6 +221,7 @@ function printInformation {
     echo "https://github.com/learex/macOS-eGPU#tweaks"
 }
 
+##reboot handler
 function rebootSystem {
     cleantmpdir
     echo
@@ -193,6 +249,7 @@ function rebootSystem {
     exit
 }
 
+##handle script abortion due to error
 function irupt {
     cleantmpdir
     echo
@@ -207,6 +264,7 @@ function irupt {
     exit
 }
 
+##finish behavior
 function finish {
     cleantmpdir
     echo
@@ -227,7 +285,7 @@ function finish {
     exit
 }
 
-
+##error handler, fatal error
 function iruptError {
     echo
     echo
@@ -276,6 +334,7 @@ function iruptError {
     irupt
 }
 
+##error/ask function
 function cont {
     case "$1"
     in
@@ -323,6 +382,7 @@ function cont {
     fi
 }
 
+##error handler, non-fatal error
 function contError {
     echo
     echo
@@ -388,6 +448,10 @@ function contError {
         echo "The script will still try to continue executing ..."
     fi
 }
+
+
+##############################################################################################################parameter extraction and distribution
+
 
 #extract parameters
 for options in "$@"
@@ -522,6 +586,11 @@ do
     esac
 done
 
+
+
+
+#silent dependencies
+##license accept
 if [ "$silent" == 1 ] && [ "$license" == 0 ]
 then
     echo "Silent execution requires explicit acceptance of the licensing terms."
@@ -529,13 +598,28 @@ then
     finish
 fi
 
+##error handling with silent
 if [ "$silent" == 0 ] && [ "$errorCont" != 0 ]
 then
     echo "Error handling options can only be used in conjunction with --silent | -s."
     finish
 fi
 
-#display warning
+
+
+
+#ask license question
+if [ "$silent" == 0 ] && [ "$license" == 0 ]
+then
+    echo "You can read the licensing agreement here:"
+    echo "https://github.com/learex/macOS-eGPU/blob/master/License.txt"
+    cont "ask" "Do you agree with the license terms?" "Any further execution requires acceptance of the licensing terms ..."
+fi
+
+
+
+
+#display reboot warning
 if [ "$noReboot" == 0 ] && [ "$check" == 0 ]
 then
     echo "The system will reboot after successfull completion."
@@ -551,11 +635,7 @@ then
     sleep "$priorWaitTime"
 fi
 
-#ask license question
-if [ "$silent" == 0 ] && [ "$license" == 0 ]
-then
-    cont "ask" "Do you agree with the license terms?" "Any further execution requires acceptance of the licensing terms ..."
-fi
+
 
 #set standards
 if [ "$install" == 0 ] && [ "$uninstall" == 0 ] && [ "$update" == 0 ] && [ "$check" == 0 ]
@@ -568,7 +648,11 @@ then
     determine=1
 fi
 
-#define system info functions
+##############################################################################################################define and execute system information functions
+
+
+#define functions
+##define system info function
 function fetchOSinfo {
     echo
     echo
@@ -578,6 +662,7 @@ function fetchOSinfo {
     echo "OS version: $os (build: $build)"
 }
 
+##define SIP info function
 function fetchSIPstat {
     echo
     echo "Fetching System Integrity Protection (SIP) status ..."
@@ -627,7 +712,8 @@ function fetchSIPstat {
     echo "SIP status: $statSIP"
 }
 
-#execute and check if script is compatible with os
+#execute and check compatibility
+##os
 fetchOSinfo
 if [ "$os" == "$warningOS" ]
 then
@@ -652,6 +738,7 @@ in
         ;;
 esac
 
+##SIP
 fetchSIPstat
 if [ "$statSIP" != 31 ] && [ "$statSIP" != 128 ]
 then
@@ -662,7 +749,11 @@ then
 fi
 
 
-#define software check function
+##############################################################################################################define software check functions
+
+
+#define software check functions
+##CUDA
 function checkCudaInstall {
     echo
     echo "Searching for CUDA installations ..."
@@ -729,6 +820,7 @@ function checkCudaInstall {
     echo "CUDA installation status: $(expr $cudaDriverInstalled + $cudaDeveloperDriverInstalled \* 2 + $cudaToolkitInstalled \* 4 + $cudaSamplesInstalled \* 8)"
 }
 
+##NVIDIA driver
 function checkNvidiaDriverInstall {
     echo
     echo "Searching for NVIDIA drivers ..."
@@ -747,6 +839,7 @@ function checkNvidiaDriverInstall {
     fi
 }
 
+##Sierra enabler
 function checkAutomateeGPUInstall {
     echo
     echo "Searching for installed eGPU support (Sierra, goalque) ..."
@@ -769,6 +862,7 @@ function checkRastafabisEnablerInstall {
     echo "eGPU Support status: $(expr $automateeGPUInstalled + $rastafabisEnablerInstalled \* 2 + $eGPUenablerInstalled \* 4)"
 }
 
+##High Sierra enabler
 function checkeGPUEnablerInstall {
     echo
     echo "Searching for installed eGPU support (High Sierra) ..."
@@ -783,6 +877,7 @@ function checkeGPUEnablerInstall {
     echo "eGPU Support status: $(expr $automateeGPUInstalled + $rastafabisEnablerInstalled \* 2 + $eGPUenablerInstalled \* 4)"
 }
 
+##do it all
 function fetchInstalledSoftware {
     echo
     checkCudaInstall
@@ -793,49 +888,34 @@ function fetchInstalledSoftware {
 }
 
 
+
+
+
+#Gather list of programms
+function fetchInstalledPrograms {
+    echo
+    echo "Fetching installed apps. This might take a few moments ..."
+    appListPaths="$(find /Applications/ -iname *.app)"
+    appList=""
+    while read -r app
+    do
+        appTemp="${app##*/}"
+        appList="$appList""${appTemp%.*}"";"
+    done <<< "$appListPaths"
+    appList="${appList%;}"
+    appList="${appList//;/\n}"
+    programList="$(echo -e $appList)"
+}
+
+
+
+
+##############################################################################################################define software uninstall functions
+
+
 #define uninstallers
-function uninstallAutomateeGPU {
-    checkAutomateeGPUInstall
-    if [ "$automateeGPUInstalled" == 1 ]
-    then
-        echo
-        echo "Uninstalling eGPU support (Sierra) ..."
-        echo
-        echo "Downloading and preparing goalque's automate-eGPU script ..."
-        mktmpdir
-        curl -o "$dirName"/automate-eGPU.sh "$automateeGPUScriptPath"
-        cd "$dirName"/
-        chmod +x automate-eGPU.sh
-        echo "Executing goalque's automate-eGPU script with elevated privileges and uninstall parameter..."
-        sudo ./automate-eGPU.sh -uninstall
-        rm automate-eGPU.sh
-        scheduleReboot=1
-        doneSomething=1
-        listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) has been uninstalled"
-    else
-        contError "unEnabler"
-        listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) was not found"
-    fi
-}
-
-function uninstallRastafabisEnabler {
-    checkRastafabisEnablerInstall
-    if [ "$rastafabisEnablerInstalled" == 1 ]
-    then
-        echo
-        echo "Uninstalling eGPU support (Sierra) ..."
-        echo
-        echo "Executing Rastafabi's Enabler Uninstaller (elevated privileges needed) ..."
-        sudo installer -pkg "$rastafabisEnablerUninstallerPath" -target /
-        scheduleReboot=1
-        doneSomething=1
-        listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) has been uninstalled"
-    else
-        contError "unEnabler"
-        listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) was not found"
-    fi
-}
-
+##CUDA
+###CUDA driver
 function uninstallCudaDriver {
     if [ "$cudaDriverInstalled" == 1 ]
     then
@@ -870,7 +950,7 @@ function uninstallCudaDriver {
         listOfChanges="$listOfChanges""\n""-CUDA drivers were not found"
     fi
 }
-
+###CUDA toolkit residue
 function uninstallCudaToolkitResidue {
     if [ -d "$cudaDeveloperDirPath" ] || [ -d "$cudaUserPath" ]
     then
@@ -885,7 +965,7 @@ function uninstallCudaToolkitResidue {
         fi
     fi
 }
-
+###CUDA, all
 function uninstallCuda {
     echo
     echo
@@ -995,22 +1075,7 @@ function uninstallCuda {
     fi
 }
 
-function uninstallEnabler {
-    checkeGPUEnablerInstall
-    if [ "$eGPUenablerInstalled" == 1 ]
-    then
-        echo
-        echo "Removing enabler (elevated privileges needed) ..."
-        sudo rm -rf "$enablerKextPath"
-        listOfChanges="$listOfChanges""\n""-eGPU support (High Sierra) has been uninstalled"
-        scheduleReboot=1
-        doneSomething=1
-    else
-        contError "unEnabler"
-        listOfChanges="$listOfChanges""\n""-eGPU support (High Sierra) was not found"
-    fi
-}
-
+##NVIDIA driver
 function uninstallNvidiaDriver {
     echo
     echo
@@ -1029,6 +1094,66 @@ function uninstallNvidiaDriver {
     fi
 }
 
+##eGPU support
+###Sierra enabler
+function uninstallAutomateeGPU {
+    checkAutomateeGPUInstall
+    if [ "$automateeGPUInstalled" == 1 ]
+    then
+        echo
+        echo "Uninstalling eGPU support (Sierra) ..."
+        echo
+        echo "Downloading and preparing goalque's automate-eGPU script ..."
+        mktmpdir
+        curl -o "$dirName"/automate-eGPU.sh "$automateeGPUScriptPath"
+        cd "$dirName"/
+        chmod +x automate-eGPU.sh
+        echo "Executing goalque's automate-eGPU script with elevated privileges and uninstall parameter..."
+        sudo ./automate-eGPU.sh -uninstall
+        rm automate-eGPU.sh
+        scheduleReboot=1
+        doneSomething=1
+        listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) has been uninstalled"
+    else
+        contError "unEnabler"
+        listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) was not found"
+    fi
+}
+###Sierra enabler
+function uninstallRastafabisEnabler {
+    checkRastafabisEnablerInstall
+    if [ "$rastafabisEnablerInstalled" == 1 ]
+    then
+        echo
+        echo "Uninstalling eGPU support (Sierra) ..."
+        echo
+        echo "Executing Rastafabi's Enabler Uninstaller (elevated privileges needed) ..."
+        sudo installer -pkg "$rastafabisEnablerUninstallerPath" -target /
+        scheduleReboot=1
+        doneSomething=1
+        listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) has been uninstalled"
+    else
+        contError "unEnabler"
+        listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) was not found"
+    fi
+}
+###High Sierra enabler
+function uninstallEnabler {
+    checkeGPUEnablerInstall
+    if [ "$eGPUenablerInstalled" == 1 ]
+    then
+        echo
+        echo "Removing enabler (elevated privileges needed) ..."
+        sudo rm -rf "$enablerKextPath"
+        listOfChanges="$listOfChanges""\n""-eGPU support (High Sierra) has been uninstalled"
+        scheduleReboot=1
+        doneSomething=1
+    else
+        contError "unEnabler"
+        listOfChanges="$listOfChanges""\n""-eGPU support (High Sierra) was not found"
+    fi
+}
+###eGPU support, all
 function unInstalleGPUSupport {
     echo
     echo
@@ -1050,7 +1175,12 @@ function unInstalleGPUSupport {
     fi
 }
 
+##############################################################################################################define software install functions
+
+
 #define installers
+##eGPU Support
+###Sierra enabler
 function installAutomateeGPU {
     checkAutomateeGPUInstall
     checkeGPUEnablerInstall
@@ -1102,7 +1232,104 @@ function installAutomateeGPU {
         listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) has been installed"
     fi
 }
+###High Sierra enabler
+####High Sierra enabler install routine
+function enablerInstaller {
+    echo "Fetching newest enabler information ..."
+    mktmpdir
+    curl -o "$dirName""/eGPUenabler.plist" "$eGPUEnablerListOnline"
+    eGPUEnablerList="$dirName""/eGPUenabler.plist"
+    enablers=$("$pbuddy" -c "Print updates:" "$eGPUEnablerList" | grep "build" | awk '{print $3}')
+    enablerCount=$(echo "$enablers" | wc -l | xargs)
+    foundMatch=false
+    for index in `seq 0 $(expr $enablerCount - 1)`
+    do
+        buildTemp=$("$pbuddy" -c "Print updates:$index:build" "$eGPUEnablerList")
+        authorTemp=$("$pbuddy" -c "Print updates:$index:author" "$eGPUEnablerList")
+        pkgNameTemp=$("$pbuddy" -c "Print updates:$index:packageName" "$eGPUEnablerList")
+        eGPUEnablerDPathTemp=$("$pbuddy" -c "Print updates:$index:downloadURL" "$eGPUEnablerList")
+        if [ "$build" == "$buildTemp" ]
+        then
+            eGPUEnablerDPath="$eGPUEnablerDPathTemp"
+            eGPUEnablerAuthor="$authorTemp"
+            eGPUEnablerPKGName="$pkgNameTemp"
+            foundMatch=true
+        fi
+    done
+    rm "$eGPUEnablerList"
+    if "$foundMatch"
+    then
+        echo
+        echo "Downloading and installing ""$eGPUEnablerAuthor""'s eGPU-enabler ..."
+        curl -o "$dirName""/NVDAEGPU.zip" "$eGPUEnablerDPath"
+        unzip "$dirName""/NVDAEGPU.zip" -d "$dirName""/"
+        rm "$dirName""/NVDAEGPU.zip"
+        sudo installer -pkg "$dirName""/""$eGPUEnablerPKGName" -target /
+        rm "$dirName""/""$eGPUEnablerPKGName"
+        scheduleReboot=1
+        doneSomething=1
+        listOfChanges="$listOfChanges""\n""-eGPU support (High Sierra) has been installed"
+    else
+        contError "noEnabler"
+        listOfChanges="$listOfChanges""\n""-eGPU support (High Sierra) could not be installed"
+    fi
+}
+####High Sierra enabler install logic
+function installEnabler {
+    checkAutomateeGPUInstall
+    checkeGPUEnablerInstall
+    checkRastafabisEnablerInstall
+    if [ "$automateeGPUInstalled" == 1 ]
+    then
+        echo
+        echo "Removing previous eGPU enablers ..."
+        uninstallAutomateeGPU
+        checkAutomateeGPUInstall
+    elif [ "$rastafabisEnablerInstalled" == 1 ]
+    then
+        echo
+        echo "Removing previous eGPU enablers ..."
+        uninstallRastafabisEnabler
+        checkRastafabisEnablerInstall
+    fi
+    if [ "$reinstall" == 1 ]
+    then
+        uninstallEnabler
+        checkeGPUEnablerInstall
+    fi
+    if [ "$eGPUenablerInstalled" == 1 ]
+    then
+        if [ "$eGPUenablerBuildVersion" == "$build" ]
+        then
+            echo
+            echo "The matching eGPU enabler is already installed."
+        else
+            uninstallEnabler
+            enablerInstaller
+        fi
+    else
+        enablerInstaller
+    fi
+}
+###eGPU support, all
+function installeGPUSupport {
+    echo
+    echo
+    case "${os::5}"
+    in
+    "10.12")
+        installAutomateeGPU
+        ;;
+    "10.13")
+        installEnabler
+        ;;
+    *)
+        ;;
+    esac
+}
 
+##CUDA
+###CUDA driver
 function installCudaDriver {
     checkCudaInstall
     if [[ "$cudaVersions" > 1 ]]
@@ -1164,7 +1391,7 @@ function installCudaDriver {
         listOfChanges="$listOfChanges""\n""-No matching CUDA drivers were found"
     fi
 }
-
+###CUDA toolkit
 function installCudaToolkit {
     checkCudaInstall
     if [[ "$cudaVersions" > 1 ]]
@@ -1246,7 +1473,7 @@ function installCudaToolkit {
         listOfChanges="$listOfChanges""\n""-No matching CUDA drivers were found"
     fi
 }
-
+###CUDA, all
 function installCuda {
     echo
     echo
@@ -1269,6 +1496,7 @@ function installCuda {
     fi
 }
 
+##NVIDIA driver
 function installNvidiaDriver {
     echo
     echo
@@ -1356,116 +1584,10 @@ function installNvidiaDriver {
     fi
 }
 
-function enablerInstaller {
-    echo "Fetching newest enabler information ..."
-    mktmpdir
-    curl -o "$dirName""/eGPUenabler.plist" "$eGPUEnablerListOnline"
-    eGPUEnablerList="$dirName""/eGPUenabler.plist"
-    enablers=$("$pbuddy" -c "Print updates:" "$eGPUEnablerList" | grep "build" | awk '{print $3}')
-    enablerCount=$(echo "$enablers" | wc -l | xargs)
-    foundMatch=false
-    for index in `seq 0 $(expr $enablerCount - 1)`
-    do
-        buildTemp=$("$pbuddy" -c "Print updates:$index:build" "$eGPUEnablerList")
-        authorTemp=$("$pbuddy" -c "Print updates:$index:author" "$eGPUEnablerList")
-        pkgNameTemp=$("$pbuddy" -c "Print updates:$index:packageName" "$eGPUEnablerList")
-        eGPUEnablerDPathTemp=$("$pbuddy" -c "Print updates:$index:downloadURL" "$eGPUEnablerList")
-        if [ "$build" == "$buildTemp" ]
-        then
-            eGPUEnablerDPath="$eGPUEnablerDPathTemp"
-            eGPUEnablerAuthor="$authorTemp"
-            eGPUEnablerPKGName="$pkgNameTemp"
-            foundMatch=true
-        fi
-    done
-    rm "$eGPUEnablerList"
-    if "$foundMatch"
-    then
-        echo
-        echo "Downloading and installing ""$eGPUEnablerAuthor""'s eGPU-enabler ..."
-        curl -o "$dirName""/NVDAEGPU.zip" "$eGPUEnablerDPath"
-        unzip "$dirName""/NVDAEGPU.zip" -d "$dirName""/"
-        rm "$dirName""/NVDAEGPU.zip"
-        sudo installer -pkg "$dirName""/""$eGPUEnablerPKGName" -target /
-        rm "$dirName""/""$eGPUEnablerPKGName"
-        scheduleReboot=1
-        doneSomething=1
-        listOfChanges="$listOfChanges""\n""-eGPU support (High Sierra) has been installed"
-    else
-        contError "noEnabler"
-        listOfChanges="$listOfChanges""\n""-eGPU support (High Sierra) could not be installed"
-    fi
-}
-
-function installEnabler {
-    checkAutomateeGPUInstall
-    checkeGPUEnablerInstall
-    checkRastafabisEnablerInstall
-    if [ "$automateeGPUInstalled" == 1 ]
-    then
-        echo
-        echo "Removing previous eGPU enablers ..."
-        uninstallAutomateeGPU
-        checkAutomateeGPUInstall
-    elif [ "$rastafabisEnablerInstalled" == 1 ]
-    then
-        echo
-        echo "Removing previous eGPU enablers ..."
-        uninstallRastafabisEnabler
-        checkRastafabisEnablerInstall
-    fi
-    if [ "$reinstall" == 1 ]
-    then
-        uninstallEnabler
-        checkeGPUEnablerInstall
-    fi
-    if [ "$eGPUenablerInstalled" == 1 ]
-    then
-        if [ "$eGPUenablerBuildVersion" == "$build" ]
-        then
-            echo
-            echo "The matching eGPU enabler is already installed."
-        else
-            uninstallEnabler
-            enablerInstaller
-        fi
-    else
-        enablerInstaller
-    fi
-}
-
-function installeGPUSupport {
-    echo
-    echo
-    case "${os::5}"
-    in
-    "10.12")
-        installAutomateeGPU
-        ;;
-    "10.13")
-        installEnabler
-        ;;
-    *)
-        ;;
-    esac
-}
+##############################################################################################################self determination
 
 
-function fetchInstalledPrograms {
-    echo
-    echo "Fetching installed apps. This might take a few moments ..."
-    appListPaths="$(find /Applications/ -iname *.app)"
-    appList=""
-    while read -r app
-    do
-        appTemp="${app##*/}"
-        appList="$appList""${appTemp%.*}"";"
-    done <<< "$appListPaths"
-    appList="${appList%;}"
-    appList="${appList//;/\n}"
-    programList="$(echo -e $appList)"
-}
-
+#deduce what level of CUDA is needed
 function deduceCudaNeedsInstall {
     fetchInstalledPrograms
     echo
@@ -1528,6 +1650,10 @@ function deduceCudaNeedsInstall {
     rm "$CUDAAppList"
 }
 
+
+
+
+#deduce what installations, updates, uninstallations are wanted
 function deduceUserWish {
     fetchInstalledSoftware
     if [ "$determine" == 1 ]
@@ -1652,8 +1778,48 @@ function deduceUserWish {
     fi
 }
 
-if [ "$check" == 0 ]
-then
+##############################################################################################################define execution functions and logic
+
+#user system check
+function systemInfo {
+    fetchInstalledSoftware
+    installedCuda=0
+    if [ "$cudaDriverInstalled" == 1 ]
+    then
+        installedCuda=1
+    fi
+    if [ "$cudaDeveloperDriverInstalled" == 1 ]
+    then
+        installedCuda=2
+    fi
+    if [ "$cudaToolkitInstalled" == 1 ]
+    then
+        installedCuda=3
+    fi
+    if [ "$cudaSamplesInstalled" == 1 ]
+    then
+        installedCuda=4
+    fi
+    deduceCudaNeedsInstall
+    if [[ "$installedCuda" < "$cuda" ]]
+    then
+        echo "The script has determined that your system lacks the required CUDA installation needed in order to run certain programs on the eGPU."
+        echo "You can run the script again without any paramters to install the required CUDA software."
+    else
+        echo
+        echo "Your system has the appropriate CUDA installations. No changes needed."
+        echo "There may still be programs that the script is unware of their CUDA needs."
+    fi
+    echo
+    echo
+    system_profiler -detailLevel mini SPDisplaysDataType SPHardwareDataType SPThunderboltDataType
+}
+
+
+
+
+#system change
+function systemPatch {
     deduceUserWish
     if [ "$cuda" != 0 ]
     then
@@ -1693,43 +1859,32 @@ then
             iruptError "unex"
         fi
     fi
-elif [ "$check" == 1 ]
-then
-    fetchInstalledSoftware
-    installedCuda=0
-    if [ "$cudaDriverInstalled" == 1 ]
+}
+
+
+
+
+#system logic
+function macOSeGPU {
+    if [ "$check" == 0 ]
     then
-        installedCuda=1
-    fi
-    if [ "$cudaDeveloperDriverInstalled" == 1 ]
+        systemPatch
+    elif [ "$check" == 1 ]
     then
-        installedCuda=2
-    fi
-    if [ "$cudaToolkitInstalled" == 1 ]
-    then
-        installedCuda=3
-    fi
-    if [ "$cudaSamplesInstalled" == 1 ]
-    then
-        installedCuda=4
-    fi
-    deduceCudaNeedsInstall
-    if [[ "$installedCuda" < "$cuda" ]]
-    then
-        echo "The script has determined that your system lacks the required CUDA installation needed in order to run certain programs on the eGPU."
-        echo "You can run the script again without any paramters to install the required CUDA software."
+        systemInfo
     else
-        echo
-        echo "Your system has the appropriate CUDA installations. No changes needed."
-        echo "There may still be programs that the script is unware of their CUDA needs."
+        iruptError "unex"
     fi
-    echo
-    echo
-    system_profiler -detailLevel mini SPDisplaysDataType SPHardwareDataType SPThunderboltDataType
-else
-    iruptError "unex"
-fi
+    finish
+}
 
-finish
+##############################################################################################################execute & end
+#execute
+macOSeGPU
 
+
+
+
+#end
+iruptError "unex"
 #end of script
