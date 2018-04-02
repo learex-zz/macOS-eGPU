@@ -132,7 +132,7 @@ Force an uninstall of installed software although the software may be up to date
 Cannot be used with  `--check | -h` and `--uninstall | -u`.
 
 `--minimal | -m`  
-Only tweak the system as little as possible. This may not work in all cases.
+Only tweak the system as little as possible. This may not work in all cases.  
 Cannot be used with `--check | -h`.
 
 `--noReboot | -n`  
