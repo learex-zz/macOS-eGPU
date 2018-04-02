@@ -69,13 +69,16 @@ All external content may be subject to different licenses.
 ## Parameters
 ### Standard
 `--install | -i` (default)  
-Installs software. If not specified otherwise, the script will determine itself what to install. If some software is already installed, it will be updated.
+Installs software. If not specified otherwise, the script will determine itself what to install. If some software is already installed, it will be updated.  
+Cannot be used with `--check | -h`, `--uninstall | -u` and `--update | -r`.
 
 `--uninstall | -u`  
-Uninstalls software. If not specified otherwise, the script will try to uninstall the NVIDIA drivers, the eGPU support and all CUDA installations.
+Uninstalls software. If not specified otherwise, the script will try to uninstall the NVIDIA drivers, the eGPU support and all CUDA installations.  
+Cannot be used with `--check | -h`, `--install | -i` and `--update | -r`.
 
 `--update | -r`  
-This will try to update your drivers, eGPU support and CUDA installations. It will not install new software.
+This will try to update your drivers, eGPU support and CUDA installations. It will not install new software.  
+Cannot be used with #Packages, `--check | -h`, `--install | -i` and `--uninstall | -u`.
 
 ### Check
 `--check | -h`  
@@ -86,22 +89,29 @@ Cannot be used with #Standard, #Packages, `--forceNewest | -f`, `--forceReinstal
 The parameters in this section will override the deductions on what to install/update/uninstall of the script.
 
 `--driver [revision] | -d [revision]`  
-NVIDIA GPU drivers for Mac; you can specify the exact driver by providing the version number thereafter
+NVIDIA GPU drivers for Mac; you can specify the exact driver by providing the version number thereafter  
+`[revision]` cannot be used with `--forceNewest | -f`  
+Cannot be used with `--update | -r` and `--check | -h`.
 
 `--enabler | -e`  
-Tweak to enable eGPU support on the Mac
+Tweak to enable eGPU support on the Mac  
+Cannot be used with `--update | -r` and `--check | -h`.
 
 `--cuda | -c`  
-CUDA drivers, will use the standard driver files
+CUDA drivers, will use the standard driver files  
+Cannot be used with `--update | -r`, `--check | -h`, `--cudaDriver | -v`, `--cudaToolkit | -t` and `--cudaSamples | -a`.
 
 `--cudaDriver | -v`  
-CUDA drivers, will use the developer driver files (from the toolkit), *should* be identical to `--cuda | -c `
+CUDA drivers, will use the developer driver files (from the toolkit), *should* be identical to `--cuda | -c `  
+Cannot be used with `--update | -r`, `--check | -h`, `--cuda | -c`, `--cudaToolkit | -t` and `--cudaSamples | -a`.
 
 `--cudaToolkit | -t`  
-CUDA developer toolkit
+CUDA developer toolkit  
+Cannot be used with `--update | -r`, `--check | -h`, `--cuda | -c`, `--cudaDriver | -v` and `--cudaSamples | -a`.
 
 `--cudaSamples | -a`  
-CUDA developer samples
+CUDA developer samples  
+Cannot be used with `--update | -r`, `--check | -h`, `--cuda | -c`, `--cudaDriver | -v` and `--cudaToolkit | -t`.
 
 **Dependencies:**
 
@@ -114,32 +124,41 @@ Therefore, installing the toolkit will also install the drivers and uninstalling
 The parameters in this section will change the behavior of the script.
 
 `--forceNewest | -f`  
-Force the newest NVIDIA drivers and CUDA drivers to be used. This is not recommended. The script will automatically determine the most *stable* drivers. Cannot be used with `--uninstall | -u`.
+Force the newest NVIDIA drivers and CUDA drivers to be used. This is not recommended. The script will automatically determine the most *stable* drivers.  
+Cannot be used with `--uninstall | -u`, `--check | -h` and a driver `[revision]`.
 
 `--forceReinstall | -l`  
 Force an uninstall of installed software although the software may be up to date. Can be used to fix corrupt software installations.  
-Cannot be used with `--uninstall | -u`.
+Cannot be used with  `--check | -h` and `--uninstall | -u`.
 
 `--minimal | -m`  
 Only tweak the system as little as possible. This may not work in all cases.
+Cannot be used with `--check | -h`.
 
 `--noReboot | -n`  
 Omit the otherwise obligatory reboot at the end of the script.
 
 `--silent | -s`  
-Automatically answer every question with yes. Can only be used in conjunction with `--acceptLicenseTerms`.
+Automatically answer every question with yes.  
+Can only be used in conjunction with `--acceptLicenseTerms`.
 
 `--acceptLicenseTerms`  
 Answer the question of whether to accept the license terms with yes.
 
 `--errorContinue`  
-Can only be used in silent mode. If a non fatal error occurs, try to continue by omitting some arguments. Might result in failure.
+If a non fatal error occurs, try to continue by omitting some arguments. Might result in failure.  
+Can only be used in conjunction with `--silent | -s `.  
+Cannot be used with `--errorBreakSilence` and `--errorStop`.
 
 `--errorBreakSilence`  
-Can only be used in silent mode. If a non fatal error occurs, ask user whether to continue. Continuation  might result in failure.
+If a non fatal error occurs, ask user whether to continue. Continuation  might result in failure.  
+Can only be used in conjunction with `--silent | -s `.  
+Cannot be used with `--errorContinue` and `--errorStop`.
 
 `--errorStop`  
-Can only be used in silent mode. If a non fatal error occurs, stop the script.
+If a non fatal error occurs, stop the script.  
+Can only be used in conjunction with `--silent | -s `.  
+Cannot be used with `--errorContinue` and `--errorBreakSilence`.
 
 [1]:	https://support.apple.com/HT201314%20%22macOS-Recovery%22 "Guide to boot into recovery mode"
 [2]:	https://www.titanium-software.fr/en/onyx.html

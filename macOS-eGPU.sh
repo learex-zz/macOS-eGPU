@@ -175,6 +175,7 @@ forceNew="stable"
 ##internal rules
 determine=0
 customDriver=0
+foundMatch=false
 
 ##OS info
 os=0
@@ -600,6 +601,8 @@ do
             nvidiaDriverDownloadVersion="$options"
         else
             echo "ERROR: ""$options"
+            echo "The usage of this script is explained here in full detail:"
+            echo "https://github.com/learex/macOS-eGPU"
             iruptError "unknwnArg"
         fi
         ;;
@@ -1518,25 +1521,19 @@ function installCuda {
 }
 
 ##NVIDIA driver
-function installNvidiaDriver {
+###Installer routines
+####fetch driver information
+function nvidiaDriverInfo {
     echo
-    echo
-    checkNvidiaDriverInstall
-    if [ "$reinstall" == 1 ]
+    echo "Fetching newest NVIDIA driver information ..."
+    mktmpdir
+    curl -o "$dirName""/nvidiaDriver.plist" "$nvidiaDriverListOnline"
+    nvidiaDriverList="$dirName""/nvidiaDriver.plist"
+    drivers=$("$pbuddy" -c "Print updates:" "$nvidiaDriverList" | grep "OS" | awk '{print $3}')
+    driverCount=$(echo "$drivers" | wc -l | xargs)
+    foundMatch=false
+    if [ "$1" == "newest" ]
     then
-        uninstallNvidiaDriver
-        checkNvidiaDriverInstall
-    fi
-    if [ "$forceNew" == "newest" ]
-    then
-        echo
-        echo "Fetching newest NVIDIA driver information ..."
-        mktmpdir
-        curl -o "$dirName""/nvidiaDriver.plist" "$nvidiaDriverListOnline"
-        nvidiaDriverList="$dirName""/nvidiaDriver.plist"
-        drivers=$("$pbuddy" -c "Print updates:" "$nvidiaDriverList" | grep "OS" | awk '{print $3}')
-        driverCount=$(echo "$drivers" | wc -l | xargs)
-        foundMatch=false
         for index in `seq 0 $(expr $driverCount - 1)`
         do
             buildTemp=$("$pbuddy" -c "Print updates:$index:OS" "$nvidiaDriverList")
@@ -1548,7 +1545,65 @@ function installNvidiaDriver {
                 foundMatch=true
             fi
         done
-        rm "$nvidiaDriverList"
+    elif [ "$1" == "test" ]
+    then
+        for index in `seq 0 $(expr $driverCount - 1)`
+        do
+            nvidiaDriverVersionTemp=$("$pbuddy" -c "Print updates:$index:version" "$nvidiaDriverList")
+
+            if [ "$nvidiaDriverDownloadVersion" == "$nvidiaDriverVersionTemp" ]
+            then
+                foundMatch=true
+            fi
+        done
+    else
+        iruptError "unex"
+    fi
+    rm "$nvidiaDriverList"
+}
+####NVIDIA driver installer
+function nvidiaDriverInstaller  {
+    echo
+    echo "Downloading and executing Benjamin Dobell's NVIDIA driver script ..."
+    nvidiaDriverVersionTemp="$nvidiaDriverVersion"
+    if [ "$1" == "force" ]
+    then
+        bash <(curl -s "$nvidiaUpdateScriptDPath") --force "$nvidiaDriverDownloadVersion"
+    elif [ "$1" == "automatic" ]
+    then
+        bash <(curl -s "$nvidiaUpdateScriptDPath")
+    else
+        iruptError "unex"
+    fi
+
+    if [ "$2" == "changeTest" ]
+    then
+        checkNvidiaDriverInstall
+        if [ "$nvidiaDriverVersionTemp" != "$nvidiaDriverVersion" ]
+        then
+            doneSomething=1
+            listOfChanges="$listOfChanges""\n""-NVIDIA drivers have been installed"
+            scheduleReboot=1
+        fi
+    else
+        doneSomething=1
+        listOfChanges="$listOfChanges""\n""-NVIDIA drivers have been installed"
+        scheduleReboot=1
+    fi
+}
+###installation logic
+function installNvidiaDriver {
+    echo
+    echo
+    checkNvidiaDriverInstall
+    if [ "$reinstall" == 1 ]
+    then
+        uninstallNvidiaDriver
+        checkNvidiaDriverInstall
+    fi
+    if [ "$forceNew" == "newest" ]
+    then
+        nvidiaDriverInfo "newest"
         if "$foundMatch"
         then
             if [ "$nvidiaDriversInstalled" == 1 ]
@@ -1558,50 +1613,18 @@ function installNvidiaDriver {
                     echo
                     echo "The best NVIDIA driver is already installed."
                 else
-                    echo
-                    echo "Downloading and executing Benjamin Dobell's NVIDIA driver script ..."
-                    bash <(curl -s "$nvidiaUpdateScriptDPath") --force "$nvidiaDriverDownloadVersion"
-                    doneSomething=1
-                    listOfChanges="$listOfChanges""\n""-NVIDIA drivers have been installed"
-                    scheduleReboot=1
+                    nvidiaDriverInstaller "force"
                 fi
             else
-                echo
-                echo "Downloading and executing Benjamin Dobell's NVIDIA driver script ..."
-                bash <(curl -s "$nvidiaUpdateScriptDPath") --force "$nvidiaDriverDownloadVersion"
-                doneSomething=1
-                listOfChanges="$listOfChanges""\n""-NVIDIA drivers have been installed"
-                scheduleReboot=1
+                nvidiaDriverInstaller "force"
             fi
         else
-            contError "noNvidiaDriver"
-            echo
-            echo "Downloading and executing Benjamin Dobell's NVIDIA driver script ..."
-            bash <(curl -s "$nvidiaUpdateScriptDPath")
-            doneSomething=1
-            listOfChanges="$listOfChanges""\n""-NVIDIA drivers have been installed"
-            scheduleReboot=1
+            nvidiaDriverInstaller "automatic"
         fi
     else
         if [ "$customDriver" == 1 ]
         then
-            echo
-            echo "Fetching newest NVIDIA driver information ..."
-            mktmpdir
-            curl -o "$dirName""/nvidiaDriver.plist" "$nvidiaDriverListOnline"
-            nvidiaDriverList="$dirName""/nvidiaDriver.plist"
-            drivers=$("$pbuddy" -c "Print updates:" "$nvidiaDriverList" | grep "OS" | awk '{print $3}')
-            driverCount=$(echo "$drivers" | wc -l | xargs)
-            foundMatch=false
-            for index in `seq 0 $(expr $driverCount - 1)`
-            do
-                nvidiaDriverVersionTemp=$("$pbuddy" -c "Print updates:$index:version" "$nvidiaDriverList")
-
-                if [ "$nvidiaDriverDownloadVersion" == "$nvidiaDriverVersionTemp" ]
-                then
-                    foundMatch=true
-                fi
-            done
+            nvidiaDriverInfo "test"
             if "$foundMatch"
             then
                 if [ "$nvidiaDriverBuildVersion" == "$build" ] && [ "$nvidiaDriverDownloadVersion" == "$nvidiaDriverVersion" ]
@@ -1609,66 +1632,23 @@ function installNvidiaDriver {
                     echo
                     echo "The best NVIDIA driver is already installed."
                 else
-                    echo
-                    echo "Downloading and executing Benjamin Dobell's NVIDIA driver script ..."
-                    if [ "$nvidiaDriversInstalled" == 1 ]
-                    then
-                        nvidiaDriverVersionTemp="$nvidiaDriverVersion"
-                        bash <(curl -s "$nvidiaUpdateScriptDPath") --force "$nvidiaDriverDownloadVersion"
-                        if [ "$nvidiaDriverVersionTemp" != "$nvidiaDriverDownloadVersion" ]
-                        then
-                            doneSomething=1
-                            listOfChanges="$listOfChanges""\n""-NVIDIA drivers have been installed"
-                            scheduleReboot=1
-                        fi
-                    else
-                        bash <(curl -s "$nvidiaUpdateScriptDPath") --force "$nvidiaDriverDownloadVersion"
-                        doneSomething=1
-                        listOfChanges="$listOfChanges""\n""-NVIDIA drivers have been installed"
-                        scheduleReboot=1
-                    fi
+                    nvidiaDriverInstaller "force"
                 fi
             else
                 contError "noNvidiaDriverForce"
-                echo
-                echo "Downloading and executing Benjamin Dobell's NVIDIA driver script ..."
                 if [ "$nvidiaDriversInstalled" == 1 ]
                 then
-                    nvidiaDriverVersionTemp="$nvidiaDriverVersion"
-                    bash <(curl -s "$nvidiaUpdateScriptDPath")
-                    checkNvidiaDriverInstall
-                    if [ "$nvidiaDriverVersionTemp" != "$nvidiaDriverVersion" ]
-                    then
-                        doneSomething=1
-                        listOfChanges="$listOfChanges""\n""-NVIDIA drivers have been installed"
-                        scheduleReboot=1
-                    fi
+                    nvidiaDriverInstaller "automatic" "changeTest"
                 else
-                    bash <(curl -s "$nvidiaUpdateScriptDPath")
-                    doneSomething=1
-                    listOfChanges="$listOfChanges""\n""-NVIDIA drivers have been installed"
-                    scheduleReboot=1
+                    nvidiaDriverInstaller "automatic"
                 fi
             fi
         else
-            echo
-            echo "Downloading and executing Benjamin Dobell's NVIDIA driver script ..."
             if [ "$nvidiaDriversInstalled" == 1 ]
             then
-                nvidiaDriverVersionTemp="$nvidiaDriverVersion"
-                bash <(curl -s "$nvidiaUpdateScriptDPath")
-                checkNvidiaDriverInstall
-                if [ "$nvidiaDriverVersionTemp" != "$nvidiaDriverVersion" ]
-                then
-                    doneSomething=1
-                    listOfChanges="$listOfChanges""\n""-NVIDIA drivers have been installed"
-                    scheduleReboot=1
-                fi
+                nvidiaDriverInstaller "automatic" "changeTest"
             else
-                bash <(curl -s "$nvidiaUpdateScriptDPath")
-                doneSomething=1
-                listOfChanges="$listOfChanges""\n""-NVIDIA drivers have been installed"
-                scheduleReboot=1
+                nvidiaDriverInstaller "automatic"
             fi
         fi
     fi
