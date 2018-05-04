@@ -3368,7 +3368,9 @@ function uninstall {
     if [ `dc -e "$thunderbolt12UnlockRoutine 2 / 2 % n"` == 1 ]
     then
         echoing "Thunderbolt 1/2 unlock"
+        trapLock
         uninstallThunderbolt12Unlock
+        trapWithWarning
         echoend "done"
     fi
     if [ `dc -e "$cudaRoutine 2 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 32 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 512 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 8192 / 2 % n"` == 1 ]
@@ -3396,7 +3398,9 @@ function install {
     if [ `dc -e "$unlockNvidiaRoutine 4 / 2 % n"` == 1 ]
     then
         echoing "   NVIDIA macOS 10.13.4 unlock"
+        trapLock
         installNvidiaUnlockWranglerPatch
+        trapWithWarning
         echoend "done"
     fi
     if [ `dc -e "$amdLegacyDriverRoutine 4 / 2 % n"` == 1 ]
@@ -3420,7 +3424,9 @@ function install {
     if [ `dc -e "$thunderbolt12UnlockRoutine 4 / 2 % n"` == 1 ]
     then
         echoing "Thunderbolt 1/2 unlock"
+        trapLock
         installThunderbolt12Unlock
+        trapWithWarning
         echoend "done"
     fi
     if [ `dc -e "$cudaRoutine 4 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 64 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 1024 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 16384 / 2 % n"` == 1 ]
@@ -3435,7 +3441,9 @@ function patch {
     echo "Patching..."
     if [ `dc -e "$nvidiaDriverRoutine 8 / 2 % n"` == 1 ]
     then
+        trapLock
         patchNvidiaDriverOld
+        trapWithWarning
         echoend "done"
     fi
 }

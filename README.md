@@ -148,7 +148,7 @@ Not yet available.
 - OpenCL seems not to work on NVIDIA eGPU + dGPU configs
 	- still researched
 - Macs with NVIDIA dGPU don't boot with TB3 enclosure and NVIDIA eGPU.
-	- still researched
+	- still researched, plugin during boot 
 - Disconnect "null" on hot plug
 	- still researched. Booting with eGPU resolves this.
 - System crash on hot-disconnect
