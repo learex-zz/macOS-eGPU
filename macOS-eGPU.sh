@@ -882,8 +882,8 @@ cudaSamplesInstalled=false
 
 cudaToolkitUnInstallDir=""
 cudaToolkitUnInstallScriptName=""
-cudaToolkitUnInstallScript=""
-cudaDeveloperDriverUnInstallScript="/usr/local/bin/uninstall_cuda_drv.pl"
+cudaToolkitUnInstallScriptPath=""
+cudaDeveloperDriverUnInstallScriptPath="/usr/local/bin/uninstall_cuda_drv.pl"
 
 cudaDriverListOnline="$gitPath""/Data/cudaDriver.plist"
 cudaToolkitListOnline="$gitPath""/Data/cudaToolkit.plist"
@@ -965,7 +965,7 @@ function refineCudaToolkitInstallationStatus {
     then
         cudaToolkitUnInstallDir="/Developer/NVIDIA/CUDA-""$cudaVersion""/bin/"
         cudaToolkitUnInstallScriptName="uninstall_cuda_""$cudaVersion"".pl"
-        cudaToolkitUnInstallScript="$cudaToolkitUnInstallDir""$cudaToolkitUnInstallScriptName"
+        cudaToolkitUnInstallScriptPath="$cudaToolkitUnInstallDir""$cudaToolkitUnInstallScriptName"
         cudaSamplesDir="/Developer/NVIDIA/CUDA-""$cudaVersion""/samples/"
         if [ -d "$cudaSamplesDir" ]
         then
