@@ -3238,7 +3238,7 @@ function checkScriptRequirement {
         irupt
     fi
     fetchAppleGPUWranglerVersion
-    if ! [ "$appleGPUWranglerVersion" =~ "$build" ]
+    if ! [[ "$appleGPUWranglerVersion" =~ "$build" ]]
     then
         echo "You use the old wrangler patch. Please wait a little longer."
         irupt
