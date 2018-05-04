@@ -154,6 +154,7 @@ EOF
     echo "$printVariableTemp"
 }
 
+#   print license
 function printLicense {
     printVariableTemp=`cat <<EOF
 USAGE TERMS of macOS-eGPU.sh
@@ -405,7 +406,7 @@ function inPlaceEditor {
     sudo rm "$tempBinaryPath"
 }
 
-##  Subroutine Y2: Echo helpers
+##  Subroutine A16: Echo helpers
 lastLength=0
 doneLine=`expr $(tput cols)`
 function echoing {
@@ -440,7 +441,7 @@ function createSpace {
 
 
 
-##  Subroutine Y3: Helper functions
+##  Subroutine A17: binary parser
 function binaryParser {
     nbitTemp=`dc -e "$1 2 $2 ^ / 2 % n"`
     if [ "$nbitTemp" != "$3" ]
@@ -2047,7 +2048,7 @@ thunderbolt12UnlockRoutine=0
 
 
 
-##  Subroutine Y4: Pre branch functions
+##  Subroutine Y2: Pre branch functions
 function printHelp {
     if "$help"
     then
@@ -2069,9 +2070,7 @@ function checkSystem {
 
 
 
-##  Subroutine Y5: Print functions
-
-
+##  Subroutine Y3: Print functions
 function printHeader {
     echo "macOS-eGPU.sh"
     echo
@@ -2124,7 +2123,7 @@ function printWarnings {
 
 
 
-##  Subroutine Y6: System properties enforcer
+##  Subroutine Y4: System properties enforcer
 function enforceEGPUdisconnect {
     fetchConnectedEGPU
     if [ "$?" == 1 ]
@@ -2144,7 +2143,7 @@ function enforceEGPUdisconnect {
 
 
 
-##  Subroutine Y7: Preparations
+##  Subroutine Y5: Preparations
 function preparations {
     trapWithoutWarning
     if ! "$acceptLicense"
@@ -2173,6 +2172,10 @@ function preparations {
     echoend "OK" 2
 }
 
+
+
+
+##  Subroutine Y6: Get system info
 function gatherSystemInfo {
     echoing "   macOS info"
     fetchOSinfo
@@ -2214,8 +2217,8 @@ function gatherSystemInfo {
 
 
 
-##  Subroutine Y8: Deductions and Parsing
-###  Subroutine Y8'1: Automated eGPU information fetching
+##  Subroutine Y7: Deductions and Parsing
+###  Subroutine Y7'1: Automated eGPU information fetching
 function moveDriversToBackup {
     mktmpdir
     geforceKextTemp="/Library/Extensions/GeForceWeb.kext"
@@ -2371,7 +2374,7 @@ function secureGetEGPUInformation {
 
 
 
-###  Subroutine Y8'2: CUDA requirements
+###  Subroutine Y7'2: CUDA requirements
 function getCudaNeeds {
     if "$nvidiaDriversInstalled" || "$nvidiaDriver"
     then
@@ -2391,7 +2394,7 @@ function getCudaNeeds {
             driverNeedsTemp=$("$pbuddy" -c "Print apps:$index:requirement" "$cudaAppListTemp")
             if [[ "$programList[@]" =~ $appNameTemp ]]
             then
-                fullProgramNameTemp=$( echo "$programList" | grep $appNameTemp )
+                fullProgramNameTemp=$( echo "$programList" | grep "$appNameTemp" )
                 case "$driverNeedsTemp"
                 in
                 "driver")
@@ -2422,7 +2425,7 @@ function getCudaNeeds {
 
 
 
-###  Subroutine Y8'3: Basic requirement handler/scheduler
+###  Subroutine Y7'3: Basic requirement handler/scheduler
 function setStandards {
     if ( ! "$install" ) && ( ! "$uninstall" ) && ( ! "$check" )
     then
@@ -2544,7 +2547,7 @@ function setStandards {
 
 
 
-###  Subroutine Y8'4: Compatibility checks
+###  Subroutine Y7'4: Compatibility checks
 function nvidiaDriverDeduction {
     echoing "   NVIDIA drivers"
     nvidiaDriverRoutine=0
@@ -3088,6 +3091,8 @@ function cudaDeduction {
     fi
 }
 
+
+###  Subroutine Y7'5: sufficent disabled SIP
 function checkSIPRequirement {
     appleInternalTemp=`dc -e "$sipRequirement 64 / 2 % n"`
     kextSigningTemp=`dc -e "$sipRequirement 32 / 2 % n"`
@@ -3141,6 +3146,9 @@ function checkSIPRequirement {
 }
 
 
+
+
+###  Subroutine Y8'6: Fetch eGPU and deduce
 function softwareDeduction {
     if "$scheduleSecureEGPUfetch"
     then
@@ -3215,6 +3223,10 @@ function softwareDeduction {
     checkSIPRequirement
 }
 
+
+
+
+###  Subroutine Y8'7: Combine fetching, switching and deducution
 function determination {
     echo "Fetching system information..."
     gatherSystemInfo
@@ -3225,6 +3237,9 @@ function determination {
     softwareDeduction
 }
 
+
+
+###  Subroutine Y9: Check script requirement basics
 function checkScriptRequirement {
     fetchOSinfo
     if [ "${os::5}" != "10.13" ]
@@ -3249,7 +3264,8 @@ function checkScriptRequirement {
 
 
 
-###  Subroutine Y8'5: Execution
+###  Subroutine Y10: Execution
+###  Subroutine Y10'1: Download
 function download {
     createSpace 2
     trapWithoutWarning
@@ -3323,6 +3339,10 @@ function download {
     
 }
 
+
+
+
+###  Subroutine Y10'2: Uninstall
 function uninstall {
     createSpace 2
     echo "Uninstalling..."
@@ -3381,6 +3401,10 @@ function uninstall {
     fi
 }
 
+
+
+
+###  Subroutine Y10'3: Install
 function install {
     echo "Installing..."
     if [ `dc -e "$nvidiaDriverRoutine 4 / 2 % n"` == 1 ]
@@ -3437,6 +3461,10 @@ function install {
     fi
 }
 
+
+
+
+###  Subroutine Y10'4: Patch
 function patch {
     echo "Patching..."
     if [ `dc -e "$nvidiaDriverRoutine 8 / 2 % n"` == 1 ]
@@ -3448,6 +3476,10 @@ function patch {
     fi
 }
 
+
+
+
+###  Subroutine Y11: Base function
 function macOSeGPU {
     checkScriptRequirement
     printHelp
