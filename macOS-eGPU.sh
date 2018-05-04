@@ -127,8 +127,7 @@ function quitAllApps {
 
 
 ##  Subroutine A3: Print functions
-#   print all changes made to the system
-
+#   Print tweaks that can be done to get the system working
 function printTweaks {
     printVariableTemp=`cat <<EOF
 Not yet available
@@ -137,6 +136,7 @@ EOF
     echo "$printVariableTemp"
 }
 
+#   print the whole help manual
 function printUsage {
     printVariableTemp=`cat <<EOF
 Not yet available
@@ -145,6 +145,7 @@ EOF
     echo "$printVariableTemp"
 }
 
+#   print the short instructions for pro users
 function printShortHelp {
     printVariableTemp=`cat <<EOF
 Not yet available

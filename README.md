@@ -16,7 +16,7 @@ Make your Mac compatible with NVIDIA and AMD eGPUs.
 This script is still in pre-alpha stage it may damage your system.  
 Do not abort the script during uninstallation/installation/patch phase this *will* damage your system. 
 
-1. Remove all prior eGPU solutions. (e.g. after upgrading to 10.13, **the temporary script for 10.13.4 is currently not supported. DO NOT EXECUTE IF YOU'VE USED THAT, yet**)
+1. Remove all prior eGPU solutions. (e.g. after upgrading to 10.13, **temporary script for 10.13.4/@goalque's instructions users see below**)
 2. Back up your system.
 2. Disconnect all unnecessary peripherals. Especially eGPUs!  
 	The script may explicitly ***ask*** you to connect your eGPU.  
@@ -133,8 +133,29 @@ Specify that the initial warnings of the script shall be skipped.
 
 Not yet available.
 
+## Example
+`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) --install --nvidiaDriver 387.10.10.10.30.106`
+
+## I used the temporary script/@goalque's instructions, what should I do?
+-  I haven't upgraded yet. I'm still on 17E199.  
+	Use the uninstaller. Reboot. Proceed with this script.
+-  I have upgraded to 17E202.   
+	Do `sudo rm -rfv "/Library/Application Support/nvidia10134/"`  
+	to remove the KEXT backup. Proceed with this script. (only temporary script.)
 
 ## Problems
+### Known issues
+•	OpenCL seems not to work on NVIDIA eGPU + dGPU configs
+•	still researched
+•	Macs with NVIDIA dGPU don't boot with TB3 enclosure and NVIDIA eGPU.
+•	still researched, try hot-plug
+•	Disconnect "null" on hot plug
+•	still researched. Booting with eGPU resolves this.
+•	System crash on hot-disconnect
+•	still researched
+•	System crash on disconnect button press
+•	still researched
+### Unknown issues
 If you’ve got a problem then try the tweaks first.  
 If nothing works head over to [eGPU.io][1] and ask.
 
