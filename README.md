@@ -143,13 +143,13 @@ You think it’s amazing what we did? Then head over to [eGPU.io][2] and then sa
   
 But because people have insisted:
 
-[![paypal][image-1]][3] (*@fr34k*)
-[![paypal][image-2]][4] (*@mac_editor*)
+[![paypal][image-1]][3] (*@fr34k*)  
+[![paypal][image-2]][4] (*@mac\_editor*)
 
 [1]:	https://egpu.io/forums/mac-setup/script-fr34ks-macos-egpu-sh-one-script-all-solutions-fully-automated/#post-35722 "Link to Thread"
 [2]:	https://egpu.io/forums/mac-setup/script-fr34ks-macos-egpu-sh-one-script-all-solutions-fully-automated/#post-35722 "Link to Thread"
 [3]:	https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=learex2@icloud.com&lc=US&item_name=learex&no_note=0&currency_code=EUR&bn=PP-DonationsBF:btn_donate_SM.gif:NonHostedGuest
-[4]:	https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=mayankk2308%40gmail%2ecom&lc=US&item_name=mac_editor&no_note=0&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donate_SM%2egif%3aNonHostedGuest
+[4]:	https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=mayankk2308@gmail.com&lc=US&item_name=mac_editor&no_note=0&currency_code=USD&bn=PP-DonationsBF:btn_donate_SM.gif:NonHostedGuest
 
 [image-1]:	https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif
 [image-2]:	https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif
