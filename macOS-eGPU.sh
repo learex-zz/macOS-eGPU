@@ -910,7 +910,7 @@ cudaDriverKextPath="/Library/Extensions/CUDA.kext"
 cudaDeveloperDir="/Developer/NVIDIA/"
 cudaSamplesDir=""
 
-cudaVersionPath="/usr/local/cuda/version.txt"
+cudaVersionPath=""
 cudaDriverVersionPath="/Library/Frameworks/CUDA.framework/Versions/A/Resources/Info.plist"
 
 #forceNewest=false - defined at Subroutine C: NVIDIA drivers
@@ -991,10 +991,15 @@ function checkCudaDriverInstall {
 
 function checkCudaInstall {
     checkCudaInstallReset
-    if [ -e "$cudaVersionPath" ]
+    if [ -e "$cudaDeveloperDir" ]
     then
-        cudaVersionInstalled=true
-        readCudaDeveloperVersion
+        versionPathTemp=`find "$cudaDeveloperDir" -iname "version.txt" -maxdepth 2`
+        if [ `echo "$versionPathTemp" | wc -l | xargs` != 0 ]
+        then
+            cudaVersionPath=`echo "$versionPathTemp" | sed -n 1p`
+            cudaVersionInstalled=true
+            readCudaDeveloperVersion
+        fi
     fi
     if [ -d "$cudaDeveloperDir" ]
     then
@@ -2998,7 +3003,6 @@ function cudaToolkitDeduction {
                 cudaRoutine=`binaryParser "$cudaRoutine" 10 1`
                 echoend "install scheduled" 4
             else
-                echoend "skip" 5
                 if [ "$cudaVersionFull" == "$cudaToolkitDownloadVersion" ]
                 then
                     echoend "skip, up to date" 5
