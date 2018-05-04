@@ -16,7 +16,7 @@ Make your Mac compatible with NVIDIA and AMD eGPUs.
 This script is still in pre-alpha stage it may damage your system.  
 Do not abort the script during uninstallation/installation/patch phase this *will* damage your system. 
 
-1. Remove all prior eGPU solutions. (e.g. after upgrading to 10.13)
+1. Remove all prior eGPU solutions. (e.g. after upgrading to 10.13, **the temporary script for 10.13.4 is currently not supported. DO NOT EXECUTE IF YOU'VE USED THAT, yet**)
 2. Back up your system.
 2. Disconnect all unnecessary peripherals. Especially eGPUs!  
 	The script may explicitly ***ask*** you to connect your eGPU.  
