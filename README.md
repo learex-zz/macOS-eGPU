@@ -150,7 +150,7 @@ Not yet available.
 
 ## Problems
 ### Known issues
-- OpenCL seems not to work on NVIDIA eGPU + dGPU configs
+- OpenCL/GL seems not to work on NVIDIA eGPU + dGPU configs
 	- still researched
 - Macs with NVIDIA dGPU don't boot with TB3 enclosure and NVIDIA eGPU.
 	- still researched, plugin during boot

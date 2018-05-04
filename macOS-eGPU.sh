@@ -246,6 +246,7 @@ function rebootSystem {
         echo "A reboot will soon be performed..."
         trapWithoutWarning
         waiter 5
+        echo "/ is busy, waiting for lock (this might take approx 15-30s)..."
         sudo reboot & &>/dev/null
     fi
     echo
@@ -2952,6 +2953,9 @@ function cudaDeveloperDriverDeduction {
                     echoend "skip, up to date" 5
                     scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 0`
                 else
+                    cudaRoutine=`binaryParser "$cudaRoutine" 0 1`
+                    cudaRoutine=`binaryParser "$cudaRoutine" 1 1`
+                    cudaRoutine=`binaryParser "$cudaRoutine" 2 1`
                     cudaRoutine=`binaryParser "$cudaRoutine" 4 1`
                     cudaRoutine=`binaryParser "$cudaRoutine" 5 1`
                     cudaRoutine=`binaryParser "$cudaRoutine" 6 1`
