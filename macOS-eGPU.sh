@@ -3349,25 +3349,25 @@ function uninstall {
     fi
     if [ `dc -e "$amdLegacyDriverRoutine 2 / 2 % n"` == 1 ]
     then
-        echoing "AMD legacy drivers"
+        echoing "   AMD legacy drivers"
         uninstallAMDLegacyDriver
         echoend "done"
     fi
     if [ `dc -e "$t82UnblockerRoutine 2 / 2 % n"` == 1 ]
     then
-        echoing "T82 Unblocker"
+        echoing "   T82 Unblocker"
         uninstallT82Unblocker
         echoend "done"
     fi
     if [ `dc -e "$deactivateNVIDIAdGPURoutine 2 / 2 % n"` == 1 ]
     then
-        echoing "NVIDIA dGPU deactivator"
+        echoing "   NVIDIA dGPU deactivator"
         uninstallNvidiaDGPUdeactivator
         echoend "done"
     fi
     if [ `dc -e "$thunderbolt12UnlockRoutine 2 / 2 % n"` == 1 ]
     then
-        echoing "Thunderbolt 1/2 unlock"
+        echoing "   Thunderbolt 1/2 unlock"
         trapLock
         uninstallThunderbolt12Unlock
         trapWithWarning
@@ -3375,7 +3375,7 @@ function uninstall {
     fi
     if [ `dc -e "$cudaRoutine 2 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 32 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 512 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 8192 / 2 % n"` == 1 ]
     then
-        echoing "CUDA"
+        echoing "   CUDA"
         uninstallCuda
         echoend "done"
     fi
@@ -3405,25 +3405,25 @@ function install {
     fi
     if [ `dc -e "$amdLegacyDriverRoutine 4 / 2 % n"` == 1 ]
     then
-        echoing "AMD legacy drivers"
+        echoing "   AMD legacy drivers"
         installAMDLegacyDriver
         echoend "done"
     fi
     if [ `dc -e "$t82UnblockerRoutine 4 / 2 % n"` == 1 ]
     then
-        echoing "T82 Unblocker"
+        echoing "   T82 Unblocker"
         installT82Unblocker
         echoend "done"
     fi
     if [ `dc -e "$deactivateNVIDIAdGPURoutine 4 / 2 % n"` == 1 ]
     then
-        echoing "NVIDIA dGPU deactivator"
+        echoing "   NVIDIA dGPU deactivator"
         installNvidiaDGPUdeactivator
         echoend "done"
     fi
     if [ `dc -e "$thunderbolt12UnlockRoutine 4 / 2 % n"` == 1 ]
     then
-        echoing "Thunderbolt 1/2 unlock"
+        echoing "   Thunderbolt 1/2 unlock"
         trapLock
         installThunderbolt12Unlock
         trapWithWarning
@@ -3431,7 +3431,7 @@ function install {
     fi
     if [ `dc -e "$cudaRoutine 4 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 64 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 1024 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 16384 / 2 % n"` == 1 ]
     then
-        echoing "CUDA"
+        echoing "   CUDA"
         installCuda
         echoend "done"
     fi
