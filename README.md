@@ -80,7 +80,12 @@ The unlock thunderbolt v1, v2 parameter tells the script to make older Macs with
 `--unlockNvidia | -N`
 
 Specify that NVIDIA eGPU support shall be unlocked. *patch by @fr34k, @goalque*  
-The unlock NVIDIA parameter tells the script to make the Mac compatible with NVIDIA eGPUs. This is only required for macOS 10.13.4. This might cause issues/crashes with AMD graphics cards.  
+The unlock NVIDIA parameter tells the script to make the Mac compatible with NVIDIA eGPUs. This is only required for macOS 10.13.4. This might cause issues/crashes with AMD graphics cards.
+
+`--unlockT82 | -T`
+
+Specify that the T82 chipsets shall be unlocked.  
+The unlock T82 parameter tells the script to make the Mac compatible with T82 eGPU enclosures. This is not reduced to eGPU enclosures all thunderbolt enclosures with T82 chipset will work.  
 
 `--cudaDriver | -c`
 
@@ -148,7 +153,7 @@ Not yet available.
 - OpenCL seems not to work on NVIDIA eGPU + dGPU configs
 	- still researched
 - Macs with NVIDIA dGPU don't boot with TB3 enclosure and NVIDIA eGPU.
-	- still researched, plugin during boot 
+	- still researched, plugin during boot
 - Disconnect "null" on hot plug
 	- still researched. Booting with eGPU resolves this.
 - System crash on hot-disconnect
