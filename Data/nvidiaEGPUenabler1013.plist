@@ -16,6 +16,16 @@
 		</dict>
 		<dict>
 			<key>checksum</key>
+			<string>ed1dbef44a918d034b4c47ce996c62365871488de652fdd14104e79820daa54ecb63977bef6fbe5c6337918635224b32b607cb543cb1d5209080640ea2d6d377</string>
+			<key>build</key>
+			<string>17E199</string>
+			<key>downloadURL</key>
+			<string>https://egpu.io/wp-content/uploads/wpforo/attachments/6469/5130-NVDAEGPUSupportUniversal.zip</string>
+			<key>packageName</key>
+			<string>NVDAEGPUSupport.pkg</string>
+		</dict>
+		<dict>
+			<key>checksum</key>
 			<string>c773da8e52ab9b0db2f4774bfc4549ab07a65f5cb92f1e39add3f470dd7303bd4da4ff24cc6ee8971fe0039e2215aa69000533bf0902691c20f397494492683c</string>
 			<key>build</key>
 			<string>17D102</string>
