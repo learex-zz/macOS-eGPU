@@ -146,6 +146,8 @@ But because people have insisted:
 [![paypal][image-1]][3] (*@fr34k*)  
 [![paypal][image-2]][4] (*@mac\_editor*)
 
+*@ shows that it’s the alias on eGPU.io*
+
 [1]:	https://egpu.io/forums/mac-setup/script-fr34ks-macos-egpu-sh-one-script-all-solutions-fully-automated/#post-35722 "Link to Thread"
 [2]:	https://egpu.io/forums/mac-setup/script-fr34ks-macos-egpu-sh-one-script-all-solutions-fully-automated/#post-35722 "Link to Thread"
 [3]:	https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=learex2@icloud.com&lc=US&item_name=learex&no_note=0&currency_code=EUR&bn=PP-DonationsBF:btn_donate_SM.gif:NonHostedGuest
