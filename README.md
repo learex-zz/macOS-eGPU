@@ -1,169 +1,155 @@
+**THIS STILL IS A PRE-ALPHA BE PREPARED TO LOOSE ALL YOUR DATA!**
 
-# macOS-eGPU
-**NOTE: THE SCRIPT DOES NOT WORK FOR 10.13.4  
-It is currently unknown if and when support will arrive.  
-The current recommendation is to downgrade macOS to 10.13.3 using Time Machine.  
-To check whether the script has been updated, visit its GitHub homepage.**
+# macOS-eGPU.sh
 ## Purpose
-Setup/Update/Uninstall NVIDIA eGPU Support on a Mac with macOS Sierra (10.12) or High Sierra (10.13).
-
-## Howto
-Simply execute the following Terminal command:  
-`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`  
-***Installing NVIDIA drivers with SIP fully disabled may not work. Use enabled unsigned kext or a tweak below. You may, however, try it yourself.***  
-**DO NOT DETACH ANY MOUNTED DMGs DURING EXECUTION!**
-  
-Advanced users may want to take a look at the parameters below.
+Make your Mac compatible with NVIDIA and AMD eGPUs.
 
 ## Requirements
-- macOS 10.12 or 10.13 (≤10.13.3)
-- enabled unsigned kext/disabled SIP
+- macOS 10.13.X ≤ 10.13.4 2018-001 (17E202)
+- a NVIDIA or an AMD graphics card
+- an eGPU enclosure (T82 & T83 controllers are supported)
+- a Mac (TB 1/2/3 are supported)
+- ***BACKUP***
+- sufficiently disabled SIP; more information under **SIP**
 
-Howto enable unsigned kext or disable **S**ystem **I**ntegrity **P**rotection (SIP) entirely:
-1. Reboot your Mac into recovery mode ([Howto][1])
-2. Open Terminal (Utilities -\> Terminal)
-3. Execute:
-	1. Enable unsigned kext: `csrutil enable --without kext; reboot;`
-	2. Disable SIP: `csrutil disable; reboot;`
+## Howto
+This script is still in pre-alpha stage it may damage your system.  
+Do not abort the script during uninstallation/installation/patch phase this *will* damage your system. 
 
-## Tweaks
-1. Execute in new order:
-	1. Uninstall everything: `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -u`
-	2. Enable SIP in recovery mode: `csrutil clear`
-	3. Install NVIDIA drivers: `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -i -d`
-	4. Disable SIP in recovery mode: `csrutil disable`
-	5. Install rest: `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`
-2. Change SIP setting
-	1. `csrutil enable --without kext`
-	2. `csrutil disable`
-3. Using newest driver, instead of most stable:
-	1. `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -i -d -f`
-	2. `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -i -d` (to revert 3.i)
-4. Only using HDMI output
-5. Change booting procedure:
-	1. Boot with eGPU attached
-	2. Boot without eGPU attached, login, hotplug, logout, login
-6. Clean your Mac using OnyX
-	1. Download [OnyX][2]
-	2. Go to optimize
-	3. Check everything
-	4. Execute
-	5. Reboot (It might take two, since a lot of caches need to be rebuild)
+1. Remove all prior eGPU solutions. (e.g. after upgrading to 10.13)
+2. Back up your system.
+2. Disconnect all unnecessary peripherals. Especially eGPUs!  
+	The script may explicitly ***ask*** you to connect your eGPU.  
+	Please follow the instructions given by the script.
+3. Save your work. The script will kill all running programs.
+4. Execute: 
 
-## Example
-On an already working eGPU system you might want to execute  
-`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -r`  
-in order to update the installed eGPU software.
+`bash <(curl -s willSoonBeUploaded)`
 
-## External Content
-This script may use some of the following external content:
-- goalque's automate-eGPU ([Link][3])
-- Benjamin Dobell’s nvidia-update ([Link][4])
-- NVDAEGPUSupport by devild/ricosuave0922 ([Link][5])
-- CUDA Drivers ([Link][6])
-- CUDA Toolkit ([Link][7])
-
-The external content above may download additional content.
-All external content may be subject to different licenses.
+*A quick note to all the pros out there: the #sh shell does not support the syntax given above. You need a #bash shell.*
 
 ## Parameters
-### Standard
-`--install | -i` (default)  
-Installs software. If not specified otherwise, the script will determine itself what to install. If some software is already installed, it will be updated.  
-Cannot be used with `--check | -h`, `--uninstall | -u` and `--update | -r`.
+### Basic
+`--install | -i`
 
-`--uninstall | -u`  
-Uninstalls software. If not specified otherwise, the script will try to uninstall the NVIDIA drivers, the eGPU support and all CUDA installations.  
-Cannot be used with `--check | -h`, `--install | -i` and `--update | -r`.
+Tells the script to install/update eGPU software. *internet required*  
+The install parameter tells the script to fetch your Mac’s parameters (such as installed software, installed patches, macOS version etc.) and to fetch the newest software versions. It then cross-references and deducts what needs to be done. This includes all packages listed below. This works best on new systems or systems that have been updated. Deductions on corrupt systems are limited. Note that earlier enablers for 10.12 won’t be touched. If you have used such software you must uninstall it yourself. To override deductions use the #Package parameters below.
 
-`--update | -r`  
-This will try to update your drivers, eGPU support and CUDA installations. It will not install new software.  
-Cannot be used with #Packages, `--check | -h`, `--install | -i` and `--uninstall | -u`.
+`--uninstall | -U`
 
-### Check
-`--check | -h`  
-Searches for installed eGPU software and other system properties and displays information about it. No changes are being made to the system. No personal information is displayed.  
-Cannot be used with #Standard, #Packages, `--forceNewest | -f`, `--forceReinstall | -l` and `--minimal | -m`.  
+Tells the script to uninstall eGPU software.  
+The uninstall parameter tells the script to search for eGPU software and fully uninstall it. Note that earlier enablers for 10.12 won’t be touched. If you have used such software you must uninstall it yourself. To override deductions use the #Package parameters below.
+
+`--checkSystem | -C`
+
+Not yet available.
+
 
 ### Packages
-The parameters in this section will override the deductions on what to install/update/uninstall of the script.
+`--nvidiaDriver [revision] | -n [revision]`
 
-`--driver [revision] | -d [revision]`  
-NVIDIA GPU drivers for Mac; you can specify the exact driver by providing the version number thereafter  
-`[revision]` cannot be used with `--forceNewest | -f`  
-Cannot be used with `--update | -r` and `--check | -h`.
+Specify that the NVIDIA drivers shall be touched.  
+The NVIDIA driver parameter tells the script to perform either an install or uninstall of the NVIDIA drivers. If the script determines that the currently installed NVIDIA driver shall be used after an update it will patch it. One can optionally specify a custom driver revision. The specified revision will automatically be patched, if necessary.
 
-`--enabler | -e`  
-Tweak to enable eGPU support on the Mac  
-Cannot be used with `--update | -r` and `--check | -h`.
+`amdLegacyDriver | -a`
 
-`--cuda | -c`  
-CUDA drivers, will use the standard driver files  
-Cannot be used with `--update | -r`, `--check | -h`, `--cudaDriver | -v`, `--cudaToolkit | -t` and `--cudaSamples | -a`.
+Specify that the AMD legacy drivers shall be touched. *drivers by @goalque*  
+The AMD legacy driver parameter tells the script to make older AMD graphics cards compatible with macOS 10.13.X  
+These include: 
+- Polaris - RX: 460, 560 | Radeon Pro: WX5100, WX4100
+	- Fiji - R9: Fury X, Fury, Nano
+	- Hawaii - R9: 390X, 390, 290X, 290
+	- Tonga - R9: 380X, 380, 285
+	- Pitcairn - R9: 370X, 270X, 270 | R7: 370, 265 | FirePro: W7000
+	- Tahiti - R9: 280x, 280 | HD: 7970, 7870, 7850
 
-`--cudaDriver | -v`  
-CUDA drivers, will use the developer driver files (from the toolkit), *should* be identical to `--cuda | -c `  
-Cannot be used with `--update | -r`, `--check | -h`, `--cuda | -c`, `--cudaToolkit | -t` and `--cudaSamples | -a`.
+`--nvidiaEGPUsupport | -e`
 
-`--cudaToolkit | -t`  
-CUDA developer toolkit  
-Cannot be used with `--update | -r`, `--check | -h`, `--cuda | -c`, `--cudaDriver | -v` and `--cudaSamples | -a`.
+Specify that the NVIDIA eGPU support shall be touched. *kext by yifanlu*  
+The NVIDIA eGPU support parameter tells the script to make the NVIDIA drivers compatible with an NVIDIA eGPU. On macOS 10.13.4 an additional patch is necessary. See `--unlockNvidia`.
 
-`--cudaSamples | -a`  
-CUDA developer samples  
-Cannot be used with `--update | -r`, `--check | -h`, `--cuda | -c`, `--cudaDriver | -v` and `--cudaToolkit | -t`.
+`--deactivateNvidiaDGPU | -d`
 
-**Dependencies:**
+Not yet available. Only for AMD eGPU users. *patch by @mac\_editor*
 
-The dependency graph of the CUDA options is:  
-Samples -\> Toolkit -\> Driver
+`--unlockThunderboltV12 | -V`
 
-Therefore, installing the toolkit will also install the drivers and uninstalling the drivers will also remove the toolkit.
+Specify that thunderbolt versions 1 and 2 shall be unlocked for use of an eGPU. *patch by @mac\_editor, @fricorico*  
+The unlock thunderbolt v1, v2 parameter tells the script to make older Macs with thunderbolt ports of version 1 or 2 compatible for eGPU use. This is not GPU vendor specific. This is only required for macOS 10.13.4.
+
+`--unlockNvidia | -N`
+
+Specify that NVIDIA eGPU support shall be unlocked. *patch by @fr34k, @goalque*  
+The unlock NVIDIA parameter tells the script to make the Mac compatible with NVIDIA eGPUs. This is only required for macOS 10.13.4. This might cause issues/crashes with AMD graphics cards.  
+
+`--cudaDriver | -c`
+
+Specify that CUDA drivers shall be touched.  
+The CUDA driver parameter tells the script to perform either an install or uninstall of the CUDA drivers. Note that the toolkit and samples are depended on the drivers. Uninstalling them will cause the script to uninstall the toolkit and samples as well.
+
+`--cudaDeveloperDriver | -D`
+
+Specify that CUDA developer drivers shall be touched.  
+The CUDA developer drivers parameter tells the script to perform either an install or uninstall of the CUDA developer drivers. Note that the toolkit and samples are depended on the developer/drivers. Uninstalling them will cause the script to uninstall the toolkit and samples as well. This should theoretically be identical to `--cudaDriver`
+
+`--cudaToolkit | -t`
+
+Specify that CUDA toolkit shall be touched.  
+The CUDA toolkit parameter tells the script to perform either an install or uninstall of the CUDA toolkit. Note that the samples are depended on the toolkit and the toolkit itself depends on the drivers. Uninstalling the toolkit will cause the script to uninstall the samples as well. Installing the toolkit will cause the script to install the drivers as well.
+
+`--cudaSamples | -s`
+
+Specify that CUDA samples shall be touched.  
+The CUDA samples parameter tells the script to perform either an install or uninstall of the CUDA samples. Note that the samples are depended on the toolkit and drivers. Installing the samples will cause the script to install the drivers and toolkit as well.
 
 ### Advanced
-The parameters in this section will change the behavior of the script.
+`--full | -F`
 
-`--forceNewest | -f`  
-Force the newest NVIDIA drivers and CUDA drivers to be used. This is not recommended. The script will automatically determine the most *stable* drivers.  
-Cannot be used with `--uninstall | -u`, `--check | -h` and a driver `[revision]`.
+Select all #Packages. This might cause issues. Read the descriptions of the #Packages as well.
 
-`--forceReinstall | -l`  
-Force an uninstall of installed software although the software may be up to date. Can be used to fix corrupt software installations.  
-Cannot be used with  `--check | -h` and `--uninstall | -u`.
+`--forceReinstall | -R`
 
-`--minimal | -m`  
-Only tweak the system as little as possible. This may not work in all cases.  
-Cannot be used with `--check | -h`.
+Specify that the script shall reinstall already installed software.  
+The force reinstall parameter tells the script to reinstall all software regardless if it already is up to date. This does not influence deductions or other installations.
 
-`--noReboot | -n`  
-Omit the otherwise obligatory reboot at the end of the script.
+`--forceNewest | -f`
 
-`--silent | -s`  
-Automatically answer every question with yes.  
-Can only be used in conjunction with `--acceptLicenseTerms`.
+Specify that the script shall install only newest software.  
+The force newest parameter tells the script to prefer newer instead of more stable software. This might resolve and/or cause issues.
 
-`--acceptLicenseTerms`  
-Answer the question of whether to accept the license terms with yes.
+`--noReboot | -r`
 
-`--errorContinue`  
-If a non fatal error occurs, try to continue by omitting some arguments. Might result in failure.  
-Can only be used in conjunction with `--silent | -s `.  
-Cannot be used with `--errorBreakSilence` and `--errorStop`.
+Specify that even if something has been done no reboot shall be performed.
 
-`--errorBreakSilence`  
-If a non fatal error occurs, ask user whether to continue. Continuation  might result in failure.  
-Can only be used in conjunction with `--silent | -s `.  
-Cannot be used with `--errorContinue` and `--errorStop`.
+`--acceptLicenseTerms`
 
-`--errorStop`  
-If a non fatal error occurs, stop the script.  
-Can only be used in conjunction with `--silent | -s `.  
-Cannot be used with `--errorContinue` and `--errorBreakSilence`.
+Specify that the question of whether the license terms have been accepted shall be automatically answered with yes and then skipped.
 
-[1]:	https://support.apple.com/HT201314%20%22macOS-Recovery%22 "Guide to boot into recovery mode"
-[2]:	https://www.titanium-software.fr/en/onyx.html
-[3]:	https://github.com/goalque/automate-eGPU "goalque's automate-eGPU"
-[4]:	https://github.com/Benjamin-Dobell/nvidia-update "Benjamin Dobell’s nvidia-update"
-[5]:	https://egpu.io/forums/mac-setup/wip-nvidia-egpu-support-for-high-sierra/#post-22370 "NVDAEGPUSupport"
-[6]:	http://www.nvidia.com/object/mac-driver-archive.html "CUDA Driver Archive"
-[7]:	https://developer.nvidia.com/cuda-toolkit-archive "Cuda Toolkit Archive"
+`--skipWarnings | -k`
+
+Specify that the initial warnings of the script shall be skipped.
+
+`--help | -h`
+
+Not yet available.
+
+
+## Problems
+If you’ve got a problem then try the tweaks first.  
+If nothing works head over to [eGPU.io][1] and ask.
+
+## Donate
+You think it’s amazing what we did? Then head over to [eGPU.io][2] and then say thanks.  
+  
+But because people have insisted:
+
+[![paypal][image-1]][3] (*@fr34k*)
+[![paypal][image-2]][4] (*@mac_editor*)
+
+[1]:	https://egpu.io/forums/mac-setup/script-fr34ks-macos-egpu-sh-one-script-all-solutions-fully-automated/#post-35722 "Link to Thread"
+[2]:	https://egpu.io/forums/mac-setup/script-fr34ks-macos-egpu-sh-one-script-all-solutions-fully-automated/#post-35722 "Link to Thread"
+[3]:	https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=learex2@icloud.com&lc=US&item_name=learex&no_note=0&currency_code=EUR&bn=PP-DonationsBF:btn_donate_SM.gif:NonHostedGuest
+[4]:	https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=mayankk2308%40gmail%2ecom&lc=US&item_name=mac_editor&no_note=0&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donate_SM%2egif%3aNonHostedGuest
+
+[image-1]:	https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif
+[image-2]:	https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif

@@ -2,30 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>newest</key>
-	<array>
-		<dict>
-			<key>driverVersion</key>
-			<string>387.128</string>
-			<key>version</key>
-			<string>9.1.128</string>
-			<key>downloadURL</key>
-			<string>https://developer.nvidia.com/compute/cuda/9.1/Prod/local_installers/cuda_9.1.128_mac</string>
-			<key>OS</key>
-			<string>10.13</string>
-		</dict>
-		<dict>
-			<key>driverVersion</key>
-			<string>387.128</string>
-			<key>version</key>
-			<string>9.1.128</string>
-			<key>downloadURL</key>
-			<string>https://developer.nvidia.com/compute/cuda/9.1/Prod/local_installers/cuda_9.1.128_mac</string>
-			<key>OS</key>
-			<string>10.12</string>
-		</dict>
-	</array>
-	<key>stable</key>
+	<key>updates</key>
 	<array>
 		<dict>
 			<key>driverVersion</key>

@@ -1,1960 +1,3475 @@
 #!/bin/bash
+
+#   macOS-eGPU.sh
 #
-# Authors: learex
-# Homepage: https://github.com/learex/macOS-eGPU
-# License: https://github.com/learex/macOS-eGPU/blob/master/License.txt
+#   This script handles installation, updating and uninstallation of eGPU support for Mac.
+#   AMD and NVIDIA cards, TI82 and T83 enclosures, TB 1/2 and 3, and CUDA are supported.
 #
-# USAGE TERMS of macOS-eGPU.sh
-# 1. You may use this script for personal use.
-# 2. You may continue development of this script at it's GitHub homepage.
-# 3. You may not redistribute this script from outside of it's GitHub homepage.
-# 4. You may not use this script, or portions thereof, for any commercial purposes.
-# 5. You accept the license terms of all downloaded and/or executed content, even content that has not been downloaded and/or executed by macOS-eGPU.sh directly.
+#   Created by learex on 05.04.18.
 #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
+#   Authors: learex
+#   Homepage: https://github.com/learex/macOS-eGPU
+#   License: https://github.com/learex/macOS-eGPU/blob/master/License.txt
+#
+#   USAGE TERMS of macOS-eGPU.sh
+#   1. You may use this script for personal use.
+#   2. You may continue development of this script at it's GitHub homepage.
+#   3. You may not redistribute this script or portions thereof from outside of it's GitHub homepage without explicit written permission.
+#   4. You may not compile, assemble or in any other way make the source code unreadable by a human.
+#   5. You may not implement this script or protions therof into other scripts and/or applications without explicit written permission.
+#   6. You may not use this script, or portions thereof, for any commercial purposes.
+#   7. You accept the license terms of all downloaded and/or executed content, even content that has only indirectly been been downloaded and/or executed by macOS-eGPU.sh.
+#
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#   THE SOFTWARE.
 
-#beginning of script
-
-#create blank screen
-clear
 
 
-##############################################################################################################variable preparation
+
+#   beginning of the script
+#   It is forbidden to execute any code until the very last subroutine. The only execption is to parse incoming options.
+#   Global variables are created as needed.
 
 
-#define all paths and URLs
+#   script specific information
+branch="master"
+warningOS="10.13.5"
+currentOS="10.13.4"
+gitPath="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch"
 
+#   external programs
+pbuddy="/usr/libexec/PlistBuddy"
 
-##directory handling
+#   sudo override
+sudoActive=false
+function sudov {
+    if "$sudoActive"
+    then
+        sudo "$@"
+    else
+        "$@"
+    fi
+}
+
+#   Subroutine A: Basic functions ##############################################################################################################
+##  Subroutine A1: Directory handling
 dirName="$(uuidgen)"
-dirName="$TMPDIR""macOS.eGPU.""$dirName"
-###tempdir creator
+dirName="/var/tmp/""macOS.eGPU.""$dirName"
+
+## tmpdir creator
 function mktmpdir {
     if ! [ -d "$dirName" ]
     then
-        mkdir "$dirName"
+        mkdir -p "$dirName"
     fi
 }
-###tmpdir cleanup
+
+##  tmpdir destructor
 function cleantmpdir {
     if [ -d "$dirName" ]
     then
-        rm -rf "$dirName"
+        sudov rm -rf "$dirName"
     fi
 }
 
 
-##outside programs
-pbuddy="/usr/libexec/PlistBuddy"
 
 
-##script specific information
-branch="master"
-warningOS="10.13.4"
+##  Subroutine A2: Cleanup
+#   DMG detachment
+attachedDMGVolumes=""
+function dmgDetatch {
+    while read -r DMGVolumeToDetachTemp
+    do
+        if [ -d "$DMGVolumeToDetachTemp" ]
+        then
+            hdiutil detach "$DMGVolumeToDetachTemp" -quiet
+        fi
+    done <<< "$attachedDMGVolumes"
+}
+
+#   system cleanup
+function systemClean {
+    echoing "   cleaning system"
+    cleantmpdir
+    dmgDetatch
+    echoend "done"
+}
+
+#   quit all running apps
+function quitAllApps {
+    ret=0
+    appsToQuitTemp=""
+    appsToQuitTemp=$(osascript -e 'tell application "System Events" to set quitapps to name of every application process whose visible is true and name is not "Finder" and name is not "Terminal"' -e 'return quitapps') &>/dev/null
+    echo "$appsToQuitTemp"
+    if ! [[ "$appsToQuitTemp" == "" ]]
+    then
+        appsToQuitTemp="${appsToQuitTemp//, /\n}"
+        appsToQuitTemp="$(echo -e $appsToQuitTemp)"
+        while read -r appNameToQuitTemp
+        do
+            killall "$appNameToQuitTemp"
+            if [ "$?" != 0 ]
+            then
+                ret=1
+            fi
+        done <<< "$appsToQuitTemp"
+    fi
+    return "$ret"
+}
 
 
-##static download paths
-###Sierra enabler
-automateeGPUScriptDPath="https://raw.githubusercontent.com/goalque/automate-eGPU/master/automate-eGPU.sh"
-###High Sierra enabler
-eGPUEnablerListOnline="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch""/eGPUenabler.plist"
-###NVIDIA drivers
-nvidiaUpdateScriptDPath="https://raw.githubusercontent.com/Benjamin-Dobell/nvidia-update/master/nvidia-update.sh"
-nvidiaDriverListOnline="https://gfe.nvidia.com/mac-update"
-###CUDA drivers
-cudaDriverListOnline="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch""/cudaDriver.plist"
-cudaToolkitListOnline="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch""/cudaToolkit.plist"
-CUDAAppListOnline="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch""/CUDAApps.plist"
 
 
-##dynamic download paths and dynamic installation info
-###High Sierra enabler
-eGPUEnablerDPath=""
-eGPUEnablerAuthor=""
-eGPUEnablerPKGName=""
-###CUDA driver
-cudaDriverDPath=""
-cudaToolkitDPath=""
-cudaDownloadVersion=""
+##  Subroutine A3: Print functions
+#   print all changes made to the system
+
+function printTweaks {
+    printVariableTemp=`cat <<EOF
+Not yet available
+EOF
+`
+    echo "$printVariableTemp"
+}
+
+function printUsage {
+    printVariableTemp=`cat <<EOF
+Not yet available
+EOF
+`
+    echo "$printVariableTemp"
+}
+
+function printShortHelp {
+    printVariableTemp=`cat <<EOF
+Not yet available
+EOF
+`
+    echo "$printVariableTemp"
+}
+
+function printLicense {
+    printVariableTemp=`cat <<EOF
+USAGE TERMS of macOS-eGPU.sh
+#   1. You may use this script for personal use.
+#   2. You may continue development of this script at it's GitHub homepage.
+#   3. You may not redistribute this script or portions thereof from outside of it's GitHub homepage without explicit written permission.
+#   4. You may not compile, assemble or in any other way make the source code unreadable by a human.
+#   5. You may not implement this script or protions therof into other scripts and/or applications without explicit written permission.
+#   6. You may not use this script, or portions thereof, for any commercial purposes.
+#   7. You accept the license terms of all downloaded and/or executed content, even content that has only indirectly been been downloaded and/or executed by macOS-eGPU.sh.
+#
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#   THE SOFTWARE.
+EOF
+`
+    echo "$printVariableTemp"
+}
 
 
-##system information
-###CUDA driver
-cudaDriverVersion=""
-cudaToolkitDriverVersion=""
-cudaVersionFull=""
-cudaVersion=""
-cudaVersionsInstalled=""
-cudaVersions=0
-###NVIDIA driver
-nvidiaDriverDownloadVersion=""
+
+##  Subroutine A4: Waiter
+function waiter {
+    for i in `seq "$1" 1`
+    do
+        echo -n "$i"".."
+        sleep 1
+    done
+    echo "0"
+}
+
+
+
+
+##  Subroutine A5: Aquire elevated privileges
+function elevatePrivileges {
+    if "$sudoActive" || [ "$(id -u)" == 0 ]
+    then
+        sudo -v
+        if [ "$?" != 0 ]
+        then
+            echoend "FAILURE" 1
+            echo "Elevated privileges could not be aquired. The script will now stop."
+            irupt
+        fi
+    else
+        sudo -k
+        echo "   elevating privileges"
+        echo -n "   "
+        lastLength=12
+        sudo -v
+        if [ "$?" != 0 ]
+        then
+            echoing "   checking for elevated privileges"
+            echoend "FAILURE" 1
+            echo "Elevated privileges could not be aquired. The script will now stop."
+            irupt
+        fi
+        echoing "   checking for elevated privileges"
+        echoend "OK" 2
+    fi
+    sudoActive=true
+}
+
+
+
+
+##  Subroutine A6: Restore privileges
+function restorePrivileges {
+    sudo -k
+}
+
+
+
+
+
+##  Subroutine A7: Reboot
+scheduleReboot=false
+noReboot=false
+function rebootSystem {
+    if "$scheduleReboot" && "$noReboot"
+    then
+        echo "A reboot of the system is recommended."
+    else
+        echo "A reboot will soon be performed..."
+        trapWithoutWarning
+        waiter 5
+        sudo reboot & &>/dev/null
+    fi
+    echo
+    restorePrivileges
+    exit
+}
+
+
+
+
+##  Subroutine A8: Rebuild Kexts
+scheduleKextTouch=false
+function rebuildKextCache {
+    if "$scheduleKextTouch"
+    then
+        echo "Rebuilding caches"
+        elevatePrivileges
+        echoing "   kext cache"
+        sudo touch /System/Library/Extensions &>/dev/null
+        sudo kextcache -q -update-volume / &>/dev/null
+        echoend "done"
+        echoing "   system cache"
+        sudo touch /System/Library/Extensions &>/dev/null
+        sudo kextcache -system-caches &>/dev/null
+        echoend "done"
+    fi
+}
+
+
+
+
+##  Subroutine A9: Finish
+function finish {
+    createSpace 2
+    echo "Finish..."
+    systemClean
+    if "$doneSomething"
+    then
+        rebuildKextCache
+        rebootSystem
+    else
+        echo "Nothing has been changed."
+    fi
+    restorePrivileges
+    echo
+    exit
+}
+
+
+
+
+##  Subroutine A10: Interrupt
+function irupt {
+    echo "Interrupt..."
+    systemClean
+    restorePrivileges
+    echo "The script has failed."
+    if "$doneSomething"
+    then
+        rebuildKextCache
+    else
+        echo "Nothing has been changed."
+    fi
+    echo
+    exit 1
+}
+
+
+
+
+##  Subroutine A11: Trap functions
+exitScript=false
+function trapIrupt {
+    if ! "$exitScript"
+    then
+        exitScript=true
+        echo "You pressed ^C. Exiting the script during execution might render your system unrepairable."
+        echo "Recommendation: Let the script finish and then run again with uninstall parameter."
+        echo "Press again to force quit. Beware of the consequenses."
+        sleep 5
+    else
+        irupt
+    fi
+}
+
+function trapWithWarning {
+    trap trapIrupt INT
+}
+
+function trapWithoutWarning {
+    trap '{ echo; echo "Abort..."; irupt; }' INT
+}
+
+function trapLock {
+    trap '' INT
+}
+
+
+
+
+##  Subroutine A12: Custom uninstaller
+function genericUninstaller {
+    elevatePrivileges
+    fileListUninstallTemp="$1"
+    genericUninstalledTemp=false
+    while read -r genericFileTemp
+    do
+        if [ -e "$genericFileTemp" ]
+        then
+            genericUninstalledTemp=true
+            sudo rm -r -f "$genericFileTemp"
+        fi
+    done <<< "$fileListUninstallTemp"
+    if "$genericUninstalledTemp"
+    then
+        return 0
+    else
+        return 1
+    fi
+}
+
+
+
+
+##  Subroutine A13: Binary Hasher
+binaryHashReturn=""
+function binaryHasher {
+    hashval1Temp=$(hexdump -ve '1/1 "%.2X"' "$1" | sed "s/.*3C3F786D6C2076657273696F6E3D22312E302220656E636F64696E673D225554462D38223F3E0A3C21444F435459504520706C697374205055424C494320222D2F2F4170706C652F2F44544420504C49535420312E302F2F454E222022687474703A2F2F7777772E6170706C652E636F6D2F445444732F50726F70657274794C6973742D312E302E647464223E0A3C706C6973742076657273696F6E3D22312E30223E0A3C646963743E0A093C6B65793E63646861736865733C2F6B65793E//g")
+    hashval2Temp=$(xxd -s -128 "$1")
+    hashvalTemp=$(echo "$hashval1Temp""$hashval2Temp" | shasum -a 512 -b | awk '{ print $1 }')
+    binaryHashReturn="$hashvalTemp"
+}
+
+
+
+
+##  Subroutine A14: Flow hex editor
+function genericHexEditor {
+    elevatePrivileges
+    (sudo hexdump -ve '1/1 "%.2X"' "$3" | sed "s/$1/$2/g" | xxd -r -p )> "$4"
+}
+
+
+
+
+##  Subroutine A15: Inplace hex editor
+function inPlaceEditor {
+    elevatePrivileges
+    mktmpdir
+    tempBinaryPath="$dirName""/binFile"
+    filePermissionsTemp=$(stat -f "%A" "$3")
+    fileOwnershipTemp=$(stat -f "%Su:%Sg" "$3")
+    genericHexEditor "$1" "$2" "$3" "$tempBinaryPath"
+    sudo rm "$3"
+    sudo cp "$tempBinaryPath" "$3"
+    sudo chmod "$filePermissionsTemp" "$3"
+    sudo chown "$fileOwnershipTemp" "$3"
+    sudo rm "$tempBinaryPath"
+}
+
+##  Subroutine Y2: Echo helpers
+lastLength=0
+doneLine=`expr $(tput cols)`
+function echoing {
+    echo -n "$1"
+    lastLength=`echo -n "$1" | wc -c | xargs`
+}
+
+function echoend {
+    lenTemp=`echo -n "$1" | wc -c | xargs`
+    for i in `seq 1 $(expr "$doneLine" - $lenTemp - 2 - "$lastLength")`
+    do
+        echo -n " "
+    done
+    if [ "$2" != "" ]
+    then
+        tput setaf "$2"
+    fi
+    echo "[$1]"
+    if [ "$2" != "" ]
+    then
+        tput sgr0
+    fi
+}
+
+function createSpace {
+    for i in `seq 1 $1`
+    do
+        echo
+    done
+}
+
+
+
+
+##  Subroutine Y3: Helper functions
+function binaryParser {
+    nbitTemp=`dc -e "$1 2 $2 ^ / 2 % n"`
+    if [ "$nbitTemp" != "$3" ]
+    then
+        if [ "$nbitTemp" == 1 ]
+        then
+            dc -e "$1 2 $2 ^ - n"
+        else
+            dc -e "$1 2 $2 ^ + n"
+        fi
+    else
+        echo "$1"
+    fi
+}
+
+
+
+
+#   Subroutine B: System checks ##############################################################################################################
+os=""
+build=""
+function fetchOSinfo {
+    os="$(sw_vers -productVersion)"
+    build="$(sw_vers -buildVersion)"
+}
+
+#   0: completely disabled, 127: fully enabled, 128: error, 31: --without KEXT
+#   Binary of: Apple Internal | Kext Signing | Filesystem Protections | Debugging Restrictions | DTrace Restrictions | NVRAM Protections | BaseSystem Verification
+statSIP=0
+function fetchSIPstat {
+    SIPTemp="$(csrutil status)"
+    if [[ "$SIPTemp[@]" =~ "Custom Configuration" ]]
+    then
+        appleInternalTemp=`echo "$SIPTemp" | sed -n 4p`
+        kextSigningTemp=`echo "$SIPTemp" | sed -n 5p`
+        fileSystemProtectionsTemp=`echo "$SIPTemp" | sed -n 6p`
+        debuggingRestrictionsTemp=`echo "$SIPTemp" | sed -n 7p`
+        dTraceRestrictionsTemp=`echo "$SIPTemp" | sed -n 8p`
+        nvramProtectionsTemp=`echo "$SIPTemp" | sed -n 9p`
+        baseSystemVerificationTemp=`echo "$SIPTemp" | sed -n 10p`
+
+        appleInternalTemp="${appleInternalTemp##*: }"
+        kextSigningTemp="${appleInternalTemp##*: }"
+        fileSystemProtectionsTemp="${fileSystemProtectionsTemp##*: }"
+        debuggingRestrictionsTemp="${debuggingRestrictionsTemp##*: }"
+        dTraceRestrictionsTemp="${dTraceRestrictionsTemp##*: }"
+        nvramProtectionsTemp="${nvramProtectionsTemp##*: }"
+        baseSystemVerificationTemp="${baseSystemVerificationTemp##*: }"
+        pTemp=1
+        statSIP=0
+        for SIPXTemp in "$baseSystemVerificationTemp" "$nvramProtectionsTemp" "$dTraceRestrictionsTemp" "$debuggingRestrictionsTemp" "$fileSystemProtectionsTemp" "$kextSigningTemp" "$appleInternalTemp"
+        do
+            if [ "$SIPXTemp" == "enabled" ]
+            then
+                statSIP="$(expr $statSIP + $pTemp)"
+            fi
+            pTemp="$(expr $pTemp \* 2)"
+        done
+    else
+        keyowordTemp="${SIPTemp#*: }"
+        if [[ "${keyowordTemp%% *}" == "enabled" ]]
+        then
+            statSIP=127
+        else
+            statSIP=0
+        fi
+    fi
+}
+
+thunderboltInterface=0
+function fetchThunderboltInterface {
+    thunderboltTemp=`ioreg | grep AppleThunderboltNHIType | sed -n 1p`
+    thunderboltTemp="${thunderboltTemp##*+-o AppleThunderboltNHIType}"
+    thunderboltInterface="${thunderboltTemp::1}"
+}
+
+nvidiaDGPU=false
+function fetchNvidiaDGPU {
+    nvidiaDGPU=false
+    displayListTemp=$(system_profiler SPDisplaysDataType | grep -v ": " | grep " " | xargs)
+    displayListTemp="$displayListTemp"" "
+    displayListTemp="${displayListTemp//: /\n}"
+    displayListTemp=$(echo -e -n "$displayListTemp")
+
+    pcieListTemp=$(system_profiler SPPCIDataType | grep -v ": " | grep " " | xargs)
+    pcieListTemp="$pcieListTemp"" "
+    pcieListTemp="${pcieListTemp//: /\n}"
+    pcieListTemp=$(echo -e -n "$pcieListTemp")
+
+    listOfPossibleDGPUTemp=""
+    while read -r displayTemp
+    do
+        matchTemp=false
+        while read -r pcieTemp
+        do
+            if [[ "$displayTemp" == "$pcieTemp" ]]
+            then
+                matchTemp=true
+            fi
+        done <<< "$pcieListTemp"
+        if ! "$matchTemp"
+        then
+            listOfPossibleDGPUTemp="$listOfPossibleDGPUTemp""$displayTemp""\n"
+        fi
+    done <<< "$displayListTemp"
+    listOfPossibleDGPUTemp=$(echo -e -n "$listOfPossibleDGPUTemp")
+    if [[ "$listOfPossibleDGPUTemp[@]" =~ "NVIDIA" ]]
+    then
+        nvidiaDGPU=true
+    fi
+}
+
+connectedEGPU=false
+connectedEGPUVendor=""
+eGPUdriverInstalled=""
+function fetchConnectedEGPU {
+    ret=0
+    connectedEGPU=false
+    pciTemp=`system_profiler SPPCIDataType`
+    vendorsTemp=`echo "$pciTemp" | grep "Vendor" | grep -v "Subsystem"`
+    usedSlotsTemp=`echo "$pciTemp" | grep "Slot"`
+    countTemp=`echo "$vendorsTemp" | wc -l | xargs`
+    countTemp2=`echo "$usedSlotsTemp" | wc -l | xargs`
+    if [ "$countTemp" == "$countTemp2" ]
+    then
+        for i in `seq 1 "$countTemp"`
+        do
+            usedSlotTemp=`echo "$usedSlotsTemp" | sed -n "$i"p`
+            vendorTemp=`echo "$vendorsTemp" | sed -n "$i"p`
+            if [[ "$usedSlotTemp" =~ "Thunderbolt" ]]
+            then
+                case "$vendorTemp"
+                in
+                *"0x10de"*)
+                    connectedEGPU=true
+                    connectedEGPUVendor="NVIDIA"
+                    ;;
+                *"0x1002"*)
+                    connectedEGPU=true
+                    connectedEGPUVendor="AMD"
+                    ;;
+                *)
+                    ;;
+                esac
+            fi
+        done
+    else
+        ret=1
+    fi
+    return "$ret"
+}
+
+appleGPUWranglerVersion=""
+function translateAppleGPUWranglerVersionHash {
+    appleGPUWranglerVersion=""
+    case "$1"
+    in
+    "6606536cd546fbaf6571e3f6e0a815e4e9b06e135812322c7d2a899cffb42ca3a3fc7ef248cb81ae82c558a761bb75c9d852c38e744686ce1b38ad108d269c51")
+        appleGPUWranglerVersion="10.13.2:17C88,17C89,17C205,17C2120,17C2205"
+        ;;
+    "ea9dc6330ba9be64e0403e1b2d30db5483ff117ea2ceb37d90ce6671768a3d13200ceb29f2336a4a908e7665a461187ee3afc214fea4bc01ae2bbfd1b3dfe231")
+        appleGPUWranglerVersion="10.13.3:17D47,17D102"
+        ;;
+    "c13a0bf6c3215b65430242b588f2039f5943c97ada42b3a176de30417b2ab79f3996401e60cbd956b8de63303c282ded8fa1667c64ec3eb241dcc84d86b33241")
+        appleGPUWranglerVersion="10.13.3:17D2047,17D2102,17D2104"
+        ;;
+    "5cecaea9a06812f195e9c6ce6f755a20c623dc8e12222eaee0118c8f8a0fe42e3167d206eb85d5a55ceeeaa9aa55cd9b13433294a3d5de4f9d24f93e07dd67f6")
+        appleGPUWranglerVersion="10.13.4:17E199"
+        ;;
+    "459cba0c4c96cd751ff5d69857901a550ebcd99929d75860d864ae3950a6a1250e30d88ebae0823dfc1544b05b94c3b9b0c1cdfaeb74735d8c69a9438ddf66b4")
+        appleGPUWranglerVersion="10.13.4:17E202"
+        ;;
+    esac
+}
+
+appleGraphicsControlPath="/System/Library/Extensions/AppleGraphicsControl.kext"
+appleGPUwranglerPath="$appleGraphicsControlPath""/Contents/PlugIns/AppleGPUWrangler.kext"
+appleGPUwranglerBinaryPath="$appleGPUwranglerPath""/Contents/MacOS/AppleGPUWrangler"
+function fetchAppleGPUWranglerVersion {
+    binaryHasher "$appleGPUwranglerBinaryPath"
+    translateAppleGPUWranglerVersionHash "$binaryHashReturn"
+}
+
+programList=""
+function fetchInstalledPrograms {
+    appListPathsTemp="$(find /Applications -iname *.app -maxdepth 3)"
+    appListTemp=""
+    while read -r appTemp
+    do
+        appTemp="${appTemp##*/}"
+        appListTemp="$appListTemp""${appTemp%.*}""\n"
+    done <<< "$appListPathsTemp"
+    programList="$(echo -e -n $appListTemp)"
+}
+
+
+
+
+#   Subroutine C: NVIDIA drivers ##############################################################################################################
+##  Subroutine C1: Global variables
+nvidiaDriversInstalled=false
 nvidiaDriverVersion=""
 nvidiaDriverBuildVersion=""
-###High Sierra enabler
-eGPUenablerBuildVersion=""
-###Installed programs
-programList=""
 
-
-##system information fetch
+nvidiaDriverUnInstallPKG="/Library/PreferencePanes/NVIDIA Driver Manager.prefPane/Contents/MacOS/NVIDIA Web Driver Uninstaller.app/Contents/Resources/NVUninstall.pkg"
 nvidiaDriverVersionPath="/Library/Extensions/NVDAStartupWeb.kext/Contents/Info.plist"
-eGPUBuildVersionPath="/Library/Extensions/NVDAEGPUSupport.kext/Contents/Info.plist"
+
+nvidiaDriverNListOnline="https://gfe.nvidia.com/mac-update"
+nvidiaDriverListOnline="$gitPath""/Data/nvidiaDriver.plist"
+
+foundMatchNvidiaDriver=false
+
+customNvidiaDriver=false
+forceNewest=false
+omitNvidiaDriver=false
+
+nvidiaDriverDownloadVersion=""
+nvidiaDriverDownloadLink=""
+nvidiaDriverDownloadChecksum=""
 
 
-##static installation paths
-###CUDA drivers
+
+
+##  Subroutine C2: Check functions
+function checkNvidiaDriverInstallReset {
+    nvidiaDriversInstalled=false
+    nvidiaDriverVersion=""
+    nvidiaDriverBuildVersion=""
+}
+
+function checkNvidiaDriverInstall {
+    if [ -e "$nvidiaDriverUnInstallPKG" ]
+    then
+        nvidiaDriversInstalled=true
+        nvidiaDriverVersion=$("$pbuddy" -c "Print CFBundleGetInfoString" "$nvidiaDriverVersionPath")
+        nvidiaDriverVersion="${nvidiaDriverVersion##* }"
+        nvidiaDriverBuildVersion=$("$pbuddy" -c "Print IOKitPersonalities:NVDAStartup:NVDARequiredOS" "$nvidiaDriverVersionPath")
+    fi
+}
+
+
+
+
+##  Subroutine C3: Uninstaller
+function uninstallNvidiaDriver {
+    if "$nvidiaDriversInstalled"
+    then
+        elevatePrivileges
+        sudo installer -pkg "$nvidiaDriverUnInstallPKG" -target / &>/dev/null
+        scheduleReboot=true
+        doneSomething=true
+        scheduleKextTouch=true
+    fi
+}
+
+
+
+
+##  Subroutine C4: Downloader
+function downloadNvidiaDriverInformation {
+    mktmpdir
+    foundMatchNvidiaDriver=false
+    if "$forceNewest"
+    then
+        nvidiaDriverListTemp="$dirName""/nvidiaDriver.plist"
+        curl -s "$nvidiaDriverNListOnline" -m 1024 > "$nvidiaDriverListTemp"
+        if [ "$?" == 0 ]
+        then
+            driversTemp=$("$pbuddy" -c "Print updates:" "$nvidiaDriverListTemp" | grep "OS" | awk '{print $3}')
+            driverCountTemp=$(echo "$driversTemp" | wc -l | xargs)
+            for index in `seq 0 $(expr $driverCountTemp - 1)`
+            do
+                buildTemp=$("$pbuddy" -c "Print updates:$index:OS" "$nvidiaDriverListTemp")
+                nvidiaDriverVersionTemp=$("$pbuddy" -c "Print updates:$index:version" "$nvidiaDriverListTemp")
+                nvidiaDriverLinkTemp=$("$pbuddy" -c "Print updates:$index:downloadURL" "$nvidiaDriverListTemp")
+                nvidiaDriverChecksumTemp=$("$pbuddy" -c "Print updates:$index:checksum" "$nvidiaDriverListTemp")
+
+                if [ "$build" == "$buildTemp" ]
+                then
+                    nvidiaDriverDownloadVersion="$nvidiaDriverVersionTemp"
+                    nvidiaDriverDownloadLink="$nvidiaDriverLinkTemp"
+                    nvidiaDriverDownloadChecksum="$nvidiaDriverChecksumTemp"
+                    foundMatchNvidiaDriver=true
+                fi
+            done
+            rm "$nvidiaDriverListTemp"
+        fi
+    elif "$customNvidiaDriver"
+    then
+        nvidiaDriverListTemp="$dirName""/nvidiaDriver.plist"
+        curl -s "$nvidiaDriverNListOnline" -m 1024 > "$nvidiaDriverListTemp"
+        if [ "$?" == 0 ]
+        then
+            driversTemp=$("$pbuddy" -c "Print updates:" "$nvidiaDriverListTemp" | grep "OS" | awk '{print $3}')
+            driverCountTemp=$(echo "$driversTemp" | wc -l | xargs)
+            for index in `seq 0 $(expr $driverCountTemp - 1)`
+            do
+                buildTemp=$("$pbuddy" -c "Print updates:$index:OS" "$nvidiaDriverListTemp")
+                nvidiaDriverVersionTemp=$("$pbuddy" -c "Print updates:$index:version" "$nvidiaDriverListTemp")
+                nvidiaDriverLinkTemp=$("$pbuddy" -c "Print updates:$index:downloadURL" "$nvidiaDriverListTemp")
+                nvidiaDriverChecksumTemp=$("$pbuddy" -c "Print updates:$index:checksum" "$nvidiaDriverListTemp")
+
+                if [ "$nvidiaDriverDownloadVersion" == "$nvidiaDriverVersionTemp" ]
+                then
+                    nvidiaDriverDownloadVersion="$nvidiaDriverVersionTemp"
+                    nvidiaDriverDownloadLink="$nvidiaDriverLinkTemp"
+                    nvidiaDriverDownloadChecksum="$nvidiaDriverChecksumTemp"
+                    foundMatchNvidiaDriver=true
+                fi
+            done
+            rm "$nvidiaDriverListTemp"
+        fi
+    else
+        nvidiaDriverListTemp="$dirName""/nvidiaDriver.plist"
+        curl -s "$nvidiaDriverListOnline" -m 1024 > "$nvidiaDriverListTemp"
+        if [ "$?" == 0 ]
+        then
+            driversTemp=$("$pbuddy" -c "Print updates:" "$nvidiaDriverListTemp" | grep "OS" | awk '{print $3}')
+            driverCountTemp=$(echo "$driversTemp" | wc -l | xargs)
+            for index in `seq 0 $(expr $driverCountTemp - 1)`
+            do
+                buildTemp=$("$pbuddy" -c "Print updates:$index:build" "$nvidiaDriverListTemp")
+                nvidiaDriverVersionTemp=$("$pbuddy" -c "Print updates:$index:version" "$nvidiaDriverListTemp")
+                nvidiaDriverLinkTemp=$("$pbuddy" -c "Print updates:$index:downloadURL" "$nvidiaDriverListTemp")
+                nvidiaDriverChecksumTemp=$("$pbuddy" -c "Print updates:$index:checksum" "$nvidiaDriverListTemp")
+
+                if [ "$build" == "$buildTemp" ]
+                then
+                    nvidiaDriverDownloadVersion="$nvidiaDriverVersionTemp"
+                    nvidiaDriverDownloadLink="$nvidiaDriverLinkTemp"
+                    nvidiaDriverDownloadChecksum="$nvidiaDriverChecksumTemp"
+                    foundMatchNvidiaDriver=true
+                fi
+            done
+            rm "$nvidiaDriverListTemp"
+        fi
+    fi
+}
+
+function downloadNvidiaDriver {
+    if "$foundMatchNvidiaDriver"
+    then
+        mktmpdir
+        sudov curl -o "$dirName""/nvidiaDriver.pkg" "$nvidiaDriverDownloadLink" "-#" -m 1024
+        nvidiaDriverChecksumTemp=$(shasum -a 512 -b "$dirName""/nvidiaDriver.pkg" | awk '{ print $1 }')
+        if [ "$nvidiaDriverDownloadChecksum" != "$nvidiaDriverChecksumTemp" ]
+        then
+            omitNvidiaDriver=true
+        fi
+    else
+        omitNvidiaDriver=true
+    fi
+}
+
+
+
+
+##  Subroutine C5: Installer/Patcher
+#   Credit: This code logic is inspired by Benjamin Dobell's nvidia-update.sh
+function patchNvidiaDriverNew {
+    mktmpdir
+    fetchOSinfo
+    elevatePrivileges
+
+    expansionTemp="$dirName""/nvidiaDriverExpansion"
+    payloadTemp="$dirName""/payloadExpansion"
+
+    sudo pkgutil --expand "$dirName""/nvidiaDriver.pkg" "$expansionTemp"
+
+    if [ `cat "$expansionTemp"/Distribution | grep "var supportedOSBuildVer" | xargs | awk '{ print $4 }' | sed 's/;//g'` != "$build" ]
+    then
+        mkdir "$payloadTemp"
+
+        driverPathTemp=$(ls "$expansionTemp" | grep "NVWebDrivers.pkg")
+        driverPathTemp="$expansionTemp""/""$driverPathTemp"
+
+        sudo cat "$expansionTemp""/Distribution" | sed '/installation-check/d' | sudo tee "$expansionTemp""/PatchDist" &>/dev/null
+        sudo mv "$expansionTemp""/PatchDist" "$expansionTemp""/Distribution"
+
+        (cd "$payloadTemp"; sudo cat "$driverPathTemp""/Payload" | gunzip -dc | cpio -i --quiet)
+        $pbuddy -c "Set IOKitPersonalities:NVDAStartup:NVDARequiredOS ""$build" "$payloadTemp""/Library/Extensions/NVDAStartupWeb.kext/Contents/Info.plist"
+        sudo chown -R root:wheel "$payloadTemp/"
+
+        (cd "$payloadTemp"; sudo find . | sudo cpio -o --quiet | gzip -c | sudo tee "$driverPathTemp""/Payload" &>/dev/null)
+        (cd "$payloadTemp"; sudo mkbom . "$driverPathTemp""/Bom")
+
+        sudo rm -rf "$payloadTemp"
+        sudo rm -rf "$dirName""/nvidiaDriver.pkg"
+
+        sudo pkgutil --flatten "$expansionTemp" "$dirName""/nvidiaDriver.pkg"
+        sudo chown "$(id -un):$(id -gn)" "$dirName""/nvidiaDriver.pkg"
+    fi
+    sudo rm -rf "$expansionTemp"
+}
+
+function patchNvidiaDriverOld {
+    elevatePrivileges
+    sudo "$pbuddy" -c "Set IOKitPersonalities:NVDAStartup:NVDARequiredOS ""$build" "$nvidiaDriverVersionPath"
+}
+
+function installNvidiaDriver {
+    if [ -e "$dirName""/nvidiaDriver.pkg" ]
+    then
+        elevatePrivileges
+        patchNvidiaDriverNew
+        sudo installer -pkg "$dirName""/nvidiaDriver.pkg" -target / &>/dev/null
+        sudov rm -f "$dirName""/nvidiaDriver.pkg"
+        scheduleReboot=true
+        doneSomething=true
+        scheduleKextTouch=true
+    fi
+}
+
+
+
+
+##  Subroutine C6: Helper functions
+
+
+
+
+#   Subroutine D: CUDA drivers ##############################################################################################################
+##  Subroutine D1: Global variables
+
+cudaLatest=true
+toolkitLatest=true
+
+cudaDriverVersion=""
+cudaVersionFull=""
+cudaVersion=""
+cudaVersionsInstalledList=""
+cudaVersionsNum=0
+cudaVersionInstalled=false
+cudaDriverInstalled=false
+cudaDeveloperDriverInstalled=false
+cudaToolkitInstalled=false
+cudaSamplesInstalled=false
+
+cudaToolkitUnInstallDir=""
+cudaToolkitUnInstallScriptName=""
+cudaToolkitUnInstallScript=""
+cudaDeveloperDriverUnInstallScript="/usr/local/bin/uninstall_cuda_drv.pl"
+
+cudaDriverListOnline="$gitPath""/Data/cudaDriver.plist"
+cudaToolkitListOnline="$gitPath""/Data/cudaToolkit.plist"
+cudaAppListOnline="$gitPath""/Data/cudaApps.plist"
+cudaDriverWebsite="http://www.nvidia.com/object/cuda-mac-driver.html"
+cudaToolkitWebsite="https://developer.nvidia.com/cuda-downloads?target_os=MacOSX&target_arch=x86_64&target_version=1013&target_type=dmglocal"
+
+cudaDriverDownloadLink=""
+cudaDriverDownloadVersion=""
+
+cudaToolkitDownloadLink=""
+cudaToolkitDownloadVersion=""
+
 cudaDriverVolPath="/Volumes/CUDADriver/"
 cudaDriverPKGName="CUDADriver.pkg"
 cudaToolkitVolPath="/Volumes/CUDAMacOSXInstaller/"
 cudaToolkitPKGName="CUDAMacOSXInstaller.app/Contents/MacOS/CUDAMacOSXInstaller"
 
-
-##static uninstallation paths
-###NVIDIA drivers
-nvidiaDriverUnInstallPath="/Library/PreferencePanes/NVIDIA Driver Manager.prefPane/Contents/MacOS/NVIDIA Web Driver Uninstaller.app/Contents/Resources/NVUninstall.pkg"
-###CUDA drivers
-cudaDriverVersionPath="/Library/Frameworks/CUDA.framework/Versions/A/Resources/Info.plist"
-cudaVersionPath="/usr/local/cuda/version.txt"
-cudaUserPath="/usr/local/cuda"
-cudaDeveloperDriverUnInstallScriptPath="/usr/local/bin/uninstall_cuda_drv.pl"
 cudaDriverFrameworkPath="/Library/Frameworks/CUDA.framework"
 cudaDriverLaunchAgentPath="/Library/LaunchAgents/com.nvidia.CUDASoftwareUpdate.plist"
-cudaDriverPrefPane="/Library/PreferencePanes/CUDA Preferences.prefPane"
-cudaDriverStartupItemPath="/System/Library/StartupItems/CUDA/"
-cudaDriverKEXTPath="/Library/Extensions/CUDA.kext"
-cudaDeveloperDirPath="/Developer/NVIDIA/"
-###High Sierra enabler
-enablerKextPath="/Library/Extensions/NVDAEGPUSupport.kext"
-###Sierra enabler
-automateeGPUPath="/Library/Application Support/Automate-eGPU/"
-automateeGPUScriptPath="/usr/local/bin/automate-eGPU.sh"
-rastafabisEnablerUninstallerPath="/Applications/Uninstall Rastafabi's eGPU Enabler.app"
+cudaDriverPrefPanePath="/Library/PreferencePanes/CUDA Preferences.prefPane"
+cudaDriverKextPath="/Library/Extensions/CUDA.kext"
+cudaDeveloperDir="/Developer/NVIDIA/"
+cudaSamplesDir=""
+
+cudaVersionPath="/usr/local/cuda/version.txt"
+cudaDriverVersionPath="/Library/Frameworks/CUDA.framework/Versions/A/Resources/Info.plist"
+
+#forceNewest=false - defined at Subroutine C: NVIDIA drivers
+scheduleCudaDeduction=0
+cudaRoutine=0
+forceCudaToolkitStable=false
+forceCudaDriverStable=false
+omitCuda=false
+foundMatchCudaDriver=false
+foundMatchCudaToolkit=false
+
+attachedDMGVolumes="$attachedDMGVolumes""$cudaDriverVolPath""\n"
+attachedDMGVolumes="$attachedDMGVolumes""$cudaToolkitVolPath""\n"
 
 
-##dynamic uninstallation paths
-###CUDA drivers
-cudaToolkitUnInstallDir=""
-cudaToolkitUnInstallScript=""
 
 
 
-
-#define all settings and info variables
-##script finish behavior
-scheduleReboot=0
-doneSomething=0
-listOfChanges="A list of what has been done:\n"
-
-##script parameter
-###script parameter #Standard
-install=0
-uninstall=0
-update=0
-###script parameter #Packages
-enabler=0
-driver=0
-cuda=0
-###script parameter #Check
-check=0
-###script parameter #Advanced
-reinstall=0
-noReboot=0
-silent=0
-license=0
-errorCont=0
-minimal=0
-forceNew="stable"
-
-
-##internal rules
-determine=0
-customDriver=0
-foundMatch=false
-
-##OS info
-os=0
-build=0
-statSIP=128
-
-
-##installed eGPU software
-###CUDA driver
-cudaVersionInstalled=0
-cudaDriverInstalled=0
-cudaDeveloperDriverInstalled=0
-cudaToolkitInstalled=0
-cudaSamplesInstalled=0
-###NVIDIA driver
-nvidiaDriversInstalled=0
-###High Sierra enabler
-eGPUenablerInstalled=0
-###Sierra enabler
-automateeGPUInstalled=0
-rastafabisEnablerInstalled=0
-
-
-##wait times
-waitTime=7
-priorWaitTime=5
-
-
-##############################################################################################################error and finish handling
-
-
-#define error functions, messages and end functions
-##print all changes made to the system
-function printChanges {
-    echo
-    echo
-    echo -e "$listOfChanges"
+##  Subroutine D2: Check functions
+function checkCudaInstallReset {
+    cudaVersionFull=""
+    cudaVersion=""
+    cudaVersionsInstalledList=""
+    cudaVersionsNum=0
+    cudaVersionInstalled=false
+    cudaDriverInstalled=false
+    cudaDeveloperDriverInstalled=false
+    cudaToolkitInstalled=false
+    cudaSamplesInstalled=false
 }
 
-##print info about tweaking
-function printInformation {
-    echo
-    echo
-    echo "Should the system not work see possible tweaks on the GitHub repository:"
-    echo "https://github.com/learex/macOS-eGPU#tweaks"
+function readCudaDeveloperVersion {
+    cudaVersionFull="$(cat $cudaVersionPath)"
+    cudaVersionFull="${cudaVersionFull##CUDA Version }"
+    cudaVersion="${cudaVersionFull%.*}"
 }
 
-##reboot handler
-function rebootSystem {
-    cleantmpdir
-    echo
-    if [ "$scheduleReboot" == 0 ]
+function readCudaToolkitVersions {
+    cudaDirContentTemp="$(ls $cudaDeveloperDir)"
+    while read -r folderTemp
+    do
+        if [ "${folderTemp%%-*}" == "CUDA" ]
+        then
+            cudaVersionsInstalledList="$cudaVersionsInstalledList""${folderTemp#CUDA-}\n"
+        fi
+    done <<< "$cudaDirContentTemp"
+    cudaVersionsInstalledList="$(echo -e -n $cudaVersionsInstalledList)"
+    cudaVersionsNum="$(echo $cudaVersionsInstalledList | wc -l | xargs)"
+}
+
+function refineCudaToolkitInstallationStatus {
+    if "$cudaVersionInstalled"
     then
-        echo
-        exit
-    elif [ "$noReboot" == 1 ]
+        cudaToolkitUnInstallDir="/Developer/NVIDIA/CUDA-""$cudaVersion""/bin/"
+        cudaToolkitUnInstallScriptName="uninstall_cuda_""$cudaVersion"".pl"
+        cudaToolkitUnInstallScript="$cudaToolkitUnInstallDir""$cudaToolkitUnInstallScriptName"
+        cudaSamplesDir="/Developer/NVIDIA/CUDA-""$cudaVersion""/samples/"
+        if [ -d "$cudaSamplesDir" ]
+        then
+            cudaSamplesInstalled=true
+        fi
+        if [ -e "$cudaToolkitUnInstallScriptPath" ]
+        then
+            cudaToolkitInstalled=true
+        fi
+    fi
+}
+
+function checkCudaDriverInstall {
+    cudaDriverInstalled=false
+    cudaDriverVersion=""
+    if [ -e "$cudaDriverFrameworkPath" ] || [ -e "$cudaDriverLaunchAgentPath" ] || [ -e "$cudaDriverPrefPanePath" ] || [ -e "$cudaDriverKextPath" ]
     then
-        echo "A reboot of the system is recommended."
+        cudaDriverVersion=$("$pbuddy" -c "Print CFBundleVersion" "$cudaDriverVersionPath")
+        cudaDriverInstalled=true
+    fi
+}
+
+function checkCudaInstall {
+    checkCudaInstallReset
+    if [ -e "$cudaVersionPath" ]
+    then
+        cudaVersionInstalled=true
+        readCudaDeveloperVersion
+    fi
+    if [ -d "$cudaDeveloperDir" ]
+    then
+        readCudaToolkitVersions
+        refineCudaToolkitInstallationStatus
+    fi
+    if [ -e "$cudaDeveloperDriverUnInstallScriptPath" ]
+    then
+        cudaDeveloperDriverInstalled=true
+    fi
+    checkCudaDriverInstall
+}
+
+
+
+
+##  Subroutine D3: Uninstaller
+function uninstallCudaDriver {
+    elevatePrivileges
+    fileDumpTemp=`cat <<EOF
+/usr/local/bin/.cuda_driver_uninstall_manifest_do_not_delete.txt
+/Library/Frameworks/CUDA.framework
+/Library/PreferencePanes/CUDA Preferences.prefPane
+/Library/LaunchDaemons/com.nvidia.cuda.launcher.plist
+/Library/LaunchDaemons/com.nvidia.cudad.plist
+/usr/local/bin/uninstall_cuda_drv.pl
+/usr/local/cuda/lib/libcuda.dylib
+/Library/Extensions/CUDA.kext
+/Library/LaunchAgents/com.nvidia.CUDASoftwareUpdate.plist
+/usr/local/cuda
+EOF
+`
+    genericUninstaller "$fileDumpTemp"
+    if [ "$?" == 0 ]
+    then
+        doneSomething=true
+        scheduleReboot=true
+        checkCudaDriverInstall
+    fi
+}
+
+function uninstallCudaResidue {
+    elevatePrivileges
+    fileDumpTemp=`cat <<EOF
+/Developer/NVIDIA/
+/usr/local/cuda
+EOF
+`
+    genericUninstaller "$fileDumpTemp"
+    if [ "$?" == 0 ]
+    then
+        doneSomething=true
+        scheduleReboot=true
+    fi
+}
+
+function uninstallCudaDeveloperDriver {
+    if [ -e "$cudaDeveloperDriverUnInstallScript" ]
+    then
+        elevatePrivileges
+        sudo perl "$cudaDeveloperDriverUnInstallScript" --silent
+        doneSomething=true
+    fi
+}
+
+function uninstallCudaToolkit {
+    if [ -e "$cudaToolkitUnInstallScript" ]
+    then
+        elevatePrivileges
+        sudo perl "$cudaToolkitUnInstallScript" --silent
+        doneSomething=true
+    fi
+}
+
+function uninstallCudaSamples {
+    if [ -e "$cudaSamplesDir" ] && [ -e "$cudaToolkitUnInstallScript" ]
+    then
+        elevatePrivileges
+        sudo perl "$cudaToolkitUnInstallScript" --manifest="$cudaToolkitUnInstallDir"".cuda_samples_uninstall_manifest_do_not_delete.txt" --silent
+        doneSomething=true
+    fi
+}
+
+function uninstallCudaVersions {
+    while read -r versionTemp
+    do
+        cudaVersion="$versionTemp"
+        cudaToolkitUnInstallDir="/Developer/NVIDIA/CUDA-""$cudaVersion""/bin/"
+        cudaToolkitUnInstallScriptName="uninstall_cuda_""$cudaVersion"".pl"
+        cudaToolkitUnInstallScript="$cudaToolkitUnInstallDir""$cudaToolkitUnInstallScriptName"
+        uninstallCudaToolkit
+    done <<< "$cudaVersionsInstalledList"
+    uninstallCudaDeveloperDriver
+    uninstallCudaDriver
+    uninstallCudaResidue
+}
+
+function uninstallCuda {
+    elevatePrivileges
+    if [[ "$cudaVersions" > 1 ]]
+    then
+        uninstallCudaVersions
     else
-        if [ "$waitTime" == 1 ]
+        if [ `dc -e "$cudaRoutine 8192 / 2 % n"` == 1 ]
         then
-            echo "The system will reboot in 1 second ..."
-        elif [ "$waitTime" == 0 ]
+            uninstallCudaSamples
+        fi
+        if [ `dc -e "$cudaRoutine 512 / 2 % n"` == 1 ]
         then
-            echo "The system will reboot now ..."
+            uninstallCudaToolkit
+            uninstallCudaResidue
+        fi
+        if [ `dc -e "$cudaRoutine 2 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 32 / 2 % n"` == 1 ]
+        then
+            uninstallCudaDeveloperDriver
+            uninstallCudaDriver
+        fi
+    fi
+}
+
+
+
+
+##  Subroutine D4: Downloader
+function downloadCudaDriverInformation {
+    mktmpdir
+    foundMatchCudaDriver=false
+    if ( "$cudaLatest" && [ "${currentOS::5}" == "${os::5}" ] ) || "$forceNewest" && ( ! "$forceCudaDriverStable" )
+    then
+        cudaWebsiteLocalTemp="$dirName""/cudaWebsite.html"
+        sudov curl -s -L "$cudaDriverWebsite" -m 1024 > "$cudaWebsiteLocalTemp"
+        if [ "$?" == 0 ]
+        then
+            cudaDriverDownloadLink=$(cat "$cudaWebsiteLocalTemp" | grep -e download)
+            cudaDriverDownloadLink="${cudaDriverDownloadLink##*http}"
+            cudaDriverDownloadLink="${cudaDriverDownloadLink%%.dmg*}"
+            cudaDriverDownloadLink="http""$cudaDriverDownloadLink"".dmg"
+            cudaDriverDownloadVersion="${cudaDriverDownloadLink%_*}"
+            cudaDriverDownloadVersion="${cudaDriverDownloadVersion##*_}"
+            rm "$cudaWebsiteLocalTemp"
+            foundMatchCudaDriver=true
+        fi
+    else
+        cudaDriverListLocalTemp="$dirName""/cudaDriverList.plist"
+        curl -s "$cudaDriverListOnline" -m 1024 > "$cudaDriverListLocalTemp"
+        if [ "$?" == 0 ]
+        then
+            driversTemp=$("$pbuddy" -c "Print updates:" "$cudaDriverListLocalTemp" | grep "OS" | awk '{print $3}')
+            driverCountTemp=$(echo "$driversTemp" | wc -l | xargs)
+            for index in `seq 0 $(expr $driverCountTemp - 1)`
+            do
+                osTemp=$("$pbuddy" -c "Print updates:$index:OS" "$cudaDriverListLocalTemp")
+                cudaDriverPathTemp=$("$pbuddy" -c "Print updates:$index:downloadURL" "$cudaDriverListLocalTemp")
+                cudaDriverVersionTemp=$("$pbuddy" -c "Print updates:$index:version" "$cudaDriverListLocalTemp")
+
+                if [ "${os::5}" == "$osTemp" ]
+                then
+                    cudaDriverDownloadLink="$cudaDriverPathTemp"
+                    cudaDriverDownloadVersion="$cudaDriverVersionTemp"
+                    foundMatchCudaDriver=true
+                fi
+            done
+            rm "$cudaDriverListLocalTemp"
+        fi
+    fi
+}
+
+function downloadCudaDriverDownloadFallback {
+    forceCudaDriverStable=true
+    downloadCudaDriverInformation
+    if "$foundMatchCudaDriver"
+    then
+        mktmpdir
+        sudov curl -o "$dirName""/cudaDriver.dmg" "$cudaDriverDownloadLink" "-#" -m 1024
+        hdiutil attach "$dirName""/cudaDriver.dmg" -quiet -nobrowse
+        if [ "$?" == 1 ]
+        then
+            omitCuda=true
+        fi
+    else
+        omitCuda=true
+    fi
+}
+
+function downloadCudaDriver {
+    if "$foundMatchCudaDriver"
+    then
+        mktmpdir
+        sudov curl -o "$dirName""/cudaDriver.dmg" "$cudaDriverDownloadLink" "-#" -m 1024
+        hdiutil attach "$dirName""/cudaDriver.dmg" -quiet -nobrowse
+        if [ "$?" == 1 ]
+        then
+            echo "Download failed... Falling back to another download list..."
+            downloadCudaDriverDownloadFallback
+        fi
+    else
+        echo "macOS vaerion match failed... Falling back to another download list..."
+        downloadCudaDriverDownloadFallback
+    fi
+}
+
+function downloadCudaToolkitInformation {
+    mktmpdir
+    foundMatchCudaToolkit=false
+    if (( "$toolkitLatest" && [ "${currentOS::5}" == "${os::5}" ] ) || "$forceNewest" ) && ( ! "$forceCudaToolkitStable" )
+    then
+        cudaWebsiteLocalTemp="$dirName""/cudaWebsite.html"
+        curl -s "$cudaToolkitWebsite" -m 1024 > "$cudaWebsiteLocalTemp"
+        if [ "$?" == 0 ]
+        then
+            cudaToolkitDownloadLink=$(cat "$cudaWebsiteLocalTemp" | grep -e mac | grep -e local_installers)
+            cudaToolkitDownloadLink="${cudaToolkitDownloadLink#*/compute/cuda/}"
+            cudaToolkitDownloadLink="${cudaToolkitDownloadLink%%_mac*}"
+            cudaToolkitDownloadLink="https://developer.nvidia.com/compute/cuda/""$cudaToolkitDownloadLink""_mac"
+            cudaToolkitDownloadVersion="${cudaToolkitDownloadLink%_*}"
+            cudaToolkitDownloadVersion="${cudaToolkitDownloadVersion##*_}"
+            rm "$cudaWebsiteLocalTemp"
+            foundMatchCudaToolkit=true
+        fi
+    else
+        cudaToolkitListTemp="$dirName""/cudaToolkitList.plist"
+        curl -s "$cudaToolkitListOnline" -m 1024 > "$cudaToolkitListTemp"
+        if [ "$?" == 0 ]
+        then
+            driversTemp=$("$pbuddy" -c "Print updates:" "$cudaToolkitListTemp" | grep "OS" | awk '{print $3}')
+            driverCountTemp=$(echo "$driversTemp" | wc -l | xargs)
+            for index in `seq 0 $(expr $driverCountTemp - 1)`
+            do
+                osTemp=$("$pbuddy" -c "Print updates:$index:OS" "$cudaToolkitListTemp")
+                cudaToolkitPathTemp=$("$pbuddy" -c "Print updates:$index:downloadURL" "$cudaToolkitListTemp")
+                cudaToolkitVersionTemp=$("$pbuddy" -c "Print updates:$index:version" "$cudaToolkitListTemp")
+                cudaToolkitDriverVersionTemp=$("$pbuddy" -c "Print updates:$index:driverVersion" "$cudaToolkitListTemp")
+                if [ "${os::5}" == "$osTemp" ]
+                then
+                    cudaToolkitDownloadLink="$cudaToolkitPathTemp"
+                    cudaToolkitDownloadVersion="$cudaToolkitVersionTemp"
+                    cudaToolkitDriverDownloadVersion="$cudaToolkitDriverVersionTemp"
+                    foundMatchCudaToolkit=true
+                fi
+            done
+            rm "$cudaToolkitListTemp"
+        fi
+    fi
+}
+
+function downloadCudaToolkitDownloadFallback {
+    forceCudaToolkitStable=true
+    downloadCudaToolkitInformation
+    if "$foundMatchCudaToolkit"
+    then
+        mktmpdir
+        sudov curl -o "$dirName""/cudaToolkit.dmg" -L "$cudaToolkitDownloadLink" "-#" -m 1024
+        hdiutil attach "$dirName""/cudaToolkit.dmg" -quiet -nobrowse
+        if [ "$?" == 1 ]
+        then
+            omitCuda=true
+        fi
+    else
+        omitCuda=true
+    fi
+}
+
+function downloadCudaToolkit {
+    if "$foundMatchCudaToolkit"
+    then
+        mktmpdir
+        sudov curl -o "$dirName""/cudaToolkit.dmg" -L "$cudaToolkitDownloadLink" "-#" -m 1024
+        hdiutil attach "$dirName""/cudaToolkit.dmg" -quiet -nobrowse
+        if [ "$?" == 1 ]
+        then
+            echo "Download failed... Falling back to another download list..."
+            downloadCudaToolkitDownloadFallback
+        fi
+    else
+        echo "Download failed... Falling back to another download list..."
+        downloadCudaToolkitDownloadFallback
+    fi
+}
+
+
+
+
+##  Subroutine D5: Installer
+function installCudaDriver {
+    if [ -e "$cudaDriverVolPath""$cudaDriverPKGName" ]
+    then
+        elevatePrivileges
+        sudo installer -pkg "$cudaDriverVolPath""$cudaDriverPKGName" -target / &>/dev/null
+        scheduleReboot=true
+        doneSomething=true
+        scheduleKextTouch=true
+        hdiutil detach "$cudaDriverVolPath" -quiet
+        sudov rm -rf "$dirName""/cudaDriver.dmg"
+    fi
+}
+
+function installCudaToolkitBranch {
+    if [ -e "$cudaToolkitVolPath""$cudaToolkitPKGName" ]
+    then
+        elevatePrivileges
+        if [ `dc -e "$scheduleCudaDeduction 2 / 2 % n"` == 1 ]
+        then
+            sudo "$cudaToolkitVolPath""$cudaToolkitPKGName" --accept-eula --silent --no-window --install-package="cuda-driver" &>/dev/null
+            scheduleReboot=true
+            doneSomething=true
+            scheduleKextTouch=true
+        elif [ `dc -e "$scheduleCudaDeduction 4 / 2 % n"` == 1 ]
+        then
+            sudo "$cudaToolkitVolPath""$cudaToolkitPKGName" --accept-eula --silent --no-window --install-package="cuda-toolkit" &>/dev/null
+            scheduleReboot=true
+            doneSomething=true
+            scheduleKextTouch=true
+        elif [ `dc -e "$scheduleCudaDeduction 8 / 2 % n"` == 1 ]
+        then
+            sudo "$cudaToolkitVolPath""$cudaToolkitPKGName" --accept-eula --silent --no-window --install-package="cuda-samples" &>/dev/null
+            scheduleReboot=true
+            doneSomething=true
+            scheduleKextTouch=true
+        fi
+        hdiutil detach "$cudaToolkitVolPath" -quiet
+        rm -rf "$dirName""/cudaToolkit.dmg"
+    fi
+}
+
+function installCuda {
+    if [ `dc -e "$cudaRoutine 64 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 1024 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 16384 / 2 % n"` == 1 ]
+    then
+        installCudaToolkitBranch
+    fi
+    if [ `dc -e "$cudaRoutine 4 / 2 % n"` == 1 ] && [ `"$pbuddy" -c "Print CFBundleVersion" "$cudaDriverVersionPath"` != "$cudaDriverDownloadVersion" ]
+    then
+        installCudaDriver
+    fi
+}
+
+
+
+
+##  Subroutine C6: Helper functions
+
+
+
+
+
+
+#   Subroutine E: eGPU enabler NVIDIA macOS 10.13.X ##############################################################################################################
+##  Subroutine E1: Global variables
+nvidiaEGPUenabler1013Installed=false
+nvidiaEGPUenabler1013BuildVersion=""
+
+nvidiaEGPUenabler1013BuildVersionPath="/Library/Extensions/NVDAEGPUSupport.kext/Contents/Info.plist"
+
+nvidiaEGPUenabler1013="/Library/Extensions/NVDAEGPUSupport.kext"
+
+nvidiaEGPUenabler1013ListOnline="$gitPath""/Data/nvidiaEGPUenabler1013.plist"
+
+nvidiaEGPUenabler1013DownloadPKGName=""
+nvidiaEGPUenabler1013DownloadLink=""
+nvidiaEGPUenabler1013DownloadChecksum=""
+
+foundMatchNvidiaEGPUenabler1013=false
+
+omitNvidiaEGPUenabler1013=false
+
+
+##  Subroutine E2: Check functions
+function checkNvidiaEGPUenabler1013InstallReset {
+    nvidiaEGPUenabler1013Installed=false
+    nvidiaEGPUenabler1013BuildVersion=""
+}
+
+function checkNvidiaEGPUenabler1013Install {
+    checkNvidiaEGPUenabler1013InstallReset
+    if [ -e "$nvidiaEGPUenabler1013" ]
+    then
+        nvidiaEGPUenabler1013Installed=true
+        nvidiaEGPUenabler1013BuildVersion=$("$pbuddy" -c "Print IOKitPersonalities:NVDAStartup:NVDARequiredOS" "$nvidiaEGPUenabler1013BuildVersionPath")
+    fi
+}
+
+
+
+
+##  Subroutine E3: Uninstaller
+function uninstallNvidiaEGPUenabler1013 {
+    if "$nvidiaEGPUenabler1013Installed"
+    then
+        elevatePrivileges
+        sudo rm -rf "$nvidiaEGPUenabler1013"
+        scheduleReboot=true
+        doneSomething=true
+        scheduleKextTouch=true
+    fi
+}
+
+
+
+
+##  Subroutine E4: Downloader
+function downloadNvidiaEGPUenabler1013Information {
+    mktmpdir
+    nvidiaEGPUenabler1013ListTemp="$dirName""/eGPUenabler.plist"
+    curl -s "$nvidiaEGPUenabler1013ListOnline" -m 1024 > "$nvidiaEGPUenabler1013ListTemp"
+    if [ "$?" == 0 ]
+    then
+        enablersTemp=$("$pbuddy" -c "Print updates:" "$nvidiaEGPUenabler1013ListTemp" | grep "build" | awk '{print $3}')
+        enablerCountTemp=$(echo "$enablersTemp" | wc -l | xargs)
+        foundMatchNvidiaEGPUenabler1013=false
+        for index in `seq 0 $(expr $enablerCountTemp - 1)`
+        do
+            buildTemp=$("$pbuddy" -c "Print updates:$index:build" "$nvidiaEGPUenabler1013ListTemp")
+            nvidiaEGPUenabler1013ChecksumTemp=$("$pbuddy" -c "Print updates:$index:checksum" "$nvidiaEGPUenabler1013ListTemp")
+            nvidiaEGPUenabler1013PKGNameTemp=$("$pbuddy" -c "Print updates:$index:packageName" "$nvidiaEGPUenabler1013ListTemp")
+            nvidiaEGPUenabler1013DownloadLinkTemp=$("$pbuddy" -c "Print updates:$index:downloadURL" "$nvidiaEGPUenabler1013ListTemp")
+            if [ "$build" == "$buildTemp" ]
+            then
+                nvidiaEGPUenabler1013DownloadPKGName="$nvidiaEGPUenabler1013PKGNameTemp"
+                nvidiaEGPUenabler1013DownloadLink="$nvidiaEGPUenabler1013DownloadLinkTemp"
+                nvidiaEGPUenabler1013DownloadChecksum="$nvidiaEGPUenabler1013ChecksumTemp"
+                foundMatchNvidiaEGPUenabler1013=true
+            fi
+        done
+        rm "$nvidiaEGPUenabler1013ListTemp"
+    fi
+}
+
+function downloadNvidiaEGPUenabler1013 {
+    downloadNvidiaEGPUenabler1013Information
+    if "$foundMatchNvidiaEGPUenabler1013"
+    then
+        mktmpdir
+        curl -o "$dirName""/enabler.zip" "$nvidiaEGPUenabler1013DownloadLink" "-#" -m 1024
+        nvidiaEGPUenabler1013ChecksumTemp=$(shasum -a 512 -b "$dirName""/enabler.zip" | awk '{ print $1 }')
+        if [ "$nvidiaEGPUenabler1013DownloadChecksum" != "$nvidiaEGPUenabler1013ChecksumTemp" ]
+        then
+            omitNvidiaEGPUenabler1013=true
         else
-            echo "The system will reboot in $waitTime seconds ..."
+            unzip -qq "$dirName""/enabler.zip" -d "$dirName""/"
         fi
-        sleep "$waitTime"
-            sudo reboot
-    fi
-    echo
-    exit
-}
-
-##handle script abortion due to error
-function irupt {
-    cleantmpdir
-    echo
-    echo "The script has failed."
-    if [ "$doneSomething" == 1 ]
-    then
-        printChanges
+        rm -rf "$dirName""/enabler.zip"
     else
-        echo "Nothing has been changed."
+        omitNvidiaEGPUenabler1013=true
     fi
-    echo
-    exit
 }
 
-##finish behavior
-function finish {
-    cleantmpdir
-    echo
-    echo
-    echo
-    echo "The script has finished successfully."
-    if [ "$doneSomething" == 1 ]
+
+
+
+##  Subroutine E5: Installer
+function installNvidiaEGPUenabler1013 {
+    if [ -e "$dirName""/""$nvidiaEGPUenabler1013DownloadPKGName" ]
     then
-        printChanges
-        printInformation
-        rebootSystem
-    else
-        printInformation
-        echo
-        echo "Nothing has been changed."
+        elevatePrivileges
+        sudo installer -pkg "$dirName""/""$nvidiaEGPUenabler1013DownloadPKGName" -target / &>/dev/null
+        rm -f "$dirName""/""$nvidiaEGPUenabler1013DownloadPKGName"
+        scheduleReboot=true
+        doneSomething=true
+        scheduleKextTouch=true
     fi
-    echo
-    exit
 }
 
-##error handler, fatal error
-function iruptError {
-    echo
-    echo
-    case "$1"
-    in
-    "param")
-        echo "This parameter configuration is currently unsupported."
-        ;;
-    "unsupBuild")
-        echo "You have an unsupported build of macOS."
-        echo "This may change in the future, so try again in a few hours."
-        ;;
-    "unex")
-        echo "An unexpected error has occured."
-        ;;
-    "unsupOS")
-        echo "Your OS is not supported by this script."
-        ;;
-    "toNewOS")
-        echo "Your OS is to new. Compatibility may change in the future, though."
-        ;;
-    "conflicArg")
-        echo "Conflicting arguments."
-        ;;
-    "unknwnArg")
-        echo "unkown argument given"
-        ;;
-    "SIP")
-        echo "The script has failed. Nothing has been changed."
-        echo "System Integrity Protection (SIP) is not set correctly."
-        echo "Please boot into recovery mode and execute:"
-        echo "csrutil enable --without kext; reboot;"
-        ;;
-    "SIPerror")
-        echo "An error whithin SIP detection as occured."
-        echo "To protect your system the script has stopped."
-        echo "Please check your System Integrity Protection (SIP) status by executing:"
-        echo "csrutil status"
-        echo "You might want to try booting into recovery mode and executing:"
-        echo "csrutil enable --without kext; reboot;"
-        ;;
-    *)
-        echo "An unknown error as occured."
-        ;;
-    esac
-    irupt
-}
 
-##error/ask function
-function cont {
-    case "$1"
-    in
-    "error")
-        case "$errorCont"
-        in
-        "0")
-            echo "Continuation might result in failure!"
-            echo "$3"
-            ;;
-        "1")
-            echo "The script will try to execute the rest of the queue due to --errorContinue ..."
-            echo "Expect the script to fail."
-            ;;
-        "2")
-            echo "Breaking silence ..."
-            silent=0
-            echo "$3"
-            ;;
-        "3")
-            finish
-            ;;
-        *)
-            iruptError "unex"
-            ;;
-        esac
-        ;;
-    "ask")
-        echo "$3"
-        ;;
-    *)
-        iruptError "unex"
-        ;;
-    esac
-    if [ "$silent" == 0 ]
+
+
+##  Subroutine E6: Helper functions
+
+
+
+
+#   Subroutine F: Thunderbolt 1/2 support - credit mayankk2308 @ GitHub / mac_editor @ eGPU.io; Please visit the GitHub repository to see all contributors. ##############################################################################################################
+#   The subroutine F has been copied and adapted from "https://github.com/mayankk2308/purge-wrangler/raw/master/purge-wrangler.sh".
+##  Subroutine F1: Global variables
+#appleGraphicsControlPath="/System/Library/Extensions/AppleGraphicsControl.kext" - defined at Subroutine B: System checks
+#appleGPUwranglerPath="$appleGraphicsControlPath""/Contents/PlugIns/AppleGPUWrangler.kext" - defined at Subroutine B: System checks
+#appleGPUwranglerBinaryPath="$appleGPUwranglerPath""/Contents/MacOS/AppleGPUWrangler" - defined at Subroutine B: System checks
+
+thunderbolt12UnlockSupportPath="/Library/Application Support/Purge-Wrangler"
+thunderbolt12UnlockKextBackupPath="$thunderbolt12UnlockSupportPath""/Kexts"
+
+thunderbolt12UnlockHexBookmark="494F5468756E646572626F6C74537769746368547970653"
+
+thunderbolt12UnlockInstalled=false
+thunderbolt12UnlockInstallStatus=0
+
+
+##  Subroutine F2: Check functions
+function checkThunderbolt12UnlockInstall {
+    if [ -e "$appleGPUwranglerBinaryPath" ]
     then
-        read -p "$2"" [y]es [n]o : " -r
-        echo
-        if [ "$REPLY" != "y" ]
+        thunderbolt12UnlockInstallStatusTemp=`hexdump -ve '1/1 "%.2X"' "$appleGPUwranglerBinaryPath" | sed "s/.*""$thunderbolt12UnlockHexBookmark""//g"`
+        thunderbolt12UnlockInstallStatus="${thunderbolt12UnlockInstallStatusTemp::1}"
+        if [ "$thunderbolt12UnlockInstallStatus" != 3 ]
         then
-            echo "The reboot will be omitted."
-            noReboot=1
-            finish
+            thunderbolt12UnlockInstalled=true
         fi
-    else
-        echo "$2"" [y]es [n]o : y"
     fi
 }
 
-##error handler, non-fatal error
-function contError {
-    echo
-    echo
-    fail=0
-    case "$1"
-    in
-    "unCudaVers")
-        echo "No CUDA installation was detected."
-        ;;
-    "unCudaDriver")
-        echo "No CUDA driver was detected."
-        ;;
-    "unCudaToolkit")
-        echo "No CUDA toolkit was detected."
-        ;;
-    "unCudaSamples")
-        echo "No CUDA samples were detected."
-        ;;
-    "unNvidiaDriver")
-        echo "No CUDA driver was found."
-        ;;
-    "unEnabler")
-        echo "No NVIDIA eGPU enabler was found."
-        ;;
-    "cudaVersion")
-        echo "Multiple CUDA versions were detected."
-        echo "Trying to uninstall them all..."
-        ;;
-    "cudaDriver")
-        echo "The best CUDA driver is already installed."
-        ;;
-    "cudaToolkit")
-        echo "The best CUDA toolkit is already installed."
-        ;;
-    "enabler")
-        echo "The matching eGPU enabler is already installed."
-        ;;
-    "noCUDAdriver")
-        echo "No CUDA driver was found for your version of macOS."
-        ;;
-    "noEnabler")
-        echo "No eGPU Support was found for your version of macOS."
-        echo "This may change in the future, so try again in a few hours."
-        ;;
-    "noNvidiaDriver")
-        echo "No NVIDIA driver was found for your version of macOS."
-        echo "Falling back to latest release."
-        fail=1
-        ;;
-    "noNvidiaDriverForce")
-        echo "Your specified NVIDIA driver was not found."
-        echo "Falling back to latest stable release."
-        fail=1
-        ;;
-    "unRecomSIP")
-        echo "You are using the script in an unrecommendend state (System Integrity Protection)."
-        echo "The recommendend state is:"
-        echo "csrutil enable --without kext"
-        fail=1
-        ;;
-    *)
-        echo "An unknown error as occured."
-        fail=1
-        ;;
-    esac
-    if [ "$fail" == 1 ]
+
+
+
+##  Subroutine F3: Uninstaller
+function uninstallThunderbolt12Unlock {
+    elevatePrivileges
+    fetchThunderboltInterface
+    checkThunderbolt12UnlockInstall
+    inPlaceEditor "$thunderbolt12UnlockHexBookmark""$thunderbolt12UnlockInstallStatus" "$thunderbolt12UnlockHexBookmark""3" "$appleGPUwranglerBinaryPath"
+    scheduleReboot=true
+    doneSomething=true
+    scheduleKextTouch=true
+}
+
+
+
+
+##  Subroutine F4: Downloader
+
+
+
+
+##  Subroutine F5: Installer
+function installThunderbolt12Unlock {
+    elevatePrivileges
+    fetchThunderboltInterface
+    checkThunderbolt12UnlockInstall
+    inPlaceEditor "$thunderbolt12UnlockHexBookmark""$thunderbolt12UnlockInstallStatus" "$thunderbolt12UnlockHexBookmark""$thunderboltInterface" "$appleGPUwranglerBinaryPath"
+    scheduleReboot=true
+    doneSomething=true
+    scheduleKextTouch=true
+}
+
+
+
+
+##  Subroutine F6: Helper functions
+function backupAppleGraphicsControl {
+    if ! [ -d "$thunderbolt12UnlockSupportPath" ]
     then
-        cont "error" "Continue?" "The script will try to execute the rest of the queue ..."
-        echo "The script will still try to continue executing ..."
+        mkdir "$thunderbolt12UnlockSupportPath"
+    fi
+    sudo cp -R "$appleGraphicsControlPath"
+}
+
+
+
+
+#   Subroutine G: AMD Legacy Driver ##############################################################################################################
+##  Subroutine G1: Global variables
+amdLegacyDriversInstalled=false
+
+amdLegacyDriverDownloadLink="https://egpu.io/wp-content/uploads/2018/04/automate-eGPU.kext_-1.zip"
+amdLegacyDriverChecksum="2c93ef2e99423e0a1223d356772bd67d6083da69489fb3cf61dfbb69237eba1aaf453b7dc571cfe729e8b8bc1f92fcf29f675f60cd7dba9ec9b2723bac8f6bb7"
+
+amdLegacyDriverKextPath="/Library/Extensions/automate-eGPU.kext"
+
+omitAMDLegacyDriver=false
+
+
+
+
+##  Subroutine G2: Check functions
+function checkAMDLegacyDriverInstall {
+    amdLegacyDriversInstalled=false
+    if [ -e "$amdLegacyDriverKextPath" ]
+    then
+        amdLegacyDriversInstalled=true
     fi
 }
 
 
-##############################################################################################################parameter extraction and distribution
 
 
-#extract parameters
+##  Subroutine G3: Uninstaller
+function uninstallAMDLegacyDriver {
+    if [ -e "$amdLegacyDriverKextPath" ]
+    then
+        elevatePrivileges
+        sudo rm -rf "$amdLegacyDriverKextPath"
+        scheduleReboot=true
+        doneSomething=true
+        scheduleKextTouch=true
+    fi
+}
+
+
+
+
+##  Subroutine G4: Downloader
+function downloadAMDLegacyDriver {
+    mktmpdir
+    curl -o "$dirName""/AMDLegacy.zip" "$amdLegacyDriverDownloadLink" "-#" -m 1024
+    amdLegacyDriverChecksumTemp=$(shasum -a 512 -b "$dirName""/AMDLegacy.zip" | awk '{ print $1 }')
+    if [ "$amdLegacyDriverChecksum" != "$amdLegacyDriverChecksumTemp" ]
+    then
+        omitAMDLegacyDriver=true
+    else
+        unzip -qq "$dirName""/AMDLegacy.zip" -d "$dirName""/"
+    fi
+    rm -rf "$dirName""/AMDLegacy.zip"
+}
+
+
+
+
+##  Subroutine G5: Installer
+function installAMDLegacyDriver {
+    if [ -e "$dirName""/automate-eGPU.kext" ]
+    then
+        elevatePrivileges
+        sudo cp "$dirName""/automate-eGPU.kext" "$amdLegacyDriverKextPath"
+        rm -rf "$dirName""/automate-eGPU.kext"
+        scheduleReboot=true
+        doneSomething=true
+        scheduleKextTouch=true
+    fi
+}
+
+
+
+
+##  Subroutine G6: Helper functions
+
+
+
+
+#   Subroutine H: T82 unblock ##############################################################################################################
+##  Subroutine H1: Global variables
+t82UnblockerDownloadLink="https://github.com/rgov/Thunderbolt3Unblocker/releases/download/v0.0.2/Thunderbolt3Unblocker.zip"
+t82UnblockerChecksum="ce6b38f6c641f1a7866a57853a877126881f5f4b79d678a2952de585e48a23f6b20cae3fd4c177cedc17968c8042ca1f562953b6bf35360428799e3184c525b9"
+
+t82UnblockerInstalled=false
+
+t82UnblockerKextPath="/Library/Extensions/Thunderbolt3Unblocker.kext"
+
+omitT82Unblocker=false
+
+
+
+
+##  Subroutine H2: Check functions
+function checkT82Unblocker {
+    t82UnblockerInstalled=false
+    if [ -e "$t82UnblockerKextPath" ]
+    then
+        t82UnblockerInstalled=true
+    fi
+}
+
+
+
+
+##  Subroutine H3: Uninstaller
+function uninstallT82Unblocker {
+    if [ -e "$t82UnblockerKextPath" ]
+    then
+        elevatePrivileges
+        sudo rm -R "$t82UnblockerKextPath"
+        scheduleReboot=true
+        doneSomething=true
+        scheduleKextTouch=true
+    fi
+}
+
+
+
+
+##  Subroutine H4: Downloader
+function downloadT82Unblocker {
+    mktmpdir
+    curl -o "$dirName""/tb82Unblock.zip" -L "$t82UnblockerDownloadLink" "-#" -m 1024
+    t82UnblockerChecksumTemp=$(shasum -a 512 -b "$dirName""/tb82Unblock.zip")
+    if [ "$t82UnblockerChecksumTemp" != "$t82UnblockerChecksum" ]
+    then
+        omitT82Unblocker=true
+    else
+        unzip -qq "$dirName""/tb82Unblock.zip" -d "$dirName""/"
+    fi
+    rm -rf "$dirName""/tb82Unblock.zip"
+}
+
+
+
+
+##  Subroutine H5: Installer
+function installT82Unblocker {
+    if [ -e "$dirName""/Thunderbolt3Unblocker.kext" ]
+    then
+        elevatePrivileges
+        sudo cp -R "$dirName""/Thunderbolt3Unblocker.kext" "$t82UnblockerKextPath"
+        rm -R "$dirName""/Thunderbolt3Unblocker.kext"
+        scheduleReboot=true
+        doneSomething=true
+        scheduleKextTouch=true
+    fi
+}
+
+
+
+
+##  Subroutine H6: Helper functions
+
+
+
+
+#   Subroutine I: NVIDIA dGPU deactivator ##############################################################################################################
+##  Subroutine I1: Global variables
+nvidiaDGPUdeactivatorBackupPath="/Library/Application Support/Purge-NVDA"
+
+nvidiaDGPUdeactivatorInstalled=false
+
+omitNvidiaDGPUdeactivator=false
+
+
+
+
+##  Subroutine I2: Check functions
+function checkNvidiaDGPUdeactivator {
+    nvidiaDGPUdeactivatorInstalled=false
+    if [ -d "$nvidiaDGPUdeactivatorBackupPath" ]
+    then
+        nvidiaDGPUdeactivatorInstalled=true
+    fi
+}
+
+
+
+
+##  Subroutine I3: Uninstaller
+function uninstallNvidiaDGPUdeactivator {
+    elevatePrivileges
+    sudo nvram -d fa4ce28d-b62f-4c99-9cc3-6815686e30f9:gpu-power-prefs
+    sudo nvram -d fa4ce28d-b62f-4c99-9cc3-6815686e30f9:gpu-active
+    sudo nvram boot-args=""
+}
+
+
+
+
+##  Subroutine I4: Downloader
+
+
+
+
+##  Subroutine I5: Installer
+function installNvidiaDGPUdeactivator {
+    elevatePrivileges
+    sudo nvram fa4ce28d-b62f-4c99-9cc3-6815686e30f9:gpu-power-prefs=%01%00%00%00
+    sudo nvram fa4ce28d-b62f-4c99-9cc3-6815686e30f9:gpu-active=%01%00%00%00
+    sudo nvram boot-args="nv_disable=1"
+}
+
+
+
+
+##  Subroutine I6: Helper functions
+
+
+
+
+#   Subroutine J: macOS 10.13.4 wrangler patch ##############################################################################################################
+##  Subroutine J1: Global variables
+nvidiaUnlockWranglerPatchHexBookmark="4989C7498B3C24E81DBDFFFF41F7C50000000"
+
+nvidiaUnlockWranglerPatchInstalled=false
+nvidiaUnlockWranglerPatchInstallStatus=0
+
+
+
+
+##  Subroutine J2: Check functions
+function checkNvidiaUnlockWranglerPatchInstall {
+    if [ -e "$appleGPUwranglerBinaryPath" ]
+    then
+        nvidiaUnlockWranglerPatchInstallStatusTemp=`hexdump -ve '1/1 "%.2X"' "$appleGPUwranglerBinaryPath" | sed "s/.*""$nvidiaUnlockWranglerPatchHexBookmark""//g"`
+        nvidiaUnlockWranglerPatchInstallStatus="${nvidiaUnlockWranglerPatchInstallStatusTemp::1}"
+        if [ "$nvidiaUnlockWranglerPatchInstallStatus" != 1 ]
+        then
+            nvidiaUnlockWranglerPatchInstalled=true
+        fi
+    fi
+}
+
+
+
+
+##  Subroutine J3: Uninstaller
+function uninstallNvidiaUnlockWranglerPatch {
+    checkNvidiaUnlockWranglerPatchInstall
+    elevatePrivileges
+    inPlaceEditor "$nvidiaUnlockWranglerPatchHexBookmark""$nvidiaUnlockWranglerPatchInstallStatus" "$nvidiaUnlockWranglerPatchHexBookmark""1" "$appleGPUwranglerBinaryPath"
+    scheduleReboot=true
+    doneSomething=true
+    scheduleKextTouch=true
+}
+
+
+
+
+##  Subroutine J4: Downloader
+
+
+
+
+##  Subroutine J5: Installer
+function installNvidiaUnlockWranglerPatch {
+    checkNvidiaUnlockWranglerPatchInstall
+    elevatePrivileges
+    inPlaceEditor "$nvidiaUnlockWranglerPatchHexBookmark""$nvidiaUnlockWranglerPatchInstallStatus" "$nvidiaUnlockWranglerPatchHexBookmark""0" "$appleGPUwranglerBinaryPath"
+    scheduleReboot=true
+    doneSomething=true
+    scheduleKextTouch=true
+}
+
+
+
+
+##  Subroutine J6: Helper functions
+
+#   Subroutine K: CUDA drivers ##############################################################################################################
+##  Subroutine K1: Global variables
+##  Subroutine K2: Check functions
+##  Subroutine K3: Uninstaller
+##  Subroutine K4: Downloader
+##  Subroutine K5: Installer
+##  Subroutine K6: Helper functions
+
+
+#   Subroutine X: Option parsing ##############################################################################################################
+install=false
+uninstall=false
+check=false
+nvidiaDriver=false
+amdLegacyDriver=false
+reinstall=false
+#forceNewest=false - defined at Subroutine C: NVIDIA drivers
+nvidiaEnabler=false
+thunderbolt12Unlock=false
+t82Unblocker=false
+unlockNvidia=false
+deactivateNvidiaDGPU=false
+fullInstall=false
+#noReboot=false - defined at Subroutine A: Basic functions
+#customNvidiaDriver=false - defined at Subroutine C: NVIDIA drivers
+help=false
+acceptLicense=false
+skipWarnings=false
+
+argumentsGiven=false
+
 lastParam=""
 for options in "$@"
 do
     case "$options"
     in
     "--install" | "-i")
-        if [ "$uninstall" != 0 ] || [ "$update" != 0 ] || [ "$check" != 0 ]
+        if "$uninstall" || "$check"
         then
-            iruptError "conflicArg"
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
         fi
-        install=1
+        install=true
         ;;
-    "--uninstall" | "-u")
-        if [ "$install" != 0 ] || [ "$update" != 0 ] || [ "$forceNew" != "stable" ] || [ "$reinstall" != 0 ] || [ "$check" != 0 ]
+    "--uninstall" | "-U")
+        if "$install" || "$check" || "$forceNewest" || "$reinstall" || "$fullInstall"
         then
-            iruptError "conflicArg"
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
         fi
-        uninstall=1
+        uninstall=true
         ;;
-    "--check" | "-h")
-        if [ "$uninstall" != 0 ] || [ "$update" != 0 ] || [ "$install" != 0 ] || [ "$reinstall" != 0 ] || [ "$forceNew" != "stable" ] || [ "$driver" != 0 ] || [ "$reinstall" != 0 ] || [ "$cuda" != 0 ] || [ "$minimal" != 0 ] || [ "$enabler" != 0 ]
+    "--checkSystem" | "-C")
+        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall"
         then
-            iruptError "conflicArg"
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
         fi
-        check=1
+        check=true
         ;;
-    "--update" | "-r")
-        if [ "$install" != 0 ] || [ "$uninstall" != 0 ] || [ "$check" != 0 ]
+    "--nvidiaDriver" | "-n")
+        if "$check"
         then
-            iruptError "conflicArg"
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
         fi
-        update=1
+        nvidiaDriver=true
         ;;
-    "--driver" | "-d")
-        if  [ "$update" != 0 ] || [ "$check" != 0 ]
+    "--amdLegacyDriver" | "-a")
+        if "$check"
         then
-            iruptError "conflicArg"
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
         fi
-        driver=1
+        amdLegacyDriver=true
         ;;
-    "--forceReinstall" | "-l")
-        if [ "$uninstall" != 0 ] || [ "$check" != 0 ]
+    "--forceReinstall" | "-R")
+        if "$uninstall" || "$check"
         then
-            iruptError "conflicArg"
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
         fi
-        reinstall=1
+        reinstall=true
         ;;
     "--forceNewest" | "-f")
-        if [ "$uninstall" != 0 ] || [ "$check" != 0 ] || [ "$customDriver" != 0 ]
+        if "$uninstall" || "$check"
         then
-            iruptError "conflicArg"
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
         fi
-        forceNew="newest"
+        forceNewest=true
         ;;
-    "--enabler" | "-e")
-        if  [ "$update" != 0 ] || [ "$check" != 0 ]
+    "--nvidiaEGPUsupport" | "-e")
+        if "$check"
         then
-            iruptError "conflicArg"
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
         fi
-        enabler=1
+        nvidiaEnabler=true
         ;;
-    "--cuda" | "-c")
-        if [ "$cuda" != 0 ] || [ "$check" != 0 ]
+    "--deactivateNvidiaDGPU" | "-d")
+        if "$check"
         then
-            iruptError "conflicArg"
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
         fi
-        cuda=1
+        deactivateNvidiaDGPU=true
         ;;
-    "--cudaDriver" | "-v")
-        if [ "$cuda" != 0 ] || [ "$check" != 0 ]
+    "--unlockThunderboltV12" | "-V")
+        if "$check"
         then
-            iruptError "conflicArg"
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
         fi
-        cuda=2
+        thunderbolt12Unlock=true
+        ;;
+    "--unlockT82" | "-T")
+        if "$check"
+        then
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
+        fi
+        t82Unblocker=true
+        ;;
+    "--unlockNvidia" | "-N")
+        if "$check"
+        then
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
+        fi
+        unlockNvidia=true
+        ;;
+    "--cudaDriver" | "-c")
+        if [ "$scheduleCudaDeduction" != 0 ] || "$check"
+        then
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
+        fi
+        scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 1`
+        ;;
+    "--cudaDeveloperDriver" | "-D")
+        if [ "$scheduleCudaDeduction" != 0 ] || "$check"
+        then
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
+        fi
+        scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
         ;;
     "--cudaToolkit" | "-t")
-        if [ "$cuda" != 0 ] || [ "$check" != 0 ]
+        if [ "$scheduleCudaDeduction" != 0 ] || "$check"
         then
-            iruptError "conflicArg"
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
         fi
-        cuda=3
+        scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
+        scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 2 1`
         ;;
-    "--cudaSamples" | "-a")
-        if [ "$cuda" != 0 ] || [ "$check" != 0 ]
+    "--cudaSamples" | "-s")
+        if [ "$scheduleCudaDeduction" != 0 ] || "$check"
         then
-            iruptError "conflicArg"
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
         fi
-        cuda=4
+        scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
+        scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 2 1`
+        scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 3 1`
         ;;
-    "--mininmal" | "-m")
-        if [ "$check" != 0 ]
+    "--full" | "-F")
+        if "$check" || "$uninstall"
         then
-            iruptError "conflicArg"
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
         fi
-        minimal=1
+        fullInstall=true
         ;;
-    "--noReboot" | "-n")
-        noReboot=1
+    "--noReboot" | "-r")
+        noReboot=true
         ;;
-    "--silent" | "-s")
-        silent=1
+    "--acceptLicenseTerms" | "--acceptLicense")
+        acceptLicense=true
         ;;
-    "--acceptLicenseTerms")
-        license=1
+    "--skipWarnings" | "-k")
+        skipWarnings=true
         ;;
-    "--errorContinue")
-        if [ "$errorCont" != 0 ]
-        then
-            iruptError "conflicArg"
-        fi
-        errorCont=1
-        ;;
-    "--errorBreakSilence")
-        if [ "$errorCont" != 0 ]
-        then
-            iruptError "conflicArg"
-        fi
-        errorCont=2
-        ;;
-    "--errorStop")
-        if [ "$errorCont" != 0 ]
-        then
-            iruptError "conflicArg"
-        fi
-        errorCont=3
+    "--help" | "-h" | "-?" | "?" | "help")
+        help=true
         ;;
     *)
-        if [ "$lastParam" == "--driver" ] || [ "$lastParam" == "-d" ]
+        if [ "$lastParam" == "--nvidiaDriver" ] || [ "$lastParam" == "-n" ]
         then
-            if [ "$forceNew" == "newest" ]
+            if "$forceNewest"
             then
-                iruptError "conflicArg"
+                echo "ERROR: Conflicting arguments with ""$options"" [revision]"
+                irupt
             fi
-            customDriver=1
+            customNvidiaDriver=true
             nvidiaDriverDownloadVersion="$options"
         else
-            echo "ERROR: ""$options"
+            echo "unrecognized parameter: ""$options"
             echo "The usage of this script is explained here in full detail:"
             echo "https://github.com/learex/macOS-eGPU"
-            iruptError "unknwnArg"
+            irupt
         fi
-        ;;
     esac
+    argumentsGiven=true
     lastParam="$options"
 done
 
 
 
+#   Subroutine Y: Script execution algorithm ##############################################################################################################
+##  Subroutine Y1: Global variables
+attachedDMGVolumes="$(echo -e -n $attachedDMGVolumes)"
 
-#silent dependencies
-##license accept
-if [ "$silent" == 1 ] && [ "$license" == 0 ]
-then
-    echo "Silent execution requires explicit acceptance of the licensing terms."
-    echo "To accept them and run the script in silent mode add the parameter --acceptLicenseTerms"
-    finish
-fi
+#scheduleReboot=false - defined at Subroutine A: Basic functions
+doneSomething=false
+scheduleKextTouch=false
 
-##error handling with silent
-if [ "$silent" == 0 ] && [ "$errorCont" != 0 ]
-then
-    echo "Error handling options can only be used in conjunction with --silent | -s."
-    finish
-fi
+determine=false
+setStandard=false
 
+scheduleSecureEGPUfetch=false
 
+sipRequirement=127
 
-
-#ask license question
-if [ "$silent" == 0 ] && [ "$license" == 0 ]
-then
-    echo "You can read the licensing agreement here:"
-    echo "https://github.com/learex/macOS-eGPU/blob/master/License.txt"
-    cont "ask" "Do you agree with the license terms?" "Any further execution requires acceptance of the licensing terms ..."
-fi
+nvidiaDriverRoutine=0
+nvidiaEnablerRoutine=0
+unlockNvidiaRoutine=0
+amdLegacyDriverRoutine=0
+t82UnblockerRoutine=0
+deactivateNVIDIAdGPURoutine=0
+thunderbolt12UnlockRoutine=0
 
 
 
 
-#display reboot warning
-if [ "$noReboot" == 0 ] && [ "$check" == 0 ]
-then
-    echo "The system will reboot after successfull completion."
-    if [ "$priorWaitTime" == 1 ]
+##  Subroutine Y4: Pre branch functions
+function printHelp {
+    if "$help"
     then
-        echo "You have 1 second to abort the script (^C) ..."
-    elif [ "$priorWaitTime" == 0 ]
-    then
-        echo "The script will continue now ..."
-    else
-        echo "You have $priorWaitTime seconds to abort the script (^C) ..."
+        createSpace 3
+        echo "Not yet available."
+        exit
     fi
-    sleep "$priorWaitTime"
-fi
-
-
-
-#set standards
-if [ "$install" == 0 ] && [ "$uninstall" == 0 ] && [ "$update" == 0 ] && [ "$check" == 0 ]
-then
-    install=1
-fi
-
-if [ "$enabler" == 0 ] && [ "$driver" == 0 ] && [ "$cuda" == 0 ]
-then
-    determine=1
-fi
-
-##############################################################################################################define and execute system information functions
-
-
-#define functions
-##define system info function
-function fetchOSinfo {
-    echo
-    echo
-    echo "Fetching system information ..."
-    os="$(sw_vers -productVersion)"
-    build="$(sw_vers -buildVersion)"
-    echo "OS version: $os (build: $build)"
 }
 
-##define SIP info function
-function fetchSIPstat {
-    echo
-    echo "Fetching System Integrity Protection (SIP) status ..."
-    SIP="$(csrutil status)"
-    if [ "${SIP: -2}" == "d." ]
+function checkSystem {
+    if "$check"
     then
-        SIP="${SIP::37}"
-        SIP="${SIP: -1}"
-        case "$SIP"
-        in
-        "e")
-            statSIP=127
-            ;;
-        "d")
-            statSIP=0
-            ;;
-        *)
-            statSIP=128
-            ;;
-        esac
-    else
-        SIP1="${SIP::102}"
-        SIP1="${SIP1: -1}"
-        SIP2="${SIP::126}"
-        SIP2="${SIP2: -1}"
-        SIP3="${SIP::160}"
-        SIP3="${SIP3: -1}"
-        SIP4="${SIP::193}"
-        SIP4="${SIP4: -1}"
-        SIP5="${SIP::223}"
-        SIP5="${SIP5: -1}"
-        SIP6="${SIP::251}"
-        SIP6="${SIP6: -1}"
-        SIP7="${SIP::285}"
-        SIP7="${SIP7: -1}"
-        p=1
-        statSIP=0
-        for SIPX in "$SIP7" "$SIP6" "$SIP5" "$SIP4" "$SIP3" "$SIP2" "$SIP1"
-        do
-            if [ "$SIPX" == "e" ]
-            then
-                statSIP="$(expr $statSIP + $p)"
-            fi
-            p="$(expr $p \* 2)"
-        done
+        createSpace 3
+        echo "Not yet available."
+        exit
     fi
-    echo "SIP status: $statSIP"
 }
 
-#execute and check compatibility
-##os
-fetchOSinfo
-if [ "$os" == "$warningOS" ]
-then
-    echo "You are using a version of macOS that is not supported."
-    echo "It is currently unknown if and when support will arrive."
-    echo "The current recommendation is to downgrade macOS to the previous version using Time Machine."
-    echo "To check whether the script has been updated, visit its GitHub homepage."
-    cont "ask" "Should the script still continue executing?" "NOTE: eGPU Support will not work even if the rest is executed!"
-fi
-
-case "${os::5}"
-in
-    "10.12")
-        ;;
-    "10.13")
-        ;;
-    "10.14")
-        iruptError "toNewOS"
-        ;;
-    *)
-        iruptError "unsupOS"
-        ;;
-esac
-
-##SIP
-fetchSIPstat
-if [ "$statSIP" != 31 ] && [ "$statSIP" != 128 ]
-then
-    contError "unRecomSIP"
-elif [ "$statSIP" == 128 ]
-then
-    iruptError "SIPerror"
-fi
 
 
-##############################################################################################################define software check functions
+
+##  Subroutine Y5: Print functions
 
 
-#define software check functions
-##CUDA
-function checkCudaInstall {
+function printHeader {
+    echo "macOS-eGPU.sh"
     echo
-    echo "Searching for CUDA installations ..."
-    cudaVersionInstalled=0
-    cudaVersionFull=""
-    cudaVersion=""
-    cudaVersionsInstalled=""
-    cudaVersions=0
-    cudaToolkitInstalled=0
-    cudaSamplesInstalled=0
-    cudaDeveloperDriverInstalled=0
-    cudaDriverInstalled=0
-    if [ -e "$cudaVersionPath" ]
+}
+
+function askLicenseQuestion {
+    if ! "$acceptLicense"
     then
-        cudaVersionInstalled=1
-        cudaVersionFull="$(cat $cudaVersionPath)"
-        cudaVersionFull="${cudaVersionFull##CUDA Version }"
-        cudaVersion="${cudaVersionFull%.*}"
-        echo "CUDA version: $cudaVersionFull"
-    fi
-    if [ -d "$cudaDeveloperDirPath" ]
-    then
-        cudaDirContent="$(ls $cudaDeveloperDirPath)"
-        while read -r folder
-        do
-            if [ "${folder%%-*}" == "CUDA" ]
-            then
-                cudaVersionsInstalled=$(echo -e "$cudaVersionsInstalled""${folder#CUDA-};")
-            fi
-        done <<< "$cudaDirContent"
-        cudaVersionsInstalled="${cudaVersionsInstalled%;}"
-        cudaVersionsInstalled="${cudaVersionsInstalled//;/\n}"
-        cudaVersionsInstalled="$(echo -e $cudaVersionsInstalled)"
-        cudaVersions="$(echo $cudaVersionsInstalled | wc -l | xargs)"
-        echo "Number of CUDA versions installed: $cudaVersions"
-        echo "List of all CUDA versions:"
-        echo "$cudaVersionsInstalled"
-        if [ "$cudaVersionInstalled" == 1 ]
+        printLicense
+        echo
+        echo "Do you agree with the license terms of the script and wish to continue?"
+        read -p "[y]es [n]o : " -r -n 1
+        echo
+        if  [ "$REPLY" != "y" ]
         then
-            cudaToolkitUnInstallDir="/Developer/NVIDIA/CUDA-""$cudaVersion""/bin/"
-            cudaToolkitUnInstallScript="uninstall_cuda_""$cudaVersion"".pl"
-            cudaToolkitUnInstallScriptPath="$cudaToolkitUnInstallDir""$cudaToolkitUnInstallScript"
-            cudaSamplesDirPath="/Developer/NVIDIA/CUDA-""$cudaVersion""/samples/"
-            if [ -d "$cudaSamplesDirPath" ]
-            then
-                cudaSamplesInstalled=1
-            fi
-            if [ -e "$cudaToolkitUnInstallScriptPath" ]
-            then
-                cudaToolkitInstalled=1
-            fi
+            echo
+            echo "Continuation requires acceptance of the license terms."
+            createSpace 4
+            irupt
         fi
     fi
-    if [ -e "$cudaDeveloperDriverUnInstallScriptPath" ]
-    then
-        cudaDeveloperDriverInstalled=1
-    fi
-    if [ -e "$cudaDriverFrameworkPath" ] || [ -e "$cudaDriverLaunchAgentPath" ] || [ -e "$cudaDriverPrefPane" ] || [ -e "$cudaDriverStartupItemPath" ] || [ -e "$cudaDriverKEXTPath" ]
-    then
-        cudaDriverVersion=$("$pbuddy" -c "Print CFBundleVersion" "$cudaDriverVersionPath")
-        echo "CUDA driver version: $cudaDriverVersion"
-        cudaDriverInstalled=1
-    fi
-    echo "CUDA installation status: $(expr $cudaDriverInstalled + $cudaDeveloperDriverInstalled \* 2 + $cudaToolkitInstalled \* 4 + $cudaSamplesInstalled \* 8)"
 }
 
-##NVIDIA driver
-function checkNvidiaDriverInstall {
-    echo
-    echo "Searching for NVIDIA drivers ..."
-    nvidiaDriversInstalled=0
-    nvidiaDriverVersion=""
-    nvidiaDriverBuildVersion=""
-    if [ -e "$nvidiaDriverUnInstallPath" ]
+function printWarnings {
+    if ! "$skipWarnings"
     then
-        nvidiaDriversInstalled=1
-        nvidiaDriverVersion=$("$pbuddy" -c "Print CFBundleGetInfoString" "$nvidiaDriverVersionPath")
-        nvidiaDriverVersion="${nvidiaDriverVersion##* }"
-        nvidiaDriverBuildVersion=$("$pbuddy" -c "Print IOKitPersonalities:NVDAStartup:NVDARequiredOS" "$nvidiaDriverVersionPath")
-        echo "NVIDIA driver version: $nvidiaDriverVersion (build: $nvidiaDriverBuildVersion)"
-    else
-        echo "No NVIDIA drivers found"
+        echo "The script will now close (kill) all programs."
+        echo "Please abort the script now should you wish to do it manually and save your work."
+        echo "Please do not, under any circumstances abort the script later during the execution."
+        echo "This might break your system."
+        echo ""
+        if ! "$noReboot"
+        then
+            echo "The script might automatically reboot the system after successful execution."
+        fi
+        fetchOSinfo
+        if [ "$os" == "$warningOS" ]
+        then
+            echo "This script is not designed to work with your current version of macOS."
+            echo "Continuation might result in failure and/or system crash."
+        fi
+        echo "To safely abort the script now, press ^C."
+        echo "Continuing in"
+        trapWithoutWarning
+        waiter 15
+        trapWithWarning
     fi
 }
 
-##Sierra enabler
-function checkAutomateeGPUInstall {
-    echo
-    echo "Searching for installed eGPU support (Sierra, goalque) ..."
-    automateeGPUInstalled=0
-    if [ -d "$automateeGPUPath" ] || [ -e "$automateeGPUScriptPath" ]
+
+
+
+##  Subroutine Y6: System properties enforcer
+function enforceEGPUdisconnect {
+    fetchConnectedEGPU
+    if [ "$?" == 1 ]
     then
-        automateeGPUInstalled=1
+        echo
+        echo "Please disconnect all thunderbolt devices. Should this problem persist, please file an issue."
+        irupt
     fi
-    echo "eGPU Support status: $(expr $automateeGPUInstalled + $rastafabisEnablerInstalled \* 2 + $eGPUenablerInstalled \* 4)"
+    if "$connectedEGPU"
+    then
+        echo
+        echo "Please disconnect your eGPU. The script does not allow installations with a connected eGPU."
+        irupt
+    fi
 }
 
-function checkRastafabisEnablerInstall {
-    echo
-    echo "Searching for installed eGPU support (Sierra, rastafabi) ..."
-    rastafabisEnablerInstalled=0
-    if [ -e "$rastafabisEnablerUninstallerPath" ]
+
+
+
+##  Subroutine Y7: Preparations
+function preparations {
+    trapWithoutWarning
+    if ! "$acceptLicense"
     then
-        rastafabisEnablerInstalled=1
+        createSpace 3
+        printHeader
+        askLicenseQuestion
     fi
-    echo "eGPU Support status: $(expr $automateeGPUInstalled + $rastafabisEnablerInstalled \* 2 + $eGPUenablerInstalled \* 4)"
+    if ! "$skipWarnings"
+    then
+        createSpace 3
+        printWarnings
+    fi
+
+    createSpace 5
+    printHeader
+    echoing "Accept license terms..."
+    echoend "done"
+    echoing "Killing all other running programs..."
+    quitAllApps
+    if [ "$?" != 0 ]
+    then
+        echoend "FAILURE" 1
+        irupt
+    fi
+    echoend "OK" 2
 }
 
-##High Sierra enabler
-function checkeGPUEnablerInstall {
-    echo
-    echo "Searching for installed eGPU support (High Sierra) ..."
-    eGPUenablerInstalled=0
-    eGPUenablerBuildVersion=""
-    if [ -e "$enablerKextPath" ]
-    then
-        eGPUenablerInstalled=1
-        eGPUenablerBuildVersion=$("$pbuddy" -c "Print IOKitPersonalities:NVDAStartup:NVDARequiredOS" "$eGPUBuildVersionPath")
-        echo "eGPU enabler build: $eGPUenablerBuildVersion"
-    fi
-    echo "eGPU Support status: $(expr $automateeGPUInstalled + $rastafabisEnablerInstalled \* 2 + $eGPUenablerInstalled \* 4)"
-}
+function gatherSystemInfo {
+    echoing "   macOS info"
+    fetchOSinfo
+    echoend "done"
 
-##do it all
-function fetchInstalledSoftware {
-    echo
-    checkCudaInstall
+    echoing "   system integrity protection"
+    fetchSIPstat
+    echoend "done"
+
+    echoing "   thunderbolt version"
+    fetchThunderboltInterface
+    echoend "done"
+
+    echoing "   GPU information"
+    fetchConnectedEGPU
+    fetchNvidiaDGPU
+    fetchAppleGPUWranglerVersion
+    echoend "done"
+
+    echoing "   installed eGPU software"
     checkNvidiaDriverInstall
-    checkAutomateeGPUInstall
-    checkRastafabisEnablerInstall
-    checkeGPUEnablerInstall
-}
-
-
-
-
-
-#Gather list of programms
-function fetchInstalledPrograms {
-    echo
-    echo "Fetching installed apps. This might take a few moments ..."
-    appListPaths="$(find /Applications/ -iname *.app)"
-    appList=""
-    while read -r app
-    do
-        appTemp="${app##*/}"
-        appList="$appList""${appTemp%.*}"";"
-    done <<< "$appListPaths"
-    appList="${appList%;}"
-    appList="${appList//;/\n}"
-    programList="$(echo -e $appList)"
-}
-
-
-
-
-##############################################################################################################define software uninstall functions
-
-
-#define uninstallers
-##CUDA
-###CUDA driver
-function uninstallCudaDriver {
-    if [ "$cudaDriverInstalled" == 1 ]
-    then
-        echo
-        echo "Uninstalling CUDA driver (elevated privileges needed) ..."
-        if [ -e "$cudaDriverFrameworkPath" ]
-        then
-            sudo rm -rf "$cudaDriverFrameworkPath"
-        fi
-        if [ -e "$cudaDriverLaunchAgentPath" ]
-        then
-            sudo launchctl unload -F "$cudaDriverLaunchAgentPath"
-            sudo rm -rf "$cudaDriverLaunchAgentPath"
-        fi
-        if [ -e "$cudaDriverPrefPane" ]
-        then
-            sudo rm -rf "$cudaDriverPrefPane"
-        fi
-        if [ -e "$cudaDriverStartupItemPath" ]
-        then
-            sudo rm -rf "$cudaDriverStartupItemPath"
-        fi
-        if [ -e "$cudaDriverKEXTPath" ]
-        then
-            sudo rm -rf "$cudaDriverKEXTPath"
-        fi
-        listOfChanges="$listOfChanges""\n""-CUDA drivers have been uninstalled"
-        doneSomething=1
-        scheduleReboot=1
-    else
-        contError "unCudaDriver"
-        listOfChanges="$listOfChanges""\n""-CUDA drivers were not found"
-    fi
-}
-###CUDA toolkit residue
-function uninstallCudaToolkitResidue {
-    if [ -d "$cudaDeveloperDirPath" ] || [ -d "$cudaUserPath" ]
-    then
-        echo "Uninstalling residue of CUDA toolkit installation (elevated privileges needed)..."
-        if [ -d "$cudaDeveloperDirPath" ]
-        then
-            sudo rm -rf "$cudaDeveloperDirPath"
-        fi
-        if [ -d "$cudaUserPath" ]
-        then
-            sudo rm -rf "$cudaUserPath"
-        fi
-    fi
-}
-###CUDA, all
-function uninstallCuda {
-    echo
-    echo
     checkCudaInstall
-    if [[ "$cudaVersions" > 1 ]]
-    then
-        contError "cudaVersion"
-        if [ -e "$cudaDeveloperDriverUnInstallScriptPath" ]
-        then
-            echo
-            echo "Uninstalling CUDA developer drivers (elevated privileges needed)"
-            sudo perl "$cudaDeveloperDriverUnInstallScriptPath"
-            listOfChanges="$listOfChanges""\n""-CUDA developer drivers have been uninstalled"
-            doneSomething=1
-        else
-            contError "unCudaDriver"
-            listOfChanges="$listOfChanges""\n""-CUDA developer drivers were not found"
-        fi
-        checkCudaInstall
-        while read -r version
-        do
-            cudaVersion="$version"
-            cudaToolkitUnInstallDir="/Developer/NVIDIA/CUDA-""$cudaVersion""/bin/"
-            cudaToolkitUnInstallScript="uninstall_cuda_""$cudaVersion"".pl"
-            cudaToolkitUnInstallScriptPath="$cudaToolkitUnInstallDir""$cudaToolkitUnInstallScript"
-            if [ -e "$cudaToolkitUnInstallScriptPath" ]
-            then
-                echo
-                echo "Uninstalling CUDA $version toolkit and samples (elevated privileges needed)"
-                sudo perl "$cudaToolkitUnInstallScriptPath"
-                listOfChanges="$listOfChanges""\n""-CUDA $version toolkit has been uninstalled"
-                doneSomething=1
-            else
-                listOfChanges="$listOfChanges""\n""-CUDA $version toolkit could not be uninstalled"
-                echo "Unable to uninstall CUDA $version toolkit."
-            fi
-        done <<< "$cudaVersionsInstalled"
-        uninstallCudaToolkitResidue
-        checkCudaInstall
-        if [ "$cudaDriverInstalled" == 1 ]
-        then
-            uninstallCudaDriver
-        fi
-    else
-        if [ "$cuda" == 1 ] || [ "$cuda" == 2 ]
-        then
-            if [ "$cudaToolkitInstalled" == 1 ]
-            then
-                echo
-                echo "Uninstalling CUDA toolkit and samples (elevated privileges needed) ..."
-                sudo perl "$cudaToolkitUnInstallScriptPath"
-                listOfChanges="$listOfChanges""\n""-CUDA toolkit has been uninstalled"
-                doneSomething=1
-            else
-                contError "unCudaSamples"
-                contError "unCudaToolkit"
-                listOfChanges="$listOfChanges""\n""-CUDA samples were not found"
-                listOfChanges="$listOfChanges""\n""-CUDA toolkit was not found"
-            fi
-            if [ -e "$cudaDeveloperDriverUnInstallScriptPath" ]
-            then
-                echo
-                echo "Uninstalling CUDA developer drivers (elevated privileges needed) ..."
-                sudo perl "$cudaDeveloperDriverUnInstallScriptPath"
-                listOfChanges="$listOfChanges""\n""-CUDA developer drivers have been uninstalled"
-                doneSomething=1
-            else
-                contError "unCudaDriver"
-                listOfChanges="$listOfChanges""\n""-CUDA developer drivers were not found"
-            fi
-            uninstallCudaToolkitResidue
-            uninstallCudaDriver
-        fi
-        if [ "$cuda" == 3 ]
-        then
-            if [ "$cudaToolkitInstalled" == 1 ]
-            then
-                echo
-                echo "Uninstalling CUDA toolkit and samples (elevated privileges needed) ..."
-                sudo perl "$cudaToolkitUnInstallScriptPath"
-                listOfChanges="$listOfChanges""\n""-CUDA toolkit has been uninstalled"
-                listOfChanges="$listOfChanges""\n""-CUDA samples have been uninstalled"
-                doneSomething=1
-            else
-                contError "unCudaSamples"
-                contError "unCudaToolkit"
-                listOfChanges="$listOfChanges""\n""-CUDA samples were not found"
-                listOfChanges="$listOfChanges""\n""-CUDA toolkit was not found"
-            fi
-            uninstallCudaToolkitResidue
-        fi
-        if [ "$cuda" == 4 ]
-        then
-            if [ "$cudaToolkitInstalled" == 1 ] && [ "$cudaSamplesInstalled" == 1 ]
-            then
-                echo
-                echo "Uninstalling CUDA samples (elevated privileges needed) ..."
-                cd "$cudaToolkitUnInstallDir"
-                sudo perl "$cudaToolkitUnInstallScriptPath" --manifest=.cuda_samples_uninstall_manifest_do_not_delete.txt
-                listOfChanges="$listOfChanges""\n""-CUDA samples have been uninstalled"
-                doneSomething=1
-            else
-                contError "unCudaSamples"
-                listOfChanges="$listOfChanges""\n""-CUDA samples were not found"
-            fi
-        fi
-    fi
-}
+    checkNvidiaEGPUenabler1013Install
+    echoend "done"
 
-##NVIDIA driver
-function uninstallNvidiaDriver {
-    echo
-    echo
-    checkNvidiaDriverInstall
-    if [ "$nvidiaDriversInstalled" == 1 ]
-    then
-        echo
-        echo "Executing NVIDIA Driver uninstaller with elevated privileges ..."
-        sudo installer -pkg "$nvidiaDriverUnInstallPath" -target /
-        listOfChanges="$listOfChanges""\n""-NVIDIA drivers have been uninstalled"
-        scheduleReboot=1
-        doneSomething=1
-    else
-        contError "unNvidiaDriver"
-        listOfChanges="$listOfChanges""\n""-NVIDIA drivers were not found"
-    fi
-}
+    echoing "   installed patches"
+    checkThunderbolt12UnlockInstall
+    checkAMDLegacyDriverInstall
+    checkT82Unblocker
+    checkNvidiaDGPUdeactivator
+    checkNvidiaUnlockWranglerPatchInstall
+    echoend "done"
 
-##eGPU support
-###Sierra enabler
-function uninstallAutomateeGPU {
-    checkAutomateeGPUInstall
-    if [ "$automateeGPUInstalled" == 1 ]
-    then
-        echo
-        echo "Uninstalling eGPU support (Sierra) ..."
-        echo
-        echo "Downloading and preparing goalque's automate-eGPU script ..."
-        mktmpdir
-        curl -o "$dirName"/automate-eGPU.sh "$automateeGPUScriptPath"
-        cd "$dirName"/
-        chmod +x automate-eGPU.sh
-        echo "Executing goalque's automate-eGPU script with elevated privileges and uninstall parameter..."
-        sudo ./automate-eGPU.sh -uninstall
-        rm automate-eGPU.sh
-        scheduleReboot=1
-        doneSomething=1
-        listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) has been uninstalled"
-    else
-        contError "unEnabler"
-        listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) was not found"
-    fi
-}
-###Sierra enabler
-function uninstallRastafabisEnabler {
-    checkRastafabisEnablerInstall
-    if [ "$rastafabisEnablerInstalled" == 1 ]
-    then
-        echo
-        echo "Uninstalling eGPU support (Sierra) ..."
-        echo
-        echo "Executing Rastafabi's Enabler Uninstaller (elevated privileges needed) ..."
-        sudo installer -pkg "$rastafabisEnablerUninstallerPath" -target /
-        scheduleReboot=1
-        doneSomething=1
-        listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) has been uninstalled"
-    else
-        contError "unEnabler"
-        listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) was not found"
-    fi
-}
-###High Sierra enabler
-function uninstallEnabler {
-    checkeGPUEnablerInstall
-    if [ "$eGPUenablerInstalled" == 1 ]
-    then
-        echo
-        echo "Removing enabler (elevated privileges needed) ..."
-        sudo rm -rf "$enablerKextPath"
-        listOfChanges="$listOfChanges""\n""-eGPU support (High Sierra) has been uninstalled"
-        scheduleReboot=1
-        doneSomething=1
-    else
-        contError "unEnabler"
-        listOfChanges="$listOfChanges""\n""-eGPU support (High Sierra) was not found"
-    fi
-}
-###eGPU support, all
-function unInstalleGPUSupport {
-    echo
-    echo
-    checkeGPUEnablerInstall
-    checkAutomateeGPUInstall
-    checkRastafabisEnablerInstall
-    if [ "$eGPUenablerInstalled" == 1 ]
-    then
-        uninstallEnabler
-    elif [ "$automateeGPUInstalled" == 1 ]
-    then
-        uninstallAutomateeGPU
-    elif [ "$rastafabisEnablerInstalled" == 1 ]
-    then
-        uninstallRastafabisEnabler
-    else
-        contError "unEnabler"
-        listOfChanges="$listOfChanges""\n""-eGPU support was not found"
-    fi
-}
-
-##############################################################################################################define software install functions
-
-
-#define installers
-##eGPU Support
-###Sierra enabler
-function installAutomateeGPU {
-    checkAutomateeGPUInstall
-    checkeGPUEnablerInstall
-    checkRastafabisEnablerInstall
-    if [ "$eGPUenablerInstalled" == 1 ]
-    then
-        echo
-        echo "Removing previous eGPU enablers ..."
-        uninstallEnabler
-        checkeGPUEnablerInstall
-    elif [ "$rastafabisEnablerInstalled" == 1 ]
-    then
-        echo
-        echo "Removing previous eGPU enablers ..."
-        uninstallRastafabisEnabler
-        checkRastafabisEnablerInstall
-    fi
-    if [ "$reinstall" == 1 ]
-    then
-        uninstallAutomateeGPU
-        checkAutomateeGPUInstall
-    fi
-    if [ "$automateeGPUInstalled" == 1 ]
-    then
-        echo
-        echo "eGPU is already enabled."
-        echo "If it does not work, try uninstalling first."
-    else
-        echo
-        echo "Installing eGPU support (Sierra) ..."
-        echo
-        echo "Downloading and preparing goalque's automate-eGPU script ..."
-        mktmpdir
-        curl -o "$dirName"/automate-eGPU.sh "$automateeGPUScriptPath"
-        cd "$dirName"
-        chmod +x automate-eGPU.sh
-        echo "Executing goalque's automate-eGPU script with elevated privileges ..."
-        if [ "$minimal" == 1 ]
-        then
-            echo
-            sudo ./automate-eGPU.sh -skip-web-driver
-        else
-            echo
-            sudo ./automate-eGPU.sh -a -skip-web-driver
-        fi
-        rm automate-eGPU.sh
-        scheduleReboot=1
-        doneSomething=1
-        listOfChanges="$listOfChanges""\n""-eGPU support (Sierra) has been installed"
-    fi
-}
-###High Sierra enabler
-####High Sierra enabler install routine
-function enablerInstaller {
-    echo "Fetching newest enabler information ..."
-    mktmpdir
-    curl -o "$dirName""/eGPUenabler.plist" "$eGPUEnablerListOnline"
-    eGPUEnablerList="$dirName""/eGPUenabler.plist"
-    enablers=$("$pbuddy" -c "Print updates:" "$eGPUEnablerList" | grep "build" | awk '{print $3}')
-    enablerCount=$(echo "$enablers" | wc -l | xargs)
-    foundMatch=false
-    for index in `seq 0 $(expr $enablerCount - 1)`
-    do
-        buildTemp=$("$pbuddy" -c "Print updates:$index:build" "$eGPUEnablerList")
-        authorTemp=$("$pbuddy" -c "Print updates:$index:author" "$eGPUEnablerList")
-        pkgNameTemp=$("$pbuddy" -c "Print updates:$index:packageName" "$eGPUEnablerList")
-        eGPUEnablerDPathTemp=$("$pbuddy" -c "Print updates:$index:downloadURL" "$eGPUEnablerList")
-        if [ "$build" == "$buildTemp" ]
-        then
-            eGPUEnablerDPath="$eGPUEnablerDPathTemp"
-            eGPUEnablerAuthor="$authorTemp"
-            eGPUEnablerPKGName="$pkgNameTemp"
-            foundMatch=true
-        fi
-    done
-    rm "$eGPUEnablerList"
-    if "$foundMatch"
-    then
-        echo
-        echo "Downloading and installing ""$eGPUEnablerAuthor""'s eGPU-enabler ..."
-        curl -o "$dirName""/NVDAEGPU.zip" "$eGPUEnablerDPath"
-        unzip "$dirName""/NVDAEGPU.zip" -d "$dirName""/"
-        rm "$dirName""/NVDAEGPU.zip"
-        sudo installer -pkg "$dirName""/""$eGPUEnablerPKGName" -target /
-        rm "$dirName""/""$eGPUEnablerPKGName"
-        scheduleReboot=1
-        doneSomething=1
-        listOfChanges="$listOfChanges""\n""-eGPU support (High Sierra) has been installed"
-    else
-        contError "noEnabler"
-        listOfChanges="$listOfChanges""\n""-eGPU support (High Sierra) could not be installed"
-    fi
-}
-####High Sierra enabler install logic
-function installEnabler {
-    checkAutomateeGPUInstall
-    checkeGPUEnablerInstall
-    checkRastafabisEnablerInstall
-    if [ "$automateeGPUInstalled" == 1 ]
-    then
-        echo
-        echo "Removing previous eGPU enablers ..."
-        uninstallAutomateeGPU
-        checkAutomateeGPUInstall
-    elif [ "$rastafabisEnablerInstalled" == 1 ]
-    then
-        echo
-        echo "Removing previous eGPU enablers ..."
-        uninstallRastafabisEnabler
-        checkRastafabisEnablerInstall
-    fi
-    if [ "$reinstall" == 1 ]
-    then
-        uninstallEnabler
-        checkeGPUEnablerInstall
-    fi
-    if [ "$eGPUenablerInstalled" == 1 ]
-    then
-        if [ "$eGPUenablerBuildVersion" == "$build" ]
-        then
-            echo
-            echo "The matching eGPU enabler is already installed."
-        else
-            uninstallEnabler
-            enablerInstaller
-        fi
-    else
-        enablerInstaller
-    fi
-}
-###eGPU support, all
-function installeGPUSupport {
-    echo
-    echo
-    case "${os::5}"
-    in
-    "10.12")
-        installAutomateeGPU
-        ;;
-    "10.13")
-        installEnabler
-        ;;
-    *)
-        ;;
-    esac
-}
-
-##CUDA
-###CUDA driver
-function installCudaDriver {
-    checkCudaInstall
-    if [[ "$cudaVersions" > 1 ]]
-    then
-        uninstallCuda
-        checkCudaInstall
-    fi
-    mktmpdir
-    echo
-    echo "Downloading latest CUDA driver information ..."
-    curl -o "$dirName""/cudaDriverList.plist" "$cudaDriverListOnline"
-    cudaDriverList="$dirName""/cudaDriverList.plist"
-    drivers=$("$pbuddy" -c "Print $forceNew:" "$cudaDriverList" | grep "OS" | awk '{print $3}')
-    driverCount=$(echo "$drivers" | wc -l | xargs)
-    foundMatch=false
-    for index in `seq 0 $(expr $driverCount - 1)`
-    do
-        osTemp=$("$pbuddy" -c "Print $forceNew:$index:OS" "$cudaDriverList")
-        cudaDriverPathTemp=$("$pbuddy" -c "Print $forceNew:$index:downloadURL" "$cudaDriverList")
-        cudaDriverVersionTemp=$("$pbuddy" -c "Print $forceNew:$index:version" "$cudaDriverList")
-
-        if [ "${os::5}" == "$osTemp" ]
-        then
-            cudaDriverDPath="$cudaDriverPathTemp"
-            cudaDownloadVersion="$cudaDriverVersionTemp"
-            foundMatch=true
-        fi
-    done
-    rm "$cudaDriverList"
-    if "$foundMatch"
-    then
-        if [ "$cudaDownloadVersion" == "$cudaDriverVersion" ]
-        then
-            echo
-            echo "CUDA drivers are up to date."
-        else
-            if [ "$cudaDriverInstalled" == 1 ] || [ "$cudaDeveloperDriverInstalled" == 1 ] || [ "$cudaToolkitInstalled" == 1 ] || [ "$cudaSamplesInstalled" == 1 ]
-            then
-                cudaTemp="$cuda"
-                cuda=1
-                uninstallCuda
-                cuda="$cudaTemp"
-                checkCudaInstall
-            fi
-            echo
-            echo "Downloading and preparing cuda installer ..."
-            curl -o "$dirName"/cudaDriver.dmg "$cudaDriverDPath"
-            hdiutil attach "$dirName"/cudaDriver.dmg
-            echo "Executing cuda installer with elevated privileges ..."
-            sudo installer -pkg "$cudaDriverVolPath""$cudaDriverPKGName" -target /
-            hdiutil detach "$cudaDriverVolPath"
-            rm "$dirName"/cudaDriver.dmg
-            scheduleReboot=1
-            doneSomething=1
-            listOfChanges="$listOfChanges""\n""-CUDA drivers have been installed"
-        fi
-    else
-        errorCont "noCUDAdriver"
-        listOfChanges="$listOfChanges""\n""-No matching CUDA drivers were found"
-    fi
-}
-###CUDA toolkit
-function installCudaToolkit {
-    checkCudaInstall
-    if [[ "$cudaVersions" > 1 ]]
-    then
-        uninstallCuda
-        checkCudaInstall
-    fi
-    mktmpdir
-    echo
-    echo "Downloading latest CUDA toolkit information ..."
-    curl -o "$dirName""/cudaToolkitList.plist" "$cudaToolkitListOnline"
-    cudaToolkitList="$dirName""/cudaToolkitList.plist"
-    drivers=$("$pbuddy" -c "Print $forceNew:" "$cudaToolkitList" | grep "OS" | awk '{print $3}')
-    driverCount=$(echo "$drivers" | wc -l | xargs)
-    foundMatch=false
-    for index in `seq 0 $(expr $driverCount - 1)`
-    do
-        osTemp=$("$pbuddy" -c "Print $forceNew:$index:OS" "$cudaToolkitList")
-        cudaToolkitPathTemp=$("$pbuddy" -c "Print $forceNew:$index:downloadURL" "$cudaToolkitList")
-        cudaToolkitVersionTemp=$("$pbuddy" -c "Print $forceNew:$index:version" "$cudaToolkitList")
-        cudaToolkitDriverVersionTemp=$("$pbuddy" -c "Print $forceNew:$index:driverVersion" "$cudaToolkitList")
-        if [ "${os::5}" == "$osTemp" ]
-        then
-            cudaToolkitDPath="$cudaToolkitPathTemp"
-            cudaDownloadVersion="$cudaToolkitVersionTemp"
-            cudaToolkitDriverVersion="$cudaToolkitDriverVersionTemp"
-            foundMatch=true
-        fi
-    done
-    rm "$cudaToolkitList"
-    if "$foundMatch"
-    then
-        if [ "$cudaDownloadVersion" == "$cudaVersionFull" ] && [[ "$cuda" > 2 ]]
-        then
-            echo
-            echo "CUDA drivers are up to date."
-        elif [ "$cudaToolkitDriverVersion" == "$cudaDriverVersion" ] && [[ "$cuda" < 3 ]]
-        then
-            echo
-            echo "CUDA drivers are up to date."
-        else
-            if [ "$cudaDriverInstalled" == 1 ] || [ "$cudaDeveloperDriverInstalled" == 1 ] || [ "$cudaToolkitInstalled" == 1 ] || [ "$cudaSamplesInstalled" == 1 ]
-            then
-                cudaTemp="$cuda"
-                cuda=1
-                uninstallCuda
-                cuda="$cudaTemp"
-                checkCudaInstall
-            fi
-            echo
-            echo "Downloading and preparing cuda installer ..."
-            curl -o "$dirName"/cudaToolkit.dmg -L "$cudaToolkitDPath"
-            hdiutil attach "$dirName"/cudaToolkit.dmg
-            echo "Executing cuda toolkit installer with elevated privileges ..."
-            if [ "$cuda" == 2 ]
-            then
-                listOfChanges="$listOfChanges""\n""-CUDA drivers have been installed"
-                sudo "$cudaToolkitVolPath""$cudaToolkitPKGName" --accept-eula --silent --no-window --install-package="cuda-driver"
-            fi
-            if [ "$cuda" == 3 ]
-            then
-                listOfChanges="$listOfChanges""\n""-CUDA drivers have been installed"
-                listOfChanges="$listOfChanges""\n""-CUDA toolkit has been installed"
-                sudo "$cudaToolkitVolPath""$cudaToolkitPKGName" --accept-eula --silent --no-window --install-package="cuda-driver" --install-package="cuda-toolkit"
-            fi
-            if [ "$cuda" == 4 ]
-            then
-                listOfChanges="$listOfChanges""\n""-CUDA drivers have been installed"
-                listOfChanges="$listOfChanges""\n""-CUDA toolkit has been installed"
-                listOfChanges="$listOfChanges""\n""-CUDA samples have been installed"
-                sudo "$cudaToolkitVolPath""$cudaToolkitPKGName" --accept-eula --silent --no-window --install-package="cuda-driver" --install-package="cuda-toolkit" --install-package="cuda-samples"
-            fi
-            hdiutil detach "$cudaToolkitVolPath"
-            rm "$dirName"/cudaToolkit.dmg
-            scheduleReboot=1
-            doneSomething=1
-        fi
-    else
-        listOfChanges="$listOfChanges""\n""-No matching CUDA drivers were found"
-    fi
-}
-###CUDA, all
-function installCuda {
-    echo
-    echo
-    checkCudaInstall
-    if [ "$reinstall" == 1 ]
-    then
-        cudaTemp="$cuda"
-        cuda=1
-        uninstallCuda
-        cuda="$cudaTemp"
-        checkCudaInstall
-    fi
-    if [ "$cuda" == 1 ]
-    then
-        installCudaDriver
-    fi
-    if [[ "$cuda" > 1 ]]
-    then
-        installCudaToolkit
-    fi
-}
-
-##NVIDIA driver
-###Installer routines
-####fetch driver information
-function nvidiaDriverInfo {
-    echo
-    echo "Fetching newest NVIDIA driver information ..."
-    mktmpdir
-    curl -o "$dirName""/nvidiaDriver.plist" "$nvidiaDriverListOnline"
-    nvidiaDriverList="$dirName""/nvidiaDriver.plist"
-    drivers=$("$pbuddy" -c "Print updates:" "$nvidiaDriverList" | grep "OS" | awk '{print $3}')
-    driverCount=$(echo "$drivers" | wc -l | xargs)
-    foundMatch=false
-    if [ "$1" == "newest" ]
-    then
-        for index in `seq 0 $(expr $driverCount - 1)`
-        do
-            buildTemp=$("$pbuddy" -c "Print updates:$index:OS" "$nvidiaDriverList")
-            nvidiaDriverVersionTemp=$("$pbuddy" -c "Print updates:$index:version" "$nvidiaDriverList")
-
-            if [ "$build" == "$buildTemp" ]
-            then
-                nvidiaDriverDownloadVersion="$nvidiaDriverVersionTemp"
-                foundMatch=true
-            fi
-        done
-    elif [ "$1" == "test" ]
-    then
-        for index in `seq 0 $(expr $driverCount - 1)`
-        do
-            nvidiaDriverVersionTemp=$("$pbuddy" -c "Print updates:$index:version" "$nvidiaDriverList")
-
-            if [ "$nvidiaDriverDownloadVersion" == "$nvidiaDriverVersionTemp" ]
-            then
-                foundMatch=true
-            fi
-        done
-    else
-        iruptError "unex"
-    fi
-    rm "$nvidiaDriverList"
-}
-####NVIDIA driver installer
-function nvidiaDriverInstaller  {
-    echo
-    echo "Downloading and executing Benjamin Dobell's NVIDIA driver script ..."
-    nvidiaDriverVersionTemp="$nvidiaDriverVersion"
-    if [ "$1" == "force" ]
-    then
-        bash <(curl -s "$nvidiaUpdateScriptDPath") --force "$nvidiaDriverDownloadVersion"
-    elif [ "$1" == "automatic" ]
-    then
-        bash <(curl -s "$nvidiaUpdateScriptDPath")
-    else
-        iruptError "unex"
-    fi
-
-    if [ "$2" == "changeTest" ]
-    then
-        checkNvidiaDriverInstall
-        if [ "$nvidiaDriverVersionTemp" != "$nvidiaDriverVersion" ]
-        then
-            doneSomething=1
-            listOfChanges="$listOfChanges""\n""-NVIDIA drivers have been installed"
-            scheduleReboot=1
-        fi
-    else
-        doneSomething=1
-        listOfChanges="$listOfChanges""\n""-NVIDIA drivers have been installed"
-        scheduleReboot=1
-    fi
-}
-###installation logic
-function installNvidiaDriver {
-    echo
-    echo
-    checkNvidiaDriverInstall
-    if [ "$reinstall" == 1 ]
-    then
-        uninstallNvidiaDriver
-        checkNvidiaDriverInstall
-    fi
-    if [ "$forceNew" == "newest" ]
-    then
-        nvidiaDriverInfo "newest"
-        if "$foundMatch"
-        then
-            if [ "$nvidiaDriversInstalled" == 1 ]
-            then
-                if [ "$nvidiaDriverBuildVersion" == "$build" ] && [ "$nvidiaDriverDownloadVersion" == "$nvidiaDriverVersion" ]
-                then
-                    echo
-                    echo "The best NVIDIA driver is already installed."
-                else
-                    nvidiaDriverInstaller "force"
-                fi
-            else
-                nvidiaDriverInstaller "force"
-            fi
-        else
-            nvidiaDriverInstaller "automatic"
-        fi
-    else
-        if [ "$customDriver" == 1 ]
-        then
-            nvidiaDriverInfo "test"
-            if "$foundMatch"
-            then
-                if [ "$nvidiaDriverBuildVersion" == "$build" ] && [ "$nvidiaDriverDownloadVersion" == "$nvidiaDriverVersion" ]
-                then
-                    echo
-                    echo "The best NVIDIA driver is already installed."
-                else
-                    nvidiaDriverInstaller "force"
-                fi
-            else
-                contError "noNvidiaDriverForce"
-                if [ "$nvidiaDriversInstalled" == 1 ]
-                then
-                    nvidiaDriverInstaller "automatic" "changeTest"
-                else
-                    nvidiaDriverInstaller "automatic"
-                fi
-            fi
-        else
-            if [ "$nvidiaDriversInstalled" == 1 ]
-            then
-                nvidiaDriverInstaller "automatic" "changeTest"
-            else
-                nvidiaDriverInstaller "automatic"
-            fi
-        fi
-    fi
-}
-
-##############################################################################################################self determination
-
-
-#deduce what level of CUDA is needed
-function deduceCudaNeedsInstall {
+    echoing "   installed programs"
     fetchInstalledPrograms
-    echo
-    echo "Fetching CUDA requiring apps ..."
+    echoend "done"
+}
+
+
+
+
+##  Subroutine Y8: Deductions and Parsing
+###  Subroutine Y8'1: Automated eGPU information fetching
+function moveDriversToBackup {
     mktmpdir
-    curl -o "$dirName""/CUDAApp.plist" "$CUDAAppListOnline"
-    CUDAAppList="$dirName""/CUDAApp.plist"
-    apps=$("$pbuddy" -c "Print apps:" "$CUDAAppList" | grep "name" | awk '{print $3}')
-    appCount=$(echo "$apps" | wc -l | xargs)
-    echo
-    echo "Checking if installed apps require CUDA to run on eGPU ..."
-    cudaRequirementTemp=0
-    for index in `seq 0 $(expr $appCount - 1)`
-    do
-        appNameTemp=$("$pbuddy" -c "Print apps:$index:name" "$CUDAAppList")
-        driverNeedsTemp=$("$pbuddy" -c "Print apps:$index:requirement" "$CUDAAppList")
-        if [[ "$programList[@]" =~ $appNameTemp ]]
+    geforceKextTemp="/Library/Extensions/GeForceWeb.kext"
+    nvdaStartupKextTemp="/Library/Extensions/NVDAStartupWeb.kext"
+    nvdaEGPUKextTemp="/Library/Extensions/NVDAEGPUSupport.kext"
+    geforceKextBackupTemp="$dirName""/GeForceWeb.kext"
+    nvdaStartupKextBackupTemp="$dirName""/NVDAStartupWeb.kext"
+    nvdaEGPUKextBackupTemp="$dirName""/NVDAEGPUSupport.kext"
+    if [ -e "$geforceKextTemp" ]
+    then
+        sudo cp -R "$geforceKextTemp" "$geforceKextBackupTemp"
+        sudo rm -R "$geforceKextTemp"
+    fi
+    if [ -e "$nvdaStartupKextTemp" ]
+    then
+        sudo cp -R "$nvdaStartupKextTemp" "$nvdaStartupKextBackupTemp"
+        sudo rm -R "$nvdaStartupKextTemp"
+    fi
+    if [ -e "$nvdaEGPUKextTemp" ]
+    then
+        sudo cp -R "$nvdaEGPUKextTemp" "$nvdaEGPUKextBackupTemp"
+        sudo rm -R "$nvdaEGPUKextTemp"
+    fi
+}
+
+function moveDriverFromBackup {
+    mktmpdir
+    geforceKextTemp="/Library/Extensions/GeForceWeb.kext"
+    nvdaStartupKextTemp="/Library/Extensions/NVDAStartupWeb.kext"
+    nvdaEGPUKextTemp="/Library/Extensions/NVDAEGPUSupport.kext"
+    geforceKextBackupTemp="$dirName""/GeForceWeb.kext"
+    nvdaStartupKextBackupTemp="$dirName""/NVDAStartupWeb.kext"
+    nvdaEGPUKextBackupTemp="$dirName""/NVDAEGPUSupport.kext"
+    if [ -e "$geforceKextBackupTemp" ]
+    then
+        sudo cp -R "$geforceKextBackupTemp" "$geforceKextTemp"
+        sudo rm -R "$geforceKextBackupTemp"
+    fi
+    if [ -e "$nvdaStartupKextBackupTemp" ]
+    then
+        sudo cp -R "$nvdaStartupKextBackupTemp" "$nvdaStartupKextTemp"
+        sudo rm -R "$nvdaStartupKextBackupTemp"
+    fi
+    if [ -e "$nvdaEGPUKextBackupTemp" ]
+    then
+        sudo cp -R "$nvdaEGPUKextBackupTemp" "$nvdaEGPUKextTemp"
+        sudo rm -R "$nvdaEGPUKextBackupTemp"
+    fi
+}
+
+function secureGetEGPUInformation {
+    echoing "   locking script execution"
+    trapLock
+    echoend "done"
+    enforceEGPUdisconnect
+
+    echoing "   preparing secure eGPU connection"
+    elevatePrivileges
+    moveDriversToBackup
+    sudo touch /System/Library/Extensions &>/dev/null
+    sudo kextcache -q -update-volume / &>/dev/null
+    sudo touch /System/Library/Extensions &>/dev/null
+    sudo kextcache -system-caches &>/dev/null
+    echoend "done"
+    echo "   waiting 20 seconds for user to connect eGPU"
+    echo -n "   "
+    waiter 20
+    sudo -v
+    echoing "   fetching eGPU information"
+    unsupportedCheckTemp=`system_profiler SPThunderboltDataType`
+    pciTemp=`system_profiler SPPCIDataType`
+    if [[ "$unsupportedCheckTemp[@]" =~ "Unsupported" ]]
+    then
+        t82Unblocker=true
+        return 0
+    else
+        fetchConnectedEGPU
+    fi
+    echoend "done"
+    if ! "$connectedEGPU"
+    then
+        echo
+        moveDriverFromBackup
+        echo "--- eGPU has not been connected ---"
+        irupt
+    fi
+    echoing "   preparing secure eGPU disconnection"
+    SafeEjectGPU Eject &>/dev/null
+    echoend "done"
+    echo "   waiting 20 seconds for user to disconnect eGPU"
+    echo -n "   "
+    waiter 20
+    sudo -v
+    connectedEGPUTemp="$connectedEGPU"
+    connectedEGPUVendorTemp="$connectedEGPUVendor"
+    fetchConnectedEGPU
+    moveDriverFromBackup
+    if "$connectedEGPU"
+    then
+        echo
+        echo "--- eGPU has not been disconnected ---"
+        echo "Do not diconnect now!"
+        echo "The script enters panic mode..."
+        echo "Trying to halt in order to avoid kernel panic..."
+        echo "Only disconnect the eGPU once the Mac has shut down."
+        echo "Re-run the script afterwards."
+        systemClean
+        echo "The script has failed."
+        sudo halt & &>/dev/null
+        exit
+    fi
+    echoing "   stetting switches"
+    connectedEGPU="$connectedEGPUTemp"
+    connectedEGPUVendor="$connectedEGPUVendorTemp"
+    if [ "$connectedEGPUVendor" == "NVIDIA" ]
+    then
+        nvidiaEnabler=true
+        nvidiaDriver=true
+        unlockNvidia=true
+    elif [ "$connectedEGPUVendor" == "AMD" ]
+    then
+        typesTemp=`echo "$pciTemp" | grep "Type"`
+        usedSlotsTemp=`echo "$pciTemp" | grep "Slot"`
+        countTemp=`echo "$typeTemp" | wc -l | xargs`
+        countTemp2=`echo "$usedSlotsTemp" | wc -l | xargs`
+        if [ "$countTemp" == "$countTemp2" ]
         then
-            fullProgramNameTemp=$( echo "$programList" | grep $appNameTemp )
-            case "$driverNeedsTemp"
+            for i in `seq 1 "$countTemp"`
+            do
+                typeTemp=`echo "$typesTemp" | sed -n "$i"p`
+                usedSlotTemp=`echo "$usedSlotsTemp" | sed -n "$i"p`
+                if [[ "$typeTemp" =~ "VGA" ]] || [[ "$typeTemp" =~ "Display" ]] || [[ "$typeTemp" =~ "gpu" ]] && [[ "$typeTemp" != *"Type: Display Controller" ]] && [[ "$usedSlotTemp" =~ "Thunderbolt" ]]
+                then
+                    amdLegacyDriver=true
+                    deactivateNvidiaDGPU=true
+                fi
+            done
+        else
+            amdLegacyDriver=true
+            deactivateNvidiaDGPU=true
+        fi
+    else
+        echoend "FAILURE" 1
+        irupt
+    fi
+    echoend "done"
+    scheduleKextTouch=true
+    echoing "   opening script execution lock"
+    trapWithoutWarning
+    echoend "done"
+}
+
+
+
+
+###  Subroutine Y8'2: CUDA requirements
+function getCudaNeeds {
+    if "$nvidiaDriversInstalled" || "$nvidiaDriver"
+    then
+        mktmpdir
+        echoing "   fetching CUDA requiring apps list"
+        cudaAppListTemp="$dirName""/cudaApp.plist"
+        curl -s "$cudaAppListOnline" -m 1024 > "$cudaAppListTemp"
+        echoend "done"
+        echoing "   preparing matching"
+        appsTemp=$("$pbuddy" -c "Print apps:" "$cudaAppListTemp" | grep "name" | awk '{print $3}')
+        appCountTemp=$(echo "$appsTemp" | wc -l | xargs)
+        echoend "done"
+        echoing "   matching"
+        for index in `seq 0 $(expr $appCountTemp - 1)`
+        do
+            appNameTemp=$("$pbuddy" -c "Print apps:$index:name" "$cudaAppListTemp")
+            driverNeedsTemp=$("$pbuddy" -c "Print apps:$index:requirement" "$cudaAppListTemp")
+            if [[ "$programList[@]" =~ $appNameTemp ]]
+            then
+                fullProgramNameTemp=$( echo "$programList" | grep $appNameTemp )
+                case "$driverNeedsTemp"
+                in
+                "driver")
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 1`
+                    ;;
+                "developerDriver")
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
+                    ;;
+                "toolkit")
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 2 1`
+                    ;;
+                "samples")
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 2 1`
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 3 1`
+                    ;;
+                *)
+                    ;;
+                esac
+            fi
+        done
+        sudov rm "$cudaAppListTemp"
+        echoend "done"
+    fi
+}
+
+
+
+
+###  Subroutine Y8'3: Basic requirement handler/scheduler
+function setStandards {
+    if ( ! "$install" ) && ( ! "$uninstall" ) && ( ! "$check" )
+    then
+        setStandard=true
+        install=true
+    fi
+    if ( ! "$nvidiaDriver" ) && ( ! "$amdLegacyDriver" ) && ( ! "$nvidiaEnabler" ) && ( ! "$thunderbolt12Unlock" ) && ( ! "$t82Unblocker" ) && ( ! "$unlockNvidia" ) && ( ! "$deactivateNvidiaDGPU" ) && [ "$scheduleCudaDeduction" == 0 ]
+    then
+        determine=true
+    fi
+    if "$determine"
+    then
+        if "$fullInstall"
+        then
+            if "$install"
+            then
+                nvidiaDriver=true
+                amdLegacyDriver=true
+                nvidiaEnabler=true
+                thunderbolt12Unlock=true
+                t82Unblocker=true
+                unlockNvidia=true
+                deactivateNvidiaDGPU=true
+                scheduleCudaDeduction=15
+            else
+                irupt
+            fi
+        else
+            if "$install"
+            then
+                if "$nvidiaDriversInstalled"
+                then
+                    nvidiaEnabler=true
+                    nvidiaDriver=true
+                    unlockNvidia=true
+                fi
+                if "$nvidiaEGPUenabler1013Installed"
+                then
+                    nvidiaEnabler=true
+                    nvidiaDriver=true
+                    unlockNvidia=true
+                fi
+                if "$amdLegacyDriversInstalled"
+                then
+                    deactivateNvidiaDGPU=true
+                    amdLegacyDriver=true
+                fi
+                if "$t82UnblockerInstalled"
+                then
+                    t82Unblocker=true
+                fi
+                if "$nvidiaDGPUdeactivatorInstalled"
+                then
+                    deactivateNvidiaDGPU=true
+                fi
+                if "$nvidiaUnlockWranglerPatchInstalled"
+                then
+                    nvidiaEnabler=true
+                    nvidiaDriver=true
+                    unlockNvidia=true
+                fi
+                if "$cudaDriverInstalled"
+                then
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 1`
+                    nvidiaEnabler=true
+                    nvidiaDriver=true
+                    unlockNvidia=true
+                fi
+                if "$cudaDeveloperDriverInstalled"
+                then
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
+                    nvidiaEnabler=true
+                    nvidiaDriver=true
+                    unlockNvidia=true
+                fi
+                if "$cudaToolkitInstalled"
+                then
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 2 1`
+                    nvidiaEnabler=true
+                    nvidiaDriver=true
+                    unlockNvidia=true
+                fi
+                if "$cudaSamplesInstalled"
+                then
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 2 1`
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 3 1`
+                    nvidiaEnabler=true
+                    nvidiaDriver=true
+                    unlockNvidia=true
+                fi
+                if ( ! "$nvidiaDriver" ) && ( ! "$amdLegacyDriver" )
+                then
+                    scheduleSecureEGPUfetch=true
+                fi
+                if [[ "$scheduleCudaDeduction" < 15 ]]
+                then
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 4 1`
+                fi
+                thunderbolt12Unlock=true
+            elif "$uninstall"
+            then
+                nvidiaDriver=true
+                nvidiaEnabler=true
+                amdLegacyDriver=true
+                t82Unblocker=true
+                deactivateNvidiaDGPU=true
+                unlockNvidia=true
+                thunderbolt12Unlock=true
+                scheduleCudaDeduction=15
+            else
+                irupt
+            fi
+        fi
+    fi
+}
+
+
+
+
+###  Subroutine Y8'4: Compatibility checks
+function nvidiaDriverDeduction {
+    echoing "   NVIDIA drivers"
+    nvidiaDriverRoutine=0
+    if "$nvidiaDriver"
+    then
+        if "$install"
+        then
+            downloadNvidiaDriverInformation
+            if ! "$foundMatchNvidiaDriver"
+            then
+                echoend "FAILURE, no match was found" 1
+                irupt
+            fi
+            if "$reinstall" && "$nvidiaDriversInstalled"
+            then
+                nvidiaDriverRoutine=`binaryParser "$nvidiaDriverRoutine" 0 1`
+                nvidiaDriverRoutine=`binaryParser "$nvidiaDriverRoutine" 1 1`
+                nvidiaDriverRoutine=`binaryParser "$nvidiaDriverRoutine" 2 1`
+                echoend "reinstall scheduled" 3
+            elif ! "$nvidiaDriversInstalled"
+            then
+                nvidiaDriverRoutine=`binaryParser "$nvidiaDriverRoutine" 0 1`
+                nvidiaDriverRoutine=`binaryParser "$nvidiaDriverRoutine" 2 1`
+                echoend "install scheduled" 4
+            elif [ "$nvidiaDriverDownloadVersion" != "$nvidiaDriverVersion" ]
+            then
+                nvidiaDriverRoutine=`binaryParser "$nvidiaDriverRoutine" 0 1`
+                nvidiaDriverRoutine=`binaryParser "$nvidiaDriverRoutine" 1 1`
+                nvidiaDriverRoutine=`binaryParser "$nvidiaDriverRoutine" 2 1`
+                echoend "update scheduled" 4
+            elif [ "$nvidiaDriverBuildVersion" != "$build" ]
+            then
+                nvidiaDriverRoutine=`binaryParser "$nvidiaDriverRoutine" 3 1`
+                echoend "patch scheduled" 4        
+            else
+                echoend "skip, up to date" 5
+                nvidiaDriver=false
+            fi
+        elif "$uninstall"
+        then
+            if "$nvidiaDriversInstalled"
+            then
+                nvidiaDriverRoutine=`binaryParser "$nvidiaDriverRoutine" 1 1`
+                echoend "uninstall scheduled" 3
+            else
+                echoend "skip, not installed" 5
+                nvidiaDriver=false
+            fi
+        else
+            irupt
+        fi
+    else
+        echoend "skip" 5
+    fi
+}
+
+function nvidiaEnablerDeduction {
+    echoing "   NVIDIA eGPU enabler"
+    sipRequirement=`binaryParser "$sipRequirement" 6 0`
+    sipRequirement=`binaryParser "$sipRequirement" 5 0`
+    nvidiaEnablerRoutine=0
+    if "$nvidiaEnabler" && ( "$nvidiaDriver" || "$nvidiaDriversInstalled" )
+    then
+        if "$install"
+        then
+            downloadNvidiaEGPUenabler1013Information
+            if ! "$foundMatchNvidiaEGPUenabler1013"
+            then
+                echoend "FAILURE, no match was found" 1
+                irupt
+            fi
+            if "$reinstall" && "$nvidiaEGPUenabler1013Installed"
+            then
+                nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 0 1`
+                nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 1 1`
+                nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 2 1`
+                echoend "reinstall scheduled" 3
+            elif ! "$nvidiaEGPUenabler1013Installed"
+            then
+                nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 0 1`
+                nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 2 1`
+                echoend "install scheduled" 4
+            elif [ "$nvidiaEGPUenabler1013BuildVersion" != "$build" ]
+            then
+                nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 0 1`
+                nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 1 1`
+                nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 2 1`
+                echoend "update scheduled" 4
+            else
+                echoend "skip, up to date" 5
+                nvidiaEnabler=false
+            fi
+        elif "$uninstall"
+        then
+            if "$nvidiaEGPUenabler1013Installed"
+            then
+                nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 1 1`
+                echoend "uninstall scheduled" 3
+            else
+                echoend "skip, not installed" 5
+                nvidiaEnabler=false
+            fi
+        else
+            irupt
+        fi
+    else
+        echoend "skip" 5
+    fi
+}
+
+function amdLegacyDriversDeduction {
+    echoing "   AMD legacy drivers"
+    amdLegacyDriverRoutine=0
+    sipRequirement=`binaryParser "$sipRequirement" 6 0`
+    sipRequirement=`binaryParser "$sipRequirement" 5 0`
+    if "$amdLegacyDriver"
+    then
+        if "$install"
+        then
+            if "$reinstall" && "$amdLegacyDriversInstalled"
+            then
+                amdLegacyDriverRoutine=`binaryParser "$amdLegacyDriverRoutine" 0 1`
+                amdLegacyDriverRoutine=`binaryParser "$amdLegacyDriverRoutine" 1 1`
+                amdLegacyDriverRoutine=`binaryParser "$amdLegacyDriverRoutine" 2 1`
+                echoend "reinstall scheduled" 3
+            elif ! "$amdLegacyDriversInstalled"
+            then
+                amdLegacyDriverRoutine=`binaryParser "$amdLegacyDriverRoutine" 0 1`
+                amdLegacyDriverRoutine=`binaryParser "$amdLegacyDriverRoutine" 2 1`
+                echoend "install scheduled" 4
+            else
+                echoend "skip, already installed" 5
+                amdLegacyDriver=false
+            fi
+        elif "$uninstall"
+        then
+            if "$amdLegacyDriversInstalled"
+            then
+                amdLegacyDriverRoutine=`binaryParser "$amdLegacyDriverRoutine" 1 1`
+                echoend "uninstall scheduled" 3
+            else
+                echoend "skip, not installed" 5
+                amdLegacyDriver=false
+            fi
+        else
+            irupt
+        fi
+    else
+        echoend "skip" 5
+    fi
+}
+
+function t82UnblockerDeduction {
+    echoing "   T82 unblocker"
+    sipRequirement=`binaryParser "$sipRequirement" 6 0`
+    sipRequirement=`binaryParser "$sipRequirement" 5 0`
+    t82UnblockerRoutine=0
+    if "$t82Unblocker"
+    then
+        if "$install"
+        then
+            if "$reinstall" && "$t82UnblockerInstalled"
+            then
+                t82UnblockerRoutine=`binaryParser "$t82UnblockerRoutine" 0 1`
+                t82UnblockerRoutine=`binaryParser "$t82UnblockerRoutine" 1 1`
+                t82UnblockerRoutine=`binaryParser "$t82UnblockerRoutine" 2 1`
+                echoend "reinstall scheduled" 3
+            elif ! "$t82UnblockerInstalled"
+            then
+                t82UnblockerRoutine=`binaryParser "$t82UnblockerRoutine" 0 1`
+                t82UnblockerRoutine=`binaryParser "$t82UnblockerRoutine" 2 1`
+                echoend "install scheduled" 4
+            else
+                echoend "skip, already installed" 5
+                t82Unblocker=false
+            fi
+        elif "$uninstall"
+        then
+            if "$t82UnblockerInstalled"
+            then
+                t82UnblockerRoutine=`binaryParser "$t82UnblockerRoutine" 1 1`
+                echoend "uninstall scheduled" 3
+            else
+                echoend "skip, not installed" 5
+                t82Unblocker=false
+            fi
+        else
+            irupt
+        fi
+    else
+        echoend "skip" 5
+    fi
+}
+
+function deactivateNvidiaDGPUDeduction {
+    echoing "   NVIDIA dGPU deactivator"
+    sipRequirement=0
+    deactivateNVIDIAdGPURoutine=0
+    if "$deactivateNvidiaDGPU"
+    then
+        if "$install"
+        then
+            if "$nvidiaDGPU"
+            then
+                if "$reinstall" && "$nvidiaDGPUdeactivatorInstalled"
+                then
+                    deactivateNVIDIAdGPURoutine=`binaryParser "$deactivateNVIDIAdGPURoutine" 1 1`
+                    deactivateNVIDIAdGPURoutine=`binaryParser "$deactivateNVIDIAdGPURoutine" 2 1`
+                    echoend "reinstall scheduled" 3
+                elif ! "$nvidiaDGPUdeactivatorInstalled"
+                then
+                    deactivateNVIDIAdGPURoutine=`binaryParser "$deactivateNVIDIAdGPURoutine" 2 1`
+                    echoend "install scheduled" 4
+                else
+                    echoend "skip, dGPU already deactivated" 5
+                    deactivateNvidiaDGPU=false
+                fi
+            else
+                echoend "skip, no NVIDIA dGPU" 5
+                deactivateNvidiaDGPU=false
+            fi
+        elif "$uninstall"
+        then
+            if "$nvidiaDGPUdeactivatorInstalled"
+            then
+                deactivateNVIDIAdGPURoutine=`binaryParser "$deactivateNVIDIAdGPURoutine" 1 1`
+                echoend "uninstall scheduled" 3
+            else
+                if "$nvidiaDGPU"
+                then
+                    echoend "skip, dGPU already activated" 5
+                else
+                    echoend "skip, no NVIDIA dGPU" 5
+                fi
+                deactivateNvidiaDGPU=false
+            fi
+        else
+            irupt
+        fi
+    else
+        echoend "skip" 5
+    fi
+}
+
+function unlockNvidiaDeduction {
+    echoing "   macOS 10.13.4 NVIDIA patch"
+    sipRequirement=0
+    unlockNvidiaRoutine=0
+    if "$unlockNvidia"
+    then
+        if [ "$os" != "10.13.0" ] && [ "$os" != "10.13.1" ] && [ "$os" != "10.13.2" ] && [ "$os" != "10.13.3" ]
+        then
+            if "$install"
+            then
+                if "$reinstall" && "$nvidiaUnlockWranglerPatchInstalled"
+                then
+                    unlockNvidiaRoutine=`binaryParser "$unlockNvidiaRoutine" 1 1`
+                    unlockNvidiaRoutine=`binaryParser "$unlockNvidiaRoutine" 2 1`
+                    echoend "reinstall scheduled" 3
+                elif ! "$nvidiaUnlockWranglerPatchInstalled"
+                then
+                    unlockNvidiaRoutine=`binaryParser "$unlockNvidiaRoutine" 2 1`
+                    echoend "install scheduled" 4
+                else
+                    echoend "skip, already installed" 5
+                    unlockNvidia=false
+                fi
+            elif "$uninstall"
+            then
+                if "$nvidiaUnlockWranglerPatchInstalled"
+                then
+                    unlockNvidiaRoutine=`binaryParser "$unlockNvidiaRoutine" 1 1`
+                    echoend "uninstall scheduled" 3
+                else
+                    echoend "skip, not installed" 5
+                    unlockNvidia=false
+                fi
+            else
+                irupt
+            fi
+        else
+            echoend "skip, not needed" 5
+            unlockNvidia=false
+        fi
+    else
+        echoend "skip" 5
+    fi
+}
+
+function thunderbolt12UnlockDeduction {
+    echoing "   macOS 10.13.4 thunderbolt 1/2 unlock"
+    sipRequirement=0
+    thunderbolt12UnlockRoutine=0
+    if "$thunderbolt12Unlock"
+    then
+        if [ "$os" != "10.13.0" ] && [ "$os" != "10.13.1" ] && [ "$os" != "10.13.2" ] && [ "$os" != "10.13.3" ] && [ "$thunderboltInterface" != 3 ]
+        then
+            if "$install"
+            then
+                if "$reinstall" && "$thunderbolt12UnlockInstalled"
+                then
+                    thunderbolt12UnlockRoutine=`binaryParser "$thunderbolt12UnlockRoutine" 1 1`
+                    thunderbolt12UnlockRoutine=`binaryParser "$thunderbolt12UnlockRoutine" 2 1`
+                    echoend "reinstall scheduled" 3
+                elif ! "$thunderbolt12UnlockInstalled"
+                then
+                    thunderbolt12UnlockRoutine=`binaryParser "$thunderbolt12UnlockRoutine" 2 1`
+                    echoend "install scheduled" 4
+                else
+                    echoend "skip, tb""$thunderboltInterface"" already unlocked" 5
+                    thunderbolt12Unlock=false
+                fi
+            elif "$uninstall"
+            then
+                if "$thunderbolt12UnlockInstalled"
+                then
+                    thunderbolt12UnlockRoutine=`binaryParser "$thunderbolt12UnlockRoutine" 1 1`
+                    echoend "uninstall scheduled" 3
+                else
+                    echoend "skip, tb$thunderboltInterface already locked" 5
+                    thunderbolt12Unlock=false
+                fi
+            else
+                irupt
+            fi
+        else
+            echoend "skip, not needed" 5
+            thunderbolt12Unlock=false
+        fi
+    else
+        echoend "skip" 5
+    fi
+}
+
+function cudaDriverDeduction {
+    echoing "      CUDA drivers"
+    if [ `dc -e "$scheduleCudaDeduction 2 % n"` == 1 ]
+    then
+        if "$install"
+        then
+            if "$reinstall" && "$cudaDriverInstalled"
+            then
+                cudaRoutine=`binaryParser "$cudaRoutine" 0 1`
+                cudaRoutine=`binaryParser "$cudaRoutine" 1 1`
+                cudaRoutine=`binaryParser "$cudaRoutine" 2 1`
+                echoend "reinstall scheduled" 3
+            elif ! "$cudaDriverInstalled"
+            then
+                cudaRoutine=`binaryParser "$cudaRoutine" 0 1`
+                cudaRoutine=`binaryParser "$cudaRoutine" 2 1`
+                echoend "install scheduled" 4
+            else
+                if [ "$cudaDriverVersion" == "$cudaDriverDownloadVersion" ]
+                then
+                    echoend "skip, up to date" 5
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 0`
+                else
+                    cudaRoutine=`binaryParser "$cudaRoutine" 0 1`
+                    cudaRoutine=`binaryParser "$cudaRoutine" 1 1`
+                    cudaRoutine=`binaryParser "$cudaRoutine" 2 1`
+                    echoend "update scheduled" 4
+                fi
+            fi
+        elif "$uninstall"
+        then
+            if "$cudaDriverInstalled"
+            then
+                cudaRoutine=`binaryParser "$cudaRoutine" 1 1`
+                echoend "uninstall scheduled" 3
+            else
+                echoend "skip, not installed" 5
+                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 0`
+            fi
+        else
+            irupt
+        fi
+    else
+        echoend "skip" 5
+    fi
+}
+
+function cudaDeveloperDriverDeduction {
+    echoing "      CUDA developer driver"
+    if [ `dc -e "$scheduleCudaDeduction 2 / 2 % n"` == 1 ]
+    then
+        if "$install"
+        then
+            if "$reinstall" && "$cudaDeveloperDriverInstalled"
+            then
+                cudaRoutine=`binaryParser "$cudaRoutine" 4 1`
+                cudaRoutine=`binaryParser "$cudaRoutine" 5 1`
+                cudaRoutine=`binaryParser "$cudaRoutine" 6 1`
+                echoend "reinstall scheduled" 3
+            elif ! "$cudaDeveloperDriverInstalled"
+            then
+                cudaRoutine=`binaryParser "$cudaRoutine" 4 1`
+                cudaRoutine=`binaryParser "$cudaRoutine" 6 1`
+                echoend "install scheduled" 4
+            else
+                if [ "$cudaDriverVersion" == "$cudaDriverDownloadVersion" ]
+                then
+                    echoend "skip, up to date" 5
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 0`
+                else
+                    cudaRoutine=`binaryParser "$cudaRoutine" 4 1`
+                    cudaRoutine=`binaryParser "$cudaRoutine" 5 1`
+                    cudaRoutine=`binaryParser "$cudaRoutine" 6 1`
+                    echoend "update scheduled" 4
+                fi
+            fi
+        elif "$uninstall"
+        then
+            if "$cudaDeveloperDriverInstalled"
+            then
+                cudaRoutine=`binaryParser "$cudaRoutine" 5 1`
+                echoend "uninstall scheduled" 3
+            else
+                echoend "skip, not installed" 5
+                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 0`
+            fi
+        else
+            irupt
+        fi
+    else
+        echoend "skip" 5
+    fi
+}
+
+function cudaToolkitDeduction {
+    echoing "      CUDA toolkit"
+    if [ `dc -e "$scheduleCudaDeduction 4 / 2 % n"` == 1 ]
+    then
+        if "$install"
+        then
+            if "$reinstall" && "$cudaToolkitInstalled"
+            then
+                cudaRoutine=`binaryParser "$cudaRoutine" 8 1`
+                cudaRoutine=`binaryParser "$cudaRoutine" 9 1`
+                cudaRoutine=`binaryParser "$cudaRoutine" 10 1`
+                echoend "reinstall scheduled" 3
+            elif ! "$cudaToolkitInstalled"
+            then
+                cudaRoutine=`binaryParser "$cudaRoutine" 8 1`
+                cudaRoutine=`binaryParser "$cudaRoutine" 10 1`
+                echoend "install scheduled" 4
+            else
+                echoend "skip" 5
+                if [ "$cudaVersionFull" == "$cudaToolkitDownloadVersion" ]
+                then
+                    echoend "skip, up to date" 5
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 2 0`
+                else
+                    cudaRoutine=`binaryParser "$cudaRoutine" 8 1`
+                    cudaRoutine=`binaryParser "$cudaRoutine" 9 1`
+                    cudaRoutine=`binaryParser "$cudaRoutine" 10 1`
+                    echoend "update scheduled" 4
+                fi
+            fi
+        elif "$uninstall"
+        then
+            if "$cudaToolkitInstalled"
+            then
+                cudaRoutine=`binaryParser "$cudaRoutine" 9 1`
+                echoend "uninstall scheduled" 3
+            else
+                echoend "skip, not installed" 5
+                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 2 0`
+            fi
+        else
+            irupt
+        fi
+    else
+        echoend "skip" 5
+    fi
+}
+
+function cudaSamplesDeduction {
+    echoing "      CUDA samples"
+    if [ `dc -e "$scheduleCudaDeduction 8 / 2 % n"` == 1 ]
+    then
+        if "$install"
+        then
+            if "$reinstall" && "$cudaSamplesInstalled"
+            then
+                cudaRoutine=`binaryParser "$cudaRoutine" 12 1`
+                cudaRoutine=`binaryParser "$cudaRoutine" 13 1`
+                cudaRoutine=`binaryParser "$cudaRoutine" 14 1`
+                echoend "reinstall scheduled" 3
+            elif ! "$cudaSamplesInstalled"
+            then
+                cudaRoutine=`binaryParser "$cudaRoutine" 12 1`
+                cudaRoutine=`binaryParser "$cudaRoutine" 14 1`
+                echoend "install scheduled" 4
+            else
+                if [ "$cudaVersionFull" == "$cudaToolkitDownloadVersion" ]
+                then
+                    echoend "skip, up to date" 5
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 3 0`
+                else
+                    cudaRoutine=`binaryParser "$cudaRoutine" 12 1`
+                    cudaRoutine=`binaryParser "$cudaRoutine" 13 1`
+                    cudaRoutine=`binaryParser "$cudaRoutine" 14 1`
+                    echoend "update scheduled" 4
+                fi
+            fi
+        elif "$uninstall"
+        then
+            if "$cudaSamplesInstalled"
+            then
+                cudaRoutine=`binaryParser "$cudaRoutine" 13 1`
+                echoend "uninstall scheduled" 3
+            else
+                echoend "skip, not installed" 5
+                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 3 0`
+            fi
+        else
+            irupt
+        fi
+    else
+        echoend "skip" 5
+    fi
+}
+
+function cudaDeduction {
+    cudaRoutine=0
+    if [ "$scheduleCudaDeduction" != 0 ] && ( "$nvidiaDriver" || "$nvidiaDriversInstalled" )
+    then
+        echo "   CUDA software"
+        if "$install"
+        then
+            downloadCudaDriverInformation
+            downloadCudaToolkitInformation
+        fi
+        cudaDriverDeduction
+        cudaDeveloperDriverDeduction
+        cudaToolkitDeduction
+        cudaSamplesDeduction
+    else
+        echoing "   CUDA software"
+        echoend "skip" 5
+    fi
+}
+
+function checkSIPRequirement {
+    appleInternalTemp=`dc -e "$sipRequirement 64 / 2 % n"`
+    kextSigningTemp=`dc -e "$sipRequirement 32 / 2 % n"`
+    fileSystemProtectionsTemp=`dc -e "$sipRequirement 16 / 2 % n"`
+    debuggingRestrictionsTemp=`dc -e "$sipRequirement 8 / 2 % n"`
+    dTraceRestrictionsTemp=`dc -e "$sipRequirement 4 / 2 % n"`
+    nvramProtectionsTemp=`dc -e "$sipRequirement 2 / 2 % n"`
+    baseSystemVerificationTemp=`dc -e "$sipRequirement 2 % n"`
+    for i in `seq 0 6`
+    do
+        if [[ `dc -e "$sipRequirement 2 $i ^ / 2 % n"` < `dc -e "$statSIP 2 $i ^ / 2 % n"` ]]
+        then
+            echoend "ERROR" 1
+            echo "   SIP setting too high."
+            echo "Execute in recovery mode:"
+            if [ "$sipRequirement" == 0 ] || [ "$baseSystemVerificationTemp" == 0 ]
+            then
+                echo "csrutil disable"
+            else
+                echo -n "csrutil"
+                if [ "$appleInternalTemp" == 0 ]
+                then
+                    echo -n " --no-internal"
+                fi
+                if [ "$kextSigningTemp" == 0 ]
+                then
+                    echo -n " --without kext"
+                fi
+                if [ "$fileSystemProtectionsTemp" == 0 ]
+                then
+                    echo -n " --without fs"
+                fi
+                if [ "$debuggingRestrictionsTemp" == 0 ]
+                then
+                    echo -n " --without debug"
+                fi
+                if [ "$dTraceRestrictionsTemp" == 0 ]
+                then
+                    echo -n " --without dtrace"
+                fi
+                if [ "$nvramProtectionsTemp" == 0 ]
+                then
+                    echo -n " --without nvram"
+                fi
+                echo ""
+            fi
+            irupt
+        fi
+    done
+    echoend "OK" 2
+}
+
+
+function softwareDeduction {
+    if "$scheduleSecureEGPUfetch"
+    then
+        if [ "$os" != "10.13.0" ] && [ "$os" != "10.13.1" ] && [ "$os" != "10.13.2" ] && [ "$os" != "10.13.3" ]
+        then
+            echo "Automatic eGPU information fetching..."
+            secureGetEGPUInformation
+        else
+            echo "Manual eGPU information fetching..."
+            echo "   please select your eGPU brand:"
+            echo "    [1]: NVIDIA"
+            echo "    [2]: AMD"
+            read -p "Number: " -r -n 1
+            echo
+            case "$REPLY"
             in
-            "driver")
-                echo "$fullProgramNameTemp"" needs CUDA drivers"
-                if [[ "$cuda" < 1 ]]
-                then
-                    cudaRequirementTemp=1
-                    cuda=1
-                fi
+            "1")
+                nvidiaEnabler=true
+                nvidiaDriver=true
+                unlockNvidia=true
                 ;;
-            "developerDriver")
-                echo "$fullProgramNameTemp"" needs CUDA developer driver"
-                if [[ "$cuda" < 2 ]]
-                then
-                    cudaRequirementTemp=2
-                    cuda=2
-                fi
-                ;;
-            "toolkit")
-                echo "$fullProgramNameTemp"" needs CUDA toolkit"
-                if [[ "$cuda" < 3 ]]
-                then
-                    cudaRequirementTemp=4
-                    cuda=3
-                fi
-                ;;
-            "samples")
-                echo "$fullProgramNameTemp"" needs CUDA samples"
-                if [[ "$cuda" < 4 ]]
-                then
-                    cudaRequirementTemp=8
-                    cuda=4
-                fi
+            "2")
+                amdLegacyDriver=true
+                deactivateNvidiaDGPU=true
                 ;;
             *)
+                echo
+                echo "ERROR: Unrecoginzed answer"
+                irupt
+                ;;
+            esac
+            echo "Do you use an 'unsupported' eGPU enclosure (T82 chip)"
+            echo "   please select your answer:"
+            echo "    [1]: YES"
+            echo "    [2]: no"
+            read -p "Number: " -r -n 1
+            echo
+            case "$REPLY"
+            in
+            "1")
+                t82Unblocker=true
+                ;;
+            "2")
+                t82Unblocker=false
+                ;;
+            *)
+                echo
+                echo "ERROR: Unrecoginzed answer"
+                irupt
                 ;;
             esac
         fi
-    done
-    echo "CUDA requirement status: ""$cudaRequirementTemp"
-    rm "$CUDAAppList"
+    fi
+
+    if [[ "$scheduleCudaDeduction" > 15 ]]
+    then
+        echo "Fetching CUDA needs..."
+        getCudaNeeds
+    fi
+
+    echo "Checking for incompatibilies and up to date software..."
+    nvidiaDriverDeduction
+    nvidiaEnablerDeduction
+    amdLegacyDriversDeduction
+    t82UnblockerDeduction
+    deactivateNvidiaDGPUDeduction
+    unlockNvidiaDeduction
+    thunderbolt12UnlockDeduction
+    cudaDeduction
+
+    echoing "Checking if SIP is sufficently disabled..."
+    checkSIPRequirement
 }
 
+function determination {
+    echo "Fetching system information..."
+    gatherSystemInfo
 
+    echo "Setting internal switches..."
+    setStandards
 
-
-#deduce what installations, updates, uninstallations are wanted
-function deduceUserWish {
-    fetchInstalledSoftware
-    if [ "$determine" == 1 ]
-    then
-        if [ "$install" == 1 ]
-        then
-            enabler=1
-            driver=1
-            if [ "$cudaDriverInstalled" == 1 ]
-            then
-                cuda=1
-            fi
-            if [ "$cudaDeveloperDriverInstalled" == 1 ]
-            then
-                cuda=2
-            fi
-            if [ "$cudaToolkitInstalled" == 1 ]
-            then
-                cuda=3
-            fi
-            if [ "$cudaSamplesInstalled" == 1 ]
-            then
-                cuda=4
-            fi
-            if [ "$minimal" == 0 ] && [[ "$cuda" < 3 ]]
-            then
-                deduceCudaNeedsInstall
-            fi
-        elif [ "$update" == 1 ]
-        then
-            if [ "$eGPUenablerInstalled" == 1 ]
-            then
-                enabler=1
-            fi
-            if [ "$nvidiaDriversInstalled" == 1 ]
-            then
-                driver=1
-            fi
-            if [ "$cudaDriverInstalled" == 1 ]
-            then
-                cuda=1
-            fi
-            if [ "$cudaDeveloperDriverInstalled" == 1 ]
-            then
-                cuda=2
-            fi
-            if [ "$cudaToolkitInstalled" == 1 ]
-            then
-                cuda=3
-            fi
-            if [ "$cudaSamplesInstalled" == 1 ]
-            then
-                cuda=4
-            fi
-        elif [ "$uninstall" == 1 ]
-        then
-            if [ "$eGPUenablerInstalled" == 1 ]
-            then
-                enabler=1
-            fi
-            if [ "$nvidiaDriversInstalled" == 1 ]
-            then
-                driver=1
-            fi
-
-            if [ "$cudaSamplesInstalled" == 1 ]
-            then
-                cuda=4
-            fi
-            if [ "$cudaToolkitInstalled" == 1 ]
-            then
-                cuda=3
-            fi
-            if [ "$cudaDeveloperDriverInstalled" == 1 ]
-            then
-                cuda=2
-            fi
-            if [ "$cudaDriverInstalled" == 1 ]
-            then
-                cuda=1
-            fi
-        else
-            iruptError "unex"
-        fi
-    else
-        if [ "$update" == 1 ]
-        then
-            if [ "$enabler" == 1 ] && [ "$eGPUenablerInstalled" == 0 ] && ["$automateeGPUInstalled" == 0 ]
-            then
-                enabler=0
-                contError "unEnabler"
-                listOfChanges="$listOfChanges""\n""-eGPU support could not be updated, no installation has been found."
-            fi
-            if [ "$driver" == 1 ] && [ "$nvidiaDriversInstalled" == 0 ]
-            then
-                driver=0
-                contError "unEnabler"
-                listOfChanges="$listOfChanges""\n""-NVIDIA driver could not be updated, no installation has been found."
-            fi
-            if [[ "$cuda" > 0 ]] && [ "$cudaDriverInstalled" == 0 ]
-            then
-                if [[ "$cuda" > 1 ]] && [ "$cudaDeveloperDriverInstalled" == 0 ]
-                then
-                    if [[ "$cuda" > 2 ]] && [ "$cudaToolkitInstalled" == 0 ]
-                    then
-                        if [[ "$cuda" > 3 ]] && [ "$cudaSamplesInstalled" == 0 ]
-                        then
-                            contError "unCudaSamples"
-                            listOfChanges="$listOfChanges""\n""-CUDA samples could not be updated, no installation has been found."
-                        fi
-                        contError "unCudaToolkit"
-                        listOfChanges="$listOfChanges""\n""-CUDA toolkit could not be updated, no installation has been found."
-                    fi
-                    contError "unCudaDriver"
-                    listOfChanges="$listOfChanges""\n""-CUDA driver could not be updated, no installation has been found."
-                fi
-                cuda=0
-                contError "unCudaDriver"
-                listOfChanges="$listOfChanges""\n""-CUDA driver could not be updated, no installation has been found."
-            fi
-        fi
-    fi
+    softwareDeduction
 }
 
-##############################################################################################################define execution functions and logic
-
-#user system check
-function systemInfo {
-    fetchInstalledSoftware
-    installedCuda=0
-    if [ "$cudaDriverInstalled" == 1 ]
+function checkScriptRequirement {
+    fetchOSinfo
+    if [ "${os::5}" != "10.13" ]
     then
-        installedCuda=1
-    fi
-    if [ "$cudaDeveloperDriverInstalled" == 1 ]
-    then
-        installedCuda=2
-    fi
-    if [ "$cudaToolkitInstalled" == 1 ]
-    then
-        installedCuda=3
-    fi
-    if [ "$cudaSamplesInstalled" == 1 ]
-    then
-        installedCuda=4
-    fi
-    deduceCudaNeedsInstall
-    if [[ "$installedCuda" < "$cuda" ]]
-    then
-        echo "The script has determined that your system lacks the required CUDA installation needed in order to run certain programs on the eGPU."
-        echo "You can run the script again without any paramters to install the required CUDA software."
-    else
         echo
-        echo "Your system has the appropriate CUDA installations. No changes needed."
-        echo "There may still be programs that the script is unware of their CUDA needs."
-    fi
-    echo
-    echo
-    system_profiler -detailLevel mini SPDisplaysDataType SPHardwareDataType SPThunderboltDataType
-}
-
-
-
-
-#system change
-function systemPatch {
-    deduceUserWish
-    if [ "$cuda" != 0 ]
+        echo "This script is only for macOS 10.13.X"
+        irupt
+    elif [ "$os" == "$warningOS" ]
     then
-        if [ "$install" == 1 ] || [ "$update" == 1 ]
-        then
-            installCuda
-        elif [ "$uninstall" == 1 ]
-        then
-            uninstallCuda
-        else
-            iruptError "unex"
-        fi
+        echo
+        echo "This script only works with ""$currentOS"" and earlier."
+        irupt
     fi
-
-    if [ "$driver" == 1 ]
+    fetchAppleGPUWranglerVersion
+    if ! [ "$appleGPUWranglerVersion" =~ "$build" ]
     then
-        if [ "$install" == 1 ] || [ "$update" == 1 ]
-        then
-            installNvidiaDriver
-        elif [ "$uninstall" == 1 ]
-        then
-            uninstallNvidiaDriver
-        else
-            iruptError "unex"
-        fi
-    fi
-
-    if [ "$enabler" == 1 ]
-    then
-        if [ "$install" == 1 ] || [ "$update" == 1 ]
-        then
-            installeGPUSupport
-        elif [ "$uninstall" == 1 ]
-        then
-            unInstalleGPUSupport
-        else
-            iruptError "unex"
-        fi
+        echo "You use the old wrangler patch. Please wait a little longer."
+        irupt
     fi
 }
 
 
 
 
-#system logic
+###  Subroutine Y8'5: Execution
+function download {
+    createSpace 2
+    trapWithoutWarning
+    echo "Download external content..."
+    if [ `dc -e "$nvidiaDriverRoutine 2 % n"` == 1 ]
+    then
+        echo "--- NVIDIA drivers ---"
+        downloadNvidiaDriver
+        if "$omitNvidiaDriver"
+        then
+            echo
+            echo "NVIDIA driver download failed. Checksums do not match."
+            irupt
+        fi
+    fi
+    if [ `dc -e "$nvidiaEnablerRoutine 2 % n"` == 1 ]
+    then
+        echo "--- NVIDIA eGPU enabler ---"
+        downloadNvidiaEGPUenabler1013
+        if "$omitNvidiaEGPUenabler1013"
+        then
+            echo
+            echo "NVIDIA eGPU enabler download failed. Checksums do not match."
+            irupt
+        fi
+    fi
+    if [ `dc -e "$amdLegacyDriverRoutine 2 % n"` == 1 ]
+    then
+        echo "--- AMD legacy drivers ---"
+        downloadAMDLegacyDriver
+        if "$omitAMDLegacyDriver"
+        then
+            echo
+            echo "AMD legacy driver download failed. Checksums do not match."
+            irupt
+        fi
+    fi
+    if [ `dc -e "$t82UnblockerRoutine 2 % n"` == 1 ]
+    then
+        echo "--- T82 unblock ---"
+        downloadT82Unblocker
+        if "$omitT82Unblocker"
+        then
+            echo
+            echo "T82 unblocker download failed. Checksums do not match."
+            irupt
+        fi
+    fi
+    if [ `dc -e "$cudaRoutine 2 % n"` == 1 ]
+    then
+        echo "--- CUDA driver ---"
+        downloadCudaDriver
+        if "$omitCuda"
+        then
+            echo
+            echo "CUDA driver download failed. Checksums do not match."
+            irupt
+        fi
+    fi
+    if [ `dc -e "$cudaRoutine 16 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 256 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 4096 / 2 % n"` == 1 ]
+    then
+        echo "--- CUDA developer driver / CUDA tooolkit / CUDA samples ---"
+        downloadCudaToolkit
+        if "$omitCuda"
+        then
+            echo
+            echo "CUDA developer driver / CUDA tooolkit / CUDA samples download failed. Checksums do not match."
+            irupt
+        fi
+    fi
+    
+}
+
+function uninstall {
+    createSpace 2
+    echo "Uninstalling..."
+    trapWithWarning
+    if [ `dc -e "$nvidiaDriverRoutine 2 / 2 % n"` == 1 ]
+    then
+        echoing "   NVIDIA driver"
+        uninstallNvidiaDriver
+        echoend "done"
+    fi
+    if [ `dc -e "$nvidiaEnablerRoutine 2 / 2 % n"` == 1 ]
+    then
+        echoing "   NVIDIA eGPU support"
+        uninstallNvidiaEGPUenabler1013
+        echoend "done"
+    fi
+    if [ `dc -e "$unlockNvidiaRoutine 2 / 2 % n"` == 1 ]
+    then
+        echoing "   NVIDIA macOS 10.13.4 unlock"
+        trapLock
+        uninstallNvidiaUnlockWranglerPatch
+        trapWithWarning
+        echoend "done"
+    fi
+    if [ `dc -e "$amdLegacyDriverRoutine 2 / 2 % n"` == 1 ]
+    then
+        echoing "AMD legacy drivers"
+        uninstallAMDLegacyDriver
+        echoend "done"
+    fi
+    if [ `dc -e "$t82UnblockerRoutine 2 / 2 % n"` == 1 ]
+    then
+        echoing "T82 Unblocker"
+        uninstallT82Unblocker
+        echoend "done"
+    fi
+    if [ `dc -e "$deactivateNVIDIAdGPURoutine 2 / 2 % n"` == 1 ]
+    then
+        echoing "NVIDIA dGPU deactivator"
+        uninstallNvidiaDGPUdeactivator
+        echoend "done"
+    fi
+    if [ `dc -e "$thunderbolt12UnlockRoutine 2 / 2 % n"` == 1 ]
+    then
+        echoing "Thunderbolt 1/2 unlock"
+        uninstallThunderbolt12Unlock
+        echoend "done"
+    fi
+    if [ `dc -e "$cudaRoutine 2 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 32 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 512 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 8192 / 2 % n"` == 1 ]
+    then
+        echoing "CUDA"
+        uninstallCuda
+        echoend "done"
+    fi
+}
+
+function install {
+    echo "Installing..."
+    if [ `dc -e "$nvidiaDriverRoutine 4 / 2 % n"` == 1 ]
+    then
+        echoing "   NVIDIA driver"
+        installNvidiaDriver
+        echoend "done"
+    fi
+    if [ `dc -e "$nvidiaEnablerRoutine 4 / 2 % n"` == 1 ]
+    then
+        echoing "   NVIDIA eGPU support"
+        installNvidiaEGPUenabler1013
+        echoend "done"
+    fi
+    if [ `dc -e "$unlockNvidiaRoutine 4 / 2 % n"` == 1 ]
+    then
+        echoing "   NVIDIA macOS 10.13.4 unlock"
+        installNvidiaUnlockWranglerPatch
+        echoend "done"
+    fi
+    if [ `dc -e "$amdLegacyDriverRoutine 4 / 2 % n"` == 1 ]
+    then
+        echoing "AMD legacy drivers"
+        installAMDLegacyDriver
+        echoend "done"
+    fi
+    if [ `dc -e "$t82UnblockerRoutine 4 / 2 % n"` == 1 ]
+    then
+        echoing "T82 Unblocker"
+        installT82Unblocker
+        echoend "done"
+    fi
+    if [ `dc -e "$deactivateNVIDIAdGPURoutine 4 / 2 % n"` == 1 ]
+    then
+        echoing "NVIDIA dGPU deactivator"
+        installNvidiaDGPUdeactivator
+        echoend "done"
+    fi
+    if [ `dc -e "$thunderbolt12UnlockRoutine 4 / 2 % n"` == 1 ]
+    then
+        echoing "Thunderbolt 1/2 unlock"
+        installThunderbolt12Unlock
+        echoend "done"
+    fi
+    if [ `dc -e "$cudaRoutine 4 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 64 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 1024 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 16384 / 2 % n"` == 1 ]
+    then
+        echoing "CUDA"
+        installCuda
+        echoend "done"
+    fi
+}
+
+function patch {
+    echo "Patching..."
+    if [ `dc -e "$nvidiaDriverRoutine 8 / 2 % n"` == 1 ]
+    then
+        patchNvidiaDriverOld
+        echoend "done"
+    fi
+}
+
 function macOSeGPU {
-    if [ "$check" == 0 ]
+    checkScriptRequirement
+    printHelp
+    checkSystem
+
+    enforceEGPUdisconnect
+    preparations
+    determination
+
+    download
+    deactivateNVIDIAdGPURoutine=0
+    deactivateNVIDIAdGPU=false
+
+    if [ "$nvidiaDriverRoutine" != 0 ] || [ "$nvidiaEnablerRoutine" != 0 ] || [ "$unlockNvidiaRoutine" != 0 ] || [ "$amdLegacyDriverRoutine" != 0 ] || [ "$t82UnblockerRoutine" != 0 ] || [ "$deactivateNVIDIAdGPURoutine" != 0 ] || [ "$thunderbolt12UnlockRoutine" != 0 ] || [ "$cudaRoutine" != 0 ] 
     then
-        systemPatch
-    elif [ "$check" == 1 ]
-    then
-        systemInfo
-    else
-        iruptError "unex"
+        echo "Checking for elevated privileges..."
+        elevatePrivileges
     fi
+
+    uninstall
+    install
+    patch
+
     finish
 }
 
-##############################################################################################################execute & end
-#execute
+
+#   Subroutine Z: Script execution call ##############################################################################################################
 macOSeGPU
 
 
 
 
-#end
-iruptError "unex"
-#end of script
+#   end of script
