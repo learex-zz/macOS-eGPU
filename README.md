@@ -145,16 +145,21 @@ Not yet available.
 
 ## Problems
 ### Known issues
-•	OpenCL seems not to work on NVIDIA eGPU + dGPU configs
-•	still researched
-•	Macs with NVIDIA dGPU don't boot with TB3 enclosure and NVIDIA eGPU.
-•	still researched, try hot-plug
-•	Disconnect "null" on hot plug
-•	still researched. Booting with eGPU resolves this.
-•	System crash on hot-disconnect
-•	still researched
-•	System crash on disconnect button press
-•	still researched
+- OpenCL seems not to work on NVIDIA eGPU + dGPU configs
+	- still researched
+- Macs with NVIDIA dGPU don't boot with TB3 enclosure and NVIDIA eGPU.
+	- still researched
+- Disconnect "null" on hot plug
+	- still researched. Booting with eGPU resolves this.
+- System crash on hot-disconnect
+	- still researched
+- System crash on disconnect button press
+	- still researched
+- Black monitor with/without mouse
+	- boot without eGPU
+	- hot-plug ONLY eGPU (wait 15 sec)
+	- hot-plug monitor (wait 15 sec)
+	- login
 ### Unknown issues
 If you’ve got a problem then try the tweaks first.  
 If nothing works head over to [eGPU.io][1] and ask.
