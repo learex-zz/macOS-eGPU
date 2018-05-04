@@ -24,7 +24,7 @@ Do not abort the script during uninstallation/installation/patch phase this *wil
 3. Save your work. The script will kill all running programs.
 4. Execute: 
 
-`bash <(curl -s willSoonBeUploaded)`
+`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`
 
 *A quick note to all the pros out there: the #sh shell does not support the syntax given above. You need a #bash shell.*
 
