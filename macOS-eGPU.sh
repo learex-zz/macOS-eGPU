@@ -3260,13 +3260,14 @@ function checkScriptRequirement {
     elif [ "$os" == "$warningOS" ]
     then
         echo
-        echo "This script only works with ""$currentOS"" and earlier."
-        irupt
+        echo "This script is not designed to work with your current version of macOS."
+        echo "Continuation might result in failure and/or system crash. (seriously!)"
+        waiter 10
     fi
     fetchAppleGPUWranglerVersion
     if ! [[ "$appleGPUWranglerVersion" =~ "$build" ]]
     then
-        echo "You use the old wrangler patch. Please wait a little longer."
+        echo "You use the old wrangler patch. Please follow instructions on eGPU.io/GitHub."
         irupt
     fi
 }
