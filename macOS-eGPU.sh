@@ -244,6 +244,7 @@ function rebootSystem {
         echo "A reboot of the system is recommended."
     else
         echo "A reboot will soon be performed..."
+        elevatePrivileges
         trapWithoutWarning
         waiter 5
         echo "/ is busy, waiting for lock (this might take approx 15-30s)..."
