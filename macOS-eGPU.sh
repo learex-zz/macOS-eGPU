@@ -281,6 +281,7 @@ function rebuildKextCache {
 
 
 ##  Subroutine A9: Finish
+doneSomething=false
 function finish {
     createSpace 2
     echo "Finish..."
@@ -1302,24 +1303,24 @@ function installCudaToolkitBranch {
     if [ -e "$cudaToolkitVolPath""$cudaToolkitPKGName" ]
     then
         elevatePrivileges
-        if [ `dc -e "$scheduleCudaDeduction 2 / 2 % n"` == 1 ]
+        if [ `dc -e "$cudaRoutine 64 / 2 % n"` == 1 ]
         then
             sudo "$cudaToolkitVolPath""$cudaToolkitPKGName" --accept-eula --silent --no-window --install-package="cuda-driver" &>/dev/null
             scheduleReboot=true
             doneSomething=true
             scheduleKextTouch=true
-        elif [ `dc -e "$scheduleCudaDeduction 4 / 2 % n"` == 1 ]
+        fi
+        if [ `dc -e "$cudaRoutine 1024 / 2 % n"` == 1 ]
         then
             sudo "$cudaToolkitVolPath""$cudaToolkitPKGName" --accept-eula --silent --no-window --install-package="cuda-toolkit" &>/dev/null
             scheduleReboot=true
             doneSomething=true
             scheduleKextTouch=true
-        elif [ `dc -e "$scheduleCudaDeduction 8 / 2 % n"` == 1 ]
+        fi
+        if [ `dc -e "$cudaRoutine 16384 / 2 % n"` == 1 ]
         then
             sudo "$cudaToolkitVolPath""$cudaToolkitPKGName" --accept-eula --silent --no-window --install-package="cuda-samples" &>/dev/null
-            scheduleReboot=true
             doneSomething=true
-            scheduleKextTouch=true
         fi
         hdiutil detach "$cudaToolkitVolPath" -quiet
         rm -rf "$dirName""/cudaToolkit.dmg"
@@ -1967,6 +1968,7 @@ do
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
         fi
+        scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 1`
         scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
         ;;
     "--cudaToolkit" | "-t")
@@ -1975,6 +1977,7 @@ do
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
         fi
+        scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 1`
         scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
         scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 2 1`
         ;;
@@ -1984,6 +1987,7 @@ do
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
         fi
+        scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 1`
         scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
         scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 2 1`
         scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 3 1`
@@ -2036,7 +2040,7 @@ done
 attachedDMGVolumes="$(echo -e -n $attachedDMGVolumes)"
 
 #scheduleReboot=false - defined at Subroutine A: Basic functions
-doneSomething=false
+#doneSomething=false - defined at Subroutine A: Basic functions
 scheduleKextTouch=false
 
 determine=false
