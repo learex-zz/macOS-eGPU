@@ -1674,7 +1674,7 @@ function uninstallT82Unblocker {
 function downloadT82Unblocker {
     mktmpdir
     curl -o "$dirName""/tb82Unblock.zip" -L "$t82UnblockerDownloadLink" "-#" -m 1024
-    t82UnblockerChecksumTemp=$(shasum -a 512 -b "$dirName""/tb82Unblock.zip")
+    t82UnblockerChecksumTemp=$(shasum -a 512 -b "$dirName""/tb82Unblock.zip" | awk '{ print $1 }')
     if [ "$t82UnblockerChecksumTemp" != "$t82UnblockerChecksum" ]
     then
         omitT82Unblocker=true
@@ -3171,6 +3171,11 @@ function softwareDeduction {
         then
             echo "Automatic eGPU information fetching..."
             secureGetEGPUInformation
+            if "$t82Unblocker"
+            then
+                echo "   After the script has finshed and the Mac has been rebooted"
+                echo "   you will need to execute the script again."
+            fi
         else
             echo "Manual eGPU information fetching..."
             echo "   please select your eGPU brand:"
