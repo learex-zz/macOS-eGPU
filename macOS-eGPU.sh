@@ -2288,8 +2288,8 @@ function secureGetEGPUInformation {
     echoend "done"
     enforceEGPUdisconnect
 
-    echoing "   preparing secure eGPU connection"
     elevatePrivileges
+    echoing "   preparing secure eGPU connection"
     moveDriversToBackup
     sudo touch /System/Library/Extensions &>/dev/null
     sudo kextcache -q -update-volume / &>/dev/null
@@ -2306,6 +2306,7 @@ function secureGetEGPUInformation {
     if [[ "$unsupportedCheckTemp[@]" =~ "Unsupported" ]]
     then
         t82Unblocker=true
+        echoend "done"
         return 0
     else
         fetchConnectedEGPU
