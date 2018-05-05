@@ -249,6 +249,7 @@ function rebootSystem {
         waiter 5
         echo "/ is busy, waiting for lock (this might take approx 15-30s)..."
         sudo reboot & &>/dev/null
+        sleep 1
     fi
     echo
     restorePrivileges
