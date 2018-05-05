@@ -826,7 +826,7 @@ function patchNvidiaDriverNew {
         sudo mv "$expansionTemp""/PatchDist" "$expansionTemp""/Distribution"
 
         (cd "$payloadTemp"; sudo cat "$driverPathTemp""/Payload" | gunzip -dc | cpio -i --quiet)
-        $pbuddy -c "Set IOKitPersonalities:NVDAStartup:NVDARequiredOS ""$build" "$payloadTemp""/Library/Extensions/NVDAStartupWeb.kext/Contents/Info.plist"
+        "$pbuddy" -c "Set IOKitPersonalities:NVDAStartup:NVDARequiredOS ""$build" "$payloadTemp""/Library/Extensions/NVDAStartupWeb.kext/Contents/Info.plist"
         sudo chown -R root:wheel "$payloadTemp/"
 
         (cd "$payloadTemp"; sudo find . | sudo cpio -o --quiet | gzip -c | sudo tee "$driverPathTemp""/Payload" &>/dev/null)
@@ -3494,6 +3494,39 @@ function patch {
 
 
 
+###  Subroutine Y10'5: Deactivate auto updaters
+cudaUpdateDaemonPath="/Library/LaunchAgents/com.nvidia.CUDASoftwareUpdate.plist"
+function deactivateCUDAupdater {
+    if [ -e "$cudaUpdateDaemonPath" ]
+    then
+        elevatePrivileges
+        sudo rm -f "$cudaUpdateDaemonPath"
+    fi
+}
+
+
+nvidiaDriverUpdateLibPath="$HOME""/Library/Preferences/ByHost"
+nvidiaDriverUpdatePlistPath=""
+function deactivateNvidiaDriverUpdater {
+    nvidiaDriverUpdatePlistPath=`find "$nvidiaDriverUpdateLibPath" -iname com.nvidia.nvagent*`
+    if [ `echo "$nvidiaDriverUpdatePlistPath" | wc -l | xargs` == 1 ]
+    then
+        elevatePrivileges
+        sudo "$pbuddy" -c "Set autoCheck 0" "$nvidiaDriverUpdatePlistPath"
+        backroundDownloadTemp=`"$pbuddy" -c "Print" "$nvidiaDriverUpdatePlistPath"`
+        if [[ "$backroundDownloadTemp[@]" =~ "downloadInBackground" ]]
+        then
+            sudo "$pbuddy" -c "Remove downloadInBackground" "$nvidiaDriverUpdatePlistPath"
+        fi
+    fi
+}
+
+function deactivateAutoUpdaters {
+    deactivateCUDAupdater
+    deactivateNvidiaDriverUpdater
+}
+
+
 
 ###  Subroutine Y11: Base function
 function macOSeGPU {
@@ -3518,6 +3551,8 @@ function macOSeGPU {
     uninstall
     install
     patch
+
+    deactivateAutoUpdaters
 
     finish
 }
