@@ -22,7 +22,7 @@ Do not abort the script during uninstallation/installation/patch phase this *wil
 	The script may explicitly ***ask*** you to connect your eGPU.  
 	Please follow the instructions given by the script.
 3. Save your work. The script will kill all running programs.
-4. Execute: 
+4. Execute: (parameters are not needed, it will self deduct what to do)
 
 `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`
 
