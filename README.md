@@ -10,7 +10,7 @@ Make your Mac compatible with NVIDIA and AMD eGPUs.
 - an eGPU enclosure (T82 & T83 controllers are supported)
 - a Mac (TB 1/2/3 are supported)
 - ***BACKUP***
-- sufficiently disabled SIP; more information under **SIP**
+- sufficiently disabled SIP; the script will abort with instructions otherwise
 
 ## Howto
 This script is still in pre-alpha stage it may damage your system.  
@@ -174,15 +174,12 @@ You think it’s amazing what we did? Then head over to [eGPU.io][2] and then sa
   
 But because people have insisted:
 
-[![paypal][image-1]][3] (*@fr34k*)  
-[![paypal][image-2]][4] (*@mac\_editor*)
+[![paypal][image-1]][3] (*@fr34k*)
 
 *@ shows that it’s the alias on eGPU.io*
 
 [1]:	https://egpu.io/forums/mac-setup/script-fr34ks-macos-egpu-sh-one-script-all-solutions-fully-automated/#post-35722 "Link to Thread"
 [2]:	https://egpu.io/forums/mac-setup/script-fr34ks-macos-egpu-sh-one-script-all-solutions-fully-automated/#post-35722 "Link to Thread"
 [3]:	https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=learex2@icloud.com&lc=US&item_name=learex&no_note=0&currency_code=EUR&bn=PP-DonationsBF:btn_donate_SM.gif:NonHostedGuest
-[4]:	https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=mayankk2308@gmail.com&lc=US&item_name=mac_editor&no_note=0&currency_code=USD&bn=PP-DonationsBF:btn_donate_SM.gif:NonHostedGuest
 
 [image-1]:	https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif
-[image-2]:	https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif
