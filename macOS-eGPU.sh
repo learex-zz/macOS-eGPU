@@ -247,7 +247,7 @@ function rebootSystem {
         elevatePrivileges
         trapWithoutWarning
         waiter 5
-        echo "/ is busy, waiting for lock (this might take approx 15-30s)..."
+        echo "reboot: / is busy updating, waiting for lock (this might take approx 15-30s)..."
         sudo reboot & &>/dev/null
         sleep 1
     fi
@@ -1331,7 +1331,8 @@ function installCuda {
     then
         installCudaToolkitBranch
     fi
-    if [ `dc -e "$cudaRoutine 4 / 2 % n"` == 1 ] && [ `"$pbuddy" -c "Print CFBundleVersion" "$cudaDriverVersionPath"` != "$cudaDriverDownloadVersion" ]
+    checkCudaDriverInstall
+    if [ `dc -e "$cudaRoutine 4 / 2 % n"` == 1 ] && [ "$cudaDriverVersion" != "$cudaDriverDownloadVersion" ]
     then
         installCudaDriver
     fi
