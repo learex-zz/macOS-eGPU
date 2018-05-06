@@ -49,7 +49,15 @@ The uninstall parameter tells the script to search for eGPU software and fully u
 
 `--checkSystem | -C`
 
-Not yet available.
+Tells the script to gather system information.
+The check system command outputs basic information about eGPU software 
+as well as basic system information.
+
+`--checkSystemFull`
+
+Tells the script to gather all available system information.
+The check full system command outputs all possible information about 
+eGPU software as well as system information.
 
 
 ### Packages
@@ -88,7 +96,7 @@ The unlock thunderbolt v1, v2 parameter tells the script to make older Macs with
 `--unlockNvidia | -N`
 
 Specify that NVIDIA eGPU support shall be unlocked. *patch by @fr34k, @goalque*  
-The unlock NVIDIA parameter tells the script to make the Mac compatible with NVIDIA eGPUs. This is only required for macOS 10.13.4. This might cause issues/crashes with AMD graphics cards.
+The unlock NVIDIA parameter tells the script to make the Mac compatible with NVIDIA eGPUs. This is only required for macOS 10.13.4. This might cause issues/crashes with AMD graphics cards (external).
 
 `--unlockT82 | -T`
 
@@ -144,7 +152,7 @@ Specify that the initial warnings of the script shall be skipped.
 
 `--help | -h`
 
-Not yet available.
+Print the help document.
 
 ## Example with parameters
 `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) --install --nvidiaDriver 387.10.10.10.30.106`

@@ -127,19 +127,181 @@ function quitAllApps {
 
 
 ##  Subroutine A3: Print functions
-#   Print tweaks that can be done to get the system working
-function printTweaks {
-    printVariableTemp=`cat <<EOF
-Not yet available
-EOF
-`
-    echo "$printVariableTemp"
-}
-
 #   print the whole help manual
 function printUsage {
     printVariableTemp=`cat <<EOF
-Not yet available
+--- Basic ---
+
+--install | -i
+
+    Tells the script to install/update eGPU software. (internet required)
+    The install parameter tells the script to fetch your Mac’s parameters
+    (such as installed software, installed patches, macOS version etc.)
+    and to fetch the newest software versions. It then cross-references and
+    deducts what needs to be done. This includes all packages listed below.
+    This works best on new systems or systems that have been updated.
+    Deductions on corrupt systems are limited.
+    Note that earlier enablers for 10.12 won’t be touched. 
+    If you have used such software you must uninstall it yourself. 
+    To override deductions use the #Package parameters below.
+
+--uninstall | -U
+
+    Tells the script to uninstall eGPU software.
+    The uninstall parameter tells the script to search for eGPU software and 
+    fully uninstall it. Note that earlier enablers for 10.12 won’t be touched. 
+    If you have used such software you must uninstall it yourself. 
+    To override deductions use the #Package parameters below.
+
+--checkSystem | -C
+
+    Tells the script to gather system information.
+    The check system command outputs basic information about eGPU software 
+    as well as basic system information.
+
+--checkSystemFull
+
+    Tells the script to gather all available system information.
+    The check full system command outputs all possible information about 
+    eGPU software as well as system information.
+
+
+--- Packages ---
+
+--nvidiaDriver [revision] | -n [revision]
+
+    Specify that the NVIDIA drivers shall be touched.
+    The NVIDIA driver parameter tells the script to perform either an install
+    or uninstall of the NVIDIA drivers. If the script determines that the
+    currently installed NVIDIA driver shall be used after an update it will
+    patch it. One can optionally specify a custom driver revision.
+    The specified revision will automatically be patched, if necessary.
+
+--amdLegacyDriver | -a
+
+    Specify that the AMD legacy drivers shall be touched. (drivers by @goalque)
+    The AMD legacy driver parameter tells the script to make older AMD graphics
+    cards compatible with macOS 10.13.X
+    These include:
+        Polaris - RX: 460, 560 | Radeon Pro: WX5100, WX4100
+        Fiji - R9: Fury X, Fury, Nano
+        Hawaii - R9: 390X, 390, 290X, 290
+        Tonga - R9: 380X, 380, 285
+        Pitcairn - R9: 370X, 270X, 270 | R7: 370, 265 | FirePro: W7000
+        Tahiti - R9: 280x, 280 | HD: 7970, 7870, 7850
+
+--nvidiaEGPUsupport | -e
+
+    Specify that the NVIDIA eGPU support shall be touched. (kext by yifanlu)
+    The NVIDIA eGPU support parameter tells the script to make the
+    NVIDIA drivers compatible with an NVIDIA eGPU.
+    On macOS 10.13.4 an additional patch is necessary. See --unlockNvidia.
+
+--deactivateNvidiaDGPU | -d
+
+    Not yet available. Only for AMD eGPU users. patch by @mac_editor
+
+--unlockThunderboltV12 | -V
+
+    Specify that thunderbolt versions 1 and 2 shall be unlocked
+    for use of an eGPU. (patch by @mac_editor, @fricorico)
+    The unlock thunderbolt v1, v2 parameter tells the script to make older Macs
+    with thunderbolt ports of version 1 or 2 compatible for eGPU use.
+    This is not GPU vendor specific. This is only required for macOS 10.13.4.
+
+--unlockNvidia | -N
+
+    Specify that NVIDIA eGPU support shall be unlocked.
+    (patch by @fr34k, @goalque)
+    The unlock NVIDIA parameter tells the script to make the Mac compatible
+    with NVIDIA eGPUs. This is only required for macOS 10.13.4.
+    This might cause issues/crashes with AMD graphics cards (external).
+
+--unlockT82 | -T
+
+    Specify that the T82 chipsets shall be unlocked.
+    The unlock T82 parameter tells the script to make the Mac compatible
+    with T82 eGPU enclosures. This is not reduced to eGPU enclosures all
+    thunderbolt enclosures with T82 chipset will work.
+
+--cudaDriver | -c
+
+    Specify that CUDA drivers shall be touched.
+    The CUDA driver parameter tells the script to perform either an install
+    or uninstall of the CUDA drivers. Note that the toolkit and samples are
+    depended on the drivers. Uninstalling them will cause the script
+    to uninstall the toolkit and samples as well.
+
+--cudaDeveloperDriver | -D
+
+    Specify that CUDA developer drivers shall be touched.
+    The CUDA developer drivers parameter tells the script to perform either
+    an install or uninstall of the CUDA developer drivers. Note that the
+    toolkit and samples are depended on the developer/drivers. Uninstalling
+    them will cause the script to uninstall the toolkit and samples as well.
+    This should theoretically be identical to --cudaDriver
+
+--cudaToolkit | -t
+
+    Specify that CUDA toolkit shall be touched.
+    The CUDA toolkit parameter tells the script to perform either an install
+    or uninstall of the CUDA toolkit. Note that the samples are depended on
+    the toolkit and the toolkit itself depends on the drivers. Uninstalling the
+    toolkit will cause the script to uninstall the samples as well. Installing
+    the toolkit will cause the script to install the drivers as well.
+
+--cudaSamples | -s
+
+    Specify that CUDA samples shall be touched.
+    The CUDA samples parameter tells the script to perform either an install or
+    uninstall of the CUDA samples. Note that the samples are depended on the
+    toolkit and drivers. Installing the samples will cause the script to
+    install the drivers and toolkit as well.
+
+
+--- Advanced ---
+
+--full | -F
+
+    Select all #Packages. This might cause issues.
+    Read the descriptions of the #Packages as well.
+
+--forceReinstall | -R
+
+    Specify that the script shall reinstall already installed software.
+    The force reinstall parameter tells the script to reinstall all software
+    regardless if it already is up to date.
+    This does not influence deductions or other installations.
+
+--forceNewest | -f
+
+    Specify that the script shall install only newest software.
+    The force newest parameter tells the script to prefer newer instead of more
+    stable software. This might resolve and/or cause issues.
+
+--noReboot | -r
+
+    Specify that even if something has been done no reboot shall be performed.
+
+--acceptLicenseTerms
+
+    Specify that the question of whether the license terms have been accepted
+    shall be automatically answered with yes and then skipped.
+
+--skipWarnings | -k
+
+    Specify that the initial warnings of the script shall be skipped.
+
+--help | -h
+
+    Print this help document
+
+--- Example with parameters ---
+
+bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) --install --nvidiaDriver 387.10.10.10.30.106
+
+--- Issues ---
+Please visit https://github.com/learex/macOS-eGPU#problems
 EOF
 `
     echo "$printVariableTemp"
@@ -148,7 +310,22 @@ EOF
 #   print the short instructions for pro users
 function printShortHelp {
     printVariableTemp=`cat <<EOF
-Not yet available
+
+bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) [parameter]
+parameter:
+    --install | -i                  | --uninstall | -U
+    --checkSystem | -C              | --checkSystemFull
+
+    --nvidiaDriver [rev] | -n [rev] | --amdLegacyDriver | -a
+    --nvidiaEGPUsupport | -e        | --deactivateNvidiaDGPU | -d
+    --unlockThunderboltV12 | -V     | --unlockNvidia | -N
+    --unlockT82 | -T                | --cudaDriver | -c
+    --cudaDeveloperDriver | -D      | --cudaToolkit | -t
+
+    --full | -F                     | --forceReinstall | -R
+    --forceNewest | -f              | --noReboot | -r
+    --acceptLicenseTerms            | --skipWarnings | -k
+    --help | -h
 EOF
 `
     echo "$printVariableTemp"
@@ -1850,6 +2027,7 @@ fullInstall=false
 help=false
 acceptLicense=false
 skipWarnings=false
+fullCheck=false
 
 argumentsGiven=false
 
@@ -1875,11 +2053,20 @@ do
         uninstall=true
         ;;
     "--checkSystem" | "-C")
-        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall"
+        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$fullCheck"
         then
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
         fi
+        check=true
+        ;;
+    "--checkSystemFull")
+        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$check"
+        then
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
+        fi
+        fullCheck=true
         check=true
         ;;
     "--nvidiaDriver" | "-n")
@@ -2024,8 +2211,7 @@ do
             nvidiaDriverDownloadVersion="$options"
         else
             echo "unrecognized parameter: ""$options"
-            echo "The usage of this script is explained here in full detail:"
-            echo "https://github.com/learex/macOS-eGPU"
+            printShortHelp
             irupt
         fi
     esac
@@ -2061,29 +2247,7 @@ thunderbolt12UnlockRoutine=0
 
 
 
-##  Subroutine Y2: Pre branch functions
-function printHelp {
-    if "$help"
-    then
-        createSpace 3
-        echo "Not yet available."
-        exit
-    fi
-}
-
-function checkSystem {
-    if "$check"
-    then
-        createSpace 3
-        echo "Not yet available."
-        exit
-    fi
-}
-
-
-
-
-##  Subroutine Y3: Print functions
+##  Subroutine Y2: Print functions
 function printHeader {
     echo "macOS-eGPU.sh"
     echo
@@ -2136,7 +2300,7 @@ function printWarnings {
 
 
 
-##  Subroutine Y4: System properties enforcer
+##  Subroutine Y3: System properties enforcer
 function enforceEGPUdisconnect {
     fetchConnectedEGPU
     if [ "$?" == 1 ]
@@ -2156,7 +2320,7 @@ function enforceEGPUdisconnect {
 
 
 
-##  Subroutine Y5: Preparations
+##  Subroutine Y4: Preparations
 function preparations {
     trapWithoutWarning
     if ! "$acceptLicense"
@@ -2188,7 +2352,7 @@ function preparations {
 
 
 
-##  Subroutine Y6: Get system info
+##  Subroutine Y5: Get system info
 function gatherSystemInfo {
     echoing "   macOS info"
     fetchOSinfo
@@ -2230,8 +2394,8 @@ function gatherSystemInfo {
 
 
 
-##  Subroutine Y7: Deductions and Parsing
-###  Subroutine Y7'1: Automated eGPU information fetching
+##  Subroutine Y6: Deductions and Parsing
+###  Subroutine Y6'1: Automated eGPU information fetching
 function moveDriversToBackup {
     mktmpdir
     geforceKextTemp="/Library/Extensions/GeForceWeb.kext"
@@ -2388,7 +2552,7 @@ function secureGetEGPUInformation {
 
 
 
-###  Subroutine Y7'2: CUDA requirements
+###  Subroutine Y6'2: CUDA requirements
 function getCudaNeeds {
     if "$nvidiaDriversInstalled" || "$nvidiaDriver"
     then
@@ -2439,7 +2603,7 @@ function getCudaNeeds {
 
 
 
-###  Subroutine Y7'3: Basic requirement handler/scheduler
+###  Subroutine Y6'3: Basic requirement handler/scheduler
 function setStandards {
     if ( ! "$install" ) && ( ! "$uninstall" ) && ( ! "$check" )
     then
@@ -2561,7 +2725,7 @@ function setStandards {
 
 
 
-###  Subroutine Y7'4: Compatibility checks
+###  Subroutine Y6'4: Compatibility checks
 function nvidiaDriverDeduction {
     echoing "   NVIDIA drivers"
     nvidiaDriverRoutine=0
@@ -3108,7 +3272,7 @@ function cudaDeduction {
 }
 
 
-###  Subroutine Y7'5: sufficent disabled SIP
+###  Subroutine Y6'5: sufficent disabled SIP
 function checkSIPRequirement {
     appleInternalTemp=`dc -e "$sipRequirement 64 / 2 % n"`
     kextSigningTemp=`dc -e "$sipRequirement 32 / 2 % n"`
@@ -3164,7 +3328,7 @@ function checkSIPRequirement {
 
 
 
-###  Subroutine Y8'6: Fetch eGPU and deduce
+###  Subroutine Y6'6: Fetch eGPU and deduce
 function softwareDeduction {
     if "$scheduleSecureEGPUfetch"
     then
@@ -3247,7 +3411,7 @@ function softwareDeduction {
 
 
 
-###  Subroutine Y8'7: Combine fetching, switching and deducution
+###  Subroutine Y6'7: Combine fetching, switching and deducution
 function determination {
     echo "Fetching system information..."
     gatherSystemInfo
@@ -3260,7 +3424,7 @@ function determination {
 
 
 
-###  Subroutine Y9: Check script requirement basics
+###  Subroutine Y7: Check script requirement basics
 function checkScriptRequirement {
     fetchOSinfo
     if [ "${os::5}" != "10.13" ]
@@ -3286,8 +3450,8 @@ function checkScriptRequirement {
 
 
 
-###  Subroutine Y10: Execution
-###  Subroutine Y10'1: Download
+###  Subroutine Y8: Execution
+###  Subroutine Y8'1: Download
 function download {
     createSpace 2
     trapWithoutWarning
@@ -3364,7 +3528,7 @@ function download {
 
 
 
-###  Subroutine Y10'2: Uninstall
+###  Subroutine Y8'2: Uninstall
 function uninstall {
     createSpace 2
     echo "Uninstalling..."
@@ -3426,7 +3590,7 @@ function uninstall {
 
 
 
-###  Subroutine Y10'3: Install
+###  Subroutine Y8'3: Install
 function install {
     echo "Installing..."
     if [ `dc -e "$nvidiaDriverRoutine 4 / 2 % n"` == 1 ]
@@ -3486,7 +3650,7 @@ function install {
 
 
 
-###  Subroutine Y10'4: Patch
+###  Subroutine Y8'4: Patch
 function patch {
     echo "Patching..."
     if [ `dc -e "$nvidiaDriverRoutine 8 / 2 % n"` == 1 ]
@@ -3500,7 +3664,7 @@ function patch {
 
 
 
-###  Subroutine Y10'5: Deactivate auto updaters
+###  Subroutine Y8'5: Deactivate auto updaters
 cudaUpdateDaemonPath="/Library/LaunchAgents/com.nvidia.CUDASoftwareUpdate.plist"
 function deactivateCUDAupdater {
     if [ -e "$cudaUpdateDaemonPath" ]
@@ -3538,8 +3702,145 @@ function deactivateAutoUpdaters {
 }
 
 
+##  Subroutine Y9: Pre branch functions
+function printHelp {
+    if "$help"
+    then
+        createSpace 3
+        printHeader
+        printUsage
+        createSpace 3
+        exit
+    fi
+}
 
-###  Subroutine Y11: Base function
+function checkSystem {
+    if "$check"
+    then
+        if ! "$acceptLicense"
+        then
+            createSpace 3
+            printHeader
+            askLicenseQuestion
+        else
+            createSpace 3
+            printHeader
+        fi
+        createSpace 3
+        echo "Fetching system information..."
+        gatherSystemInfo
+        createSpace 3
+        echo "Listing installation status of packages..."
+        echoing "   NVIDIA driver"
+        if "$nvidiaDriversInstalled"
+        then
+            echoend "$nvidiaDriverVersion"
+        else
+            echoend "not installed"
+        fi
+        echoing "   NVIDIA eGPU enabler"
+        if "$nvidiaEGPUenabler1013Installed"
+        then
+            echoend "installed"
+        else
+            echoend "not installed"
+        fi
+        echoing "   AMD legacy drivers"
+        if "$amdLegacyDriversInstalled"
+        then
+            echoend "installed"
+        else
+            echoend "not installed"
+        fi
+        echoing "   T82 unblocker"
+        if "$t82UnblockerInstalled"
+        then
+            echoend "installed"
+        else
+            echoend "not installed"
+        fi
+        echoing "   NVIDIA dGPU"
+        if "$nvidiaDGPUdeactivatorInstalled"
+        then
+            echoend "deactivated"
+        else
+            if "$nvidiaDGPU"
+            then
+                echoend "activated"
+            else
+                echoend "not available"
+            fi
+        fi
+        echoing "   NVIDIA macOS 10.13.4 patch"
+        if "$nvidiaUnlockWranglerPatchInstalled"
+        then
+            echoend "installed"
+        else
+            echoend "not installed"
+        fi
+        echoing "   unlocked thunderbolt version"
+        echoend "$thunderbolt12UnlockInstallStatus"
+        echo "   CUDA"
+        echoing "      CUDA drivers"
+        if "$cudaDriverInstalled"
+        then
+            echoend "$cudaDriverVersion"
+        else
+            echoend "not installed"
+        fi
+        echoing "      CUDA developer drivers"
+        if "$cudaDeveloperDriverInstalled"
+        then
+            echoend "$cudaDriverVersion"
+        else
+            echoend "not installed"
+        fi
+        echoing "      CUDA toolkit"
+        if "$cudaToolkitInstalled"
+        then
+            echoend "$cudaVersionFull"
+        else
+            echoend "not installed"
+        fi
+        echoing "      CUDA samples"
+        if "$cudaSamplesInstalled"
+        then
+            echoend "$cudaVersionFull"
+        else
+            echoend "not installed"
+        fi
+        echo "Listing system information..."
+        echoing "   macOS version"
+        echoend "$os"
+        echoing "   macOS build"
+        echoend "$build"
+        echoing "   SIP status"
+        echoend "$statSIP"
+        echoing "   thunderbolt interface version"
+        echoend "$thunderboltInterface"
+        echo "   eGPU information"
+        echoing "      connected eGPU"
+        echoend "$connectedEGPU"
+        if "$connectedEGPU"
+        then
+            echoing "      eGPU vendor"
+            echoend "$connectedEGPUVendor"
+        fi
+        echoing "   NVIDIA dGPU"
+        echoend "$nvidiaDGPU"
+        echoing "   AGW version"
+        echoend "$appleGPUWranglerVersion"
+        if "$fullCheck"
+        then
+            system_profiler -detailLevel mini
+        else
+            system_profiler -detailLevel mini SPDisplaysDataType SPHardwareDataType SPThunderboltDataType
+        fi
+        exit
+    fi
+}
+
+###  Subroutine Y10: Base function
 function macOSeGPU {
     checkScriptRequirement
     printHelp
