@@ -130,6 +130,10 @@ function quitAllApps {
 #   print the whole help manual
 function printUsage {
     printVariableTemp=`cat <<EOF
+bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) [parameter]
+
+Parameters are optional. If none are provided, the script will self determine what to do.
+
 --- Basic ---
 
 --install | -i

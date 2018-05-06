@@ -36,6 +36,12 @@ Do not abort the script during uninstallation/installation/patch phase this *wil
 *A quick note to all the pros out there: the #sh shell does not support the syntax given above. You need a #bash shell.*
 
 ## Parameters
+`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`
+
+
+Parameters are optional. If none are provided, the script will self determine what to do.
+
+
 ### Basic
 `--install | -i`
 
