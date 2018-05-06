@@ -184,8 +184,9 @@ Not yet available.
 		- log out
 	- Step set 2
 		- boot without eGPU
-		- hot plug eGPU only
+		- hot plug eGPU only (no external monitor)
 		- wait 15 sec
+		- log out
 		- hot plug monitor
 		- wait 15 sec
 		- log in
