@@ -2200,8 +2200,9 @@ do
         help=true
         ;;
     *)
-        if [ "$lastParam" == "--nvidiaDriver" ] || [ "$lastParam" == "-n" ]
-        then
+        case "$lastParam"
+        in
+        "--nvidiaDriver" | "-n")
             if "$forceNewest"
             then
                 echo "ERROR: Conflicting arguments with ""$options"" [revision]"
@@ -2209,11 +2210,13 @@ do
             fi
             customNvidiaDriver=true
             nvidiaDriverDownloadVersion="$options"
-        else
+            ;;
+        *)
             echo "unrecognized parameter: ""$options"
             printShortHelp
             irupt
-        fi
+            ;;
+        esac
     esac
     argumentsGiven=true
     lastParam="$options"
