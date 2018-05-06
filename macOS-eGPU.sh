@@ -3518,9 +3518,14 @@ function deactivateNvidiaDriverUpdater {
     if [ `echo "$nvidiaDriverUpdatePlistPath" | wc -l | xargs` == 1 ]
     then
         elevatePrivileges
-        sudo "$pbuddy" -c "Set autoCheck 0" "$nvidiaDriverUpdatePlistPath"
-        backroundDownloadTemp=`"$pbuddy" -c "Print" "$nvidiaDriverUpdatePlistPath"`
-        if [[ "$backroundDownloadTemp[@]" =~ "downloadInBackground" ]]
+        updatePlistTemp=`"$pbuddy" -c "Print" "$nvidiaDriverUpdatePlistPath"`
+        if [[ "$updatePlistTemp[@]" =~ "autoCheck" ]]
+        then
+            sudo "$pbuddy" -c "Set autoCheck 0" "$nvidiaDriverUpdatePlistPath"
+        else
+            sudo "$pbuddy" -c "Add autoCheck integer 0" "$nvidiaDriverUpdatePlistPath"
+        fi
+        if [[ "$updatePlistTemp[@]" =~ "downloadInBackground" ]]
         then
             sudo "$pbuddy" -c "Remove downloadInBackground" "$nvidiaDriverUpdatePlistPath"
         fi
