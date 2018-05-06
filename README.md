@@ -2,7 +2,7 @@
 
 # macOS-eGPU.sh
 ## Purpose
-Make your Mac compatible with NVIDIA and AMD eGPUs.
+Make your Mac compatible with NVIDIA and AMD eGPUs. Works on macOS High Sierra.
 
 ## Requirements
 - macOS 10.13.X ≤ 10.13.4 2018-001 (17E202)
@@ -13,18 +13,25 @@ Make your Mac compatible with NVIDIA and AMD eGPUs.
 - sufficiently disabled SIP; the script will abort with instructions otherwise
 
 ## Howto
-This script is still in pre-alpha stage it may damage your system.  
-Do not abort the script during uninstallation/installation/patch phase this *will* damage your system. 
+**This script is still in pre-alpha stage it may damage your system.**  
+Do not abort the script during uninstallation/installation/patch phase this *will* damage your system.
 
-1. Remove all prior eGPU solutions. (e.g. after upgrading to 10.13, **temporary script for 10.13.4/@goalque's instructions users see below**)
-2. Back up your system.
-2. Disconnect all unnecessary peripherals. Especially eGPUs!  
-	The script may explicitly ***ask*** you to connect your eGPU.  
-	Please follow the instructions given by the script.
-3. Save your work. The script will kill all running programs.
-4. Execute: (parameters are not needed, it will self deduct what to do)
-
-`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`
+1. If you have used an eGPU on macOS Sierra (10.12) or earlier please remove all used eGPU solutions. If you have not, skip this step.
+2. If you have used my temporary script for 10.13.4 or @goalque's instructions see below before proceeding. If you haven’t used them skip this step.
+3. Back up your system.
+4. Disable SIP. This can be done by booting into recovery mode (command + R during boot), opening the terminal window (Utilities -\> Terminal) and execute   
+	`csrutil disable; reboot`
+5. Boot normally and log in.
+6. Disconnect all unnecessary peripherals. Especially eGPUs!  
+	If you haven’t used an eGPU, the script may ***ask*** you to connect your eGPU during the process.  
+	It is of utmost importance to only connect the eGPU once the script asks for it and then remove it once the script asks again. Never try to connect or disconnect if the script didn’t explicitly ask for it. You risk damaging the system.  
+	For those, the script determines that a T82 unlock is necessary, must run the script once to unlock and then after a reboot a second time. The script would then not have been able to gather all information needed.
+7. Save your work. The script will ***kill*** all running programs.
+8. Open the terminal.
+9. Execute:  
+	`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`  
+	*It is not needed to customize the script with parameters. The script will then determine itself what the system needs.  
+	Please follow the instructions given by the script.*
 
 *A quick note to all the pros out there: the #sh shell does not support the syntax given above. You need a #bash shell.*
 
@@ -51,22 +58,23 @@ Not yet available.
 Specify that the NVIDIA drivers shall be touched.  
 The NVIDIA driver parameter tells the script to perform either an install or uninstall of the NVIDIA drivers. If the script determines that the currently installed NVIDIA driver shall be used after an update it will patch it. One can optionally specify a custom driver revision. The specified revision will automatically be patched, if necessary.
 
-`amdLegacyDriver | -a`
+`--amdLegacyDriver | -a`
 
 Specify that the AMD legacy drivers shall be touched. *drivers by @goalque*  
 The AMD legacy driver parameter tells the script to make older AMD graphics cards compatible with macOS 10.13.X  
 These include: 
 - Polaris - RX: 460, 560 | Radeon Pro: WX5100, WX4100
-	- Fiji - R9: Fury X, Fury, Nano
-	- Hawaii - R9: 390X, 390, 290X, 290
-	- Tonga - R9: 380X, 380, 285
-	- Pitcairn - R9: 370X, 270X, 270 | R7: 370, 265 | FirePro: W7000
-	- Tahiti - R9: 280x, 280 | HD: 7970, 7870, 7850
+- Fiji - R9: Fury X, Fury, Nano
+- Hawaii - R9: 390X, 390, 290X, 290
+- Tonga - R9: 380X, 380, 285
+- Pitcairn - R9: 370X, 270X, 270 | R7: 370, 265 | FirePro: W7000
+- Tahiti - R9: 280x, 280 | HD: 7970, 7870, 7850
 
 `--nvidiaEGPUsupport | -e`
 
 Specify that the NVIDIA eGPU support shall be touched. *kext by yifanlu*  
-The NVIDIA eGPU support parameter tells the script to make the NVIDIA drivers compatible with an NVIDIA eGPU. On macOS 10.13.4 an additional patch is necessary. See `--unlockNvidia`.
+The NVIDIA eGPU support parameter tells the script to make the NVIDIA drivers compatible with an NVIDIA eGPU.  
+On macOS 10.13.4 an additional patch is necessary. See `--unlockNvidia`.
 
 `--deactivateNvidiaDGPU | -d`
 
@@ -138,35 +146,66 @@ Specify that the initial warnings of the script shall be skipped.
 
 Not yet available.
 
-## Example
+## Example with parameters
 `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) --install --nvidiaDriver 387.10.10.10.30.106`
 
 ## I used the temporary script/@goalque's instructions, what should I do?
--  I haven't upgraded yet. I'm still on 17E199.  
-	Use the uninstaller. Reboot. Proceed with this script.
+-  I haven't upgraded yet. I'm still on 17E199. I have used the temporary script.  
+	-\> Use the uninstaller script. Reboot. Proceed with this script.
 -  I have upgraded to 17E202.   
-	Do `sudo rm -rfv "/Library/Application Support/nvidia10134/"`  
-	to remove the KEXT backup. Proceed with this script. (only temporary script.)
+	-\> Execute: `sudo rm -rfv "/Library/Application Support/nvidia10134/"`  
+	to remove the KEXT backup. Proceed with this script.
+- I have used @goalque’s instructions.  
+	-\> Upgrade to 17E202. Proceed with this script.
 
 ## Problems
 ### Known issues
+- My internal monitor doesn't get boosted by the eGPU
+	- normal, try a headless adapter and set to mirror
+	- apps must be specifically coded for native eGPU to work on iM
+	- use an external monitor
+- My dGPU is not running the internal screen
+	- **do not** deactivate automatic graphics switching
+	- this is normal
+- System crash on hot-disconnect
+	- still researched
+- System crash on disconnect button press
+	- still reseachred
+- Disconnect “(null)” on hot plug
+	- still researched
+	- does not influence system performance
+	- can be mitigated by booting with eGPU
+- Information in “About This Mac” is wrong
+	- does not influence system performance
+- Black external Monitor with/without mouse
+	- Step set 1
+		- boot without eGPU
+		- hot plug eGPU with monitor
+		- log out
+	- Step set 2
+		- boot without eGPU
+		- hot plug eGPU only
+		- wait 15 sec
+		- hot plug monitor
+		- wait 15 sec
+		- log in
+- I must use a headless HDMI to power my thunderbolt monitor (steps by @robert\_avram)
+	- boot without any peripherals
+	- hot plug eGPU only
+	- log out
+	- plug in headless HDMI into eGPU
+	- plug in the thunderbolt display into the thunderbolt port next to the eGPU’s port
+	- close the MBP’s lid
+	- log in
+	- select mirror display to mirror the headless
 - OpenCL/GL seems not to work on NVIDIA eGPU + dGPU configs
 	- still researched
 - Macs with NVIDIA dGPU don't boot with TB3 enclosure and NVIDIA eGPU.
 	- still researched, plugin during boot
-- Disconnect "null" on hot plug
-	- still researched. Booting with eGPU resolves this.
-- System crash on hot-disconnect
-	- still researched
-- System crash on disconnect button press
-	- still researched
-- Black monitor with/without mouse
-	- boot without eGPU
-	- hot-plug ONLY eGPU (wait 15 sec)
-	- hot-plug monitor (wait 15 sec)
-	- login
+
+
 ### Unknown issues
-If you’ve got a problem then try the tweaks first.  
+If you’ve got a problem then try the tweaks (above) first.  
 If nothing works head over to [eGPU.io][1] and ask.
 
 ## Donate
