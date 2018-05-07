@@ -1,6 +1,6 @@
 **THIS STILL IS A PRE-ALPHA BE PREPARED TO LOOSE ALL YOUR DATA!**
 
-# macOS-eGPU.sh
+# macOS-eGPU.sh (v0.1α)
 ## Purpose
 Make your Mac compatible with NVIDIA and AMD eGPUs. Works on macOS High Sierra.
 
@@ -19,7 +19,7 @@ Do not abort the script during uninstallation/installation/patch phase this *wil
 1. If you have used an eGPU on macOS Sierra (10.12) or earlier please remove all used eGPU solutions. If you have not, skip this step.
 2. If you have used my temporary script for 10.13.4 or @goalque's instructions see below before proceeding. If you haven’t used them skip this step.
 3. Back up your system.
-4. Disable SIP. This can be done by booting into recovery mode (command + R during boot), opening the terminal window (Utilities -\> Terminal) and execute   
+4. Disable SIP. This can be done by booting into recovery mode (command + R during boot), opening the terminal window (Utilities -\> Terminal) and execute  
 	`csrutil disable; reboot`
 5. Boot normally and log in.
 6. Disconnect all unnecessary peripherals. Especially eGPUs!  
@@ -222,6 +222,13 @@ Print the help document.
 ### Unknown issues
 If you’ve got a problem then try the tweaks (above) first.  
 If nothing works head over to [eGPU.io][1] and ask.
+
+## Changelog
+- v0.1α
+	- bugfixes
+	- `--help`
+	- `--checkSystem`
+	- `--checkSystemFull`
 
 ## Donate
 You think it’s amazing what we did? Then head over to [eGPU.io][2] and then say thanks.  

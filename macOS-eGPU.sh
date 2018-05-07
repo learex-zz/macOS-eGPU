@@ -41,6 +41,7 @@ branch="master"
 warningOS="10.13.5"
 currentOS="10.13.4"
 gitPath="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch"
+scriptVersion="v0.1α"
 
 #   external programs
 pbuddy="/usr/libexec/PlistBuddy"
@@ -2256,7 +2257,7 @@ thunderbolt12UnlockRoutine=0
 
 ##  Subroutine Y2: Print functions
 function printHeader {
-    echo "macOS-eGPU.sh"
+    echo "macOS-eGPU.sh (""$scriptVersion"")"
     echo
 }
 
@@ -3736,7 +3737,19 @@ function checkSystem {
         createSpace 3
         echo "Fetching system information..."
         gatherSystemInfo
+        systemProfilerTemp=""
+        if "$fullCheck"
+        then
+            echoing "   creating detailed system report"
+            systemProfilerTemp=`system_profiler -detailLevel mini 2>/dev/null`
+            echoend "done"
+        else
+            echoing "   fetching GPU related system information"
+            systemProfilerTemp=`system_profiler -detailLevel mini SPDisplaysDataType SPHardwareDataType SPThunderboltDataType SPPCIDataType 2>/dev/null`
+            echoend "done"
+        fi
         createSpace 3
+        printHeader
         echo "Listing installation status of packages..."
         echoing "   NVIDIA driver"
         if "$nvidiaDriversInstalled"
@@ -3837,12 +3850,7 @@ function checkSystem {
         echoend "$nvidiaDGPU"
         echoing "   AGW version"
         echoend "$appleGPUWranglerVersion"
-        if "$fullCheck"
-        then
-            system_profiler -detailLevel mini
-        else
-            system_profiler -detailLevel mini SPDisplaysDataType SPHardwareDataType SPThunderboltDataType
-        fi
+        echo "$systemProfilerTemp"
         exit
     fi
 }
