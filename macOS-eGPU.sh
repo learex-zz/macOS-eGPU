@@ -37,11 +37,11 @@
 
 
 #   script specific information
-branch="master"
+branch="thunderboltDaemon"
 warningOS="10.13.5"
 currentOS="10.13.4"
 gitPath="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch"
-scriptVersion="v0.1α"
+scriptVersion="v0.2α"
 
 #   external programs
 pbuddy="/usr/libexec/PlistBuddy"
@@ -2004,13 +2004,101 @@ function installNvidiaUnlockWranglerPatch {
 
 ##  Subroutine J6: Helper functions
 
-#   Subroutine K: CUDA drivers ##############################################################################################################
+
+
+
+#   Subroutine K: Thunderbolt daemon ##############################################################################################################
 ##  Subroutine K1: Global variables
+thunderboltDaemonInstalled=false
+macOSeGPUdaemonPlistPath="/Library/LaunchDaemons/scp.learex.macOS-eGPU-daemon.plist"
+macOSeGPUDaemonPath="/usr/local/bin/macOS-eGPU-daemon"
+
+
+
+
 ##  Subroutine K2: Check functions
+function checkThunderboltDaemonInstall {
+    thunderboltDaemonInstalled=false
+    if [ -e "$macOSeGPUdaemonPlistPath" ]
+    then
+        thunderboltDaemonInstalled=true
+    fi
+}
+
+
+
+
 ##  Subroutine K3: Uninstaller
-##  Subroutine K4: Downloader
+function uninstallThunderboltDaemon {
+    if [ -e "$macOSeGPUdaemonPlistPath" ]
+    then
+        elevatePrivileges
+        sudo rm "$macOSeGPUdaemonPlistPath"
+    fi
+    if [ -e "$macOSeGPUDaemonPath" ]
+    then
+        elevatePrivileges
+        sudo rm "$macOSeGPUDaemonPath"
+    fi
+}
+
 ##  Subroutine K5: Installer
-##  Subroutine K6: Helper functions
+function installThunderboltDaemon {
+    elevatePrivileges
+    plistGenerateTemp=`cat <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>macOS-eGPU-daemon</string>
+    <key>KeepAlive</key>
+    <false/>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/macOS-eGPU</string>
+        <string>--launchDaemon</string>
+    </array>
+</dict>
+</plist>
+EOF
+`
+    launchDaemonGenerateTemp=`cat <<"EOF"
+#!/bin/bash
+#   macOS eGPU launch deamon
+
+args="$@"
+
+function daemon {
+    if [ "$args" == "--launchDaemon" ]
+    then
+        sudo nvram tbt-options="<00>"
+    fi
+}
+
+daemon
+EOF
+`
+
+    echo "$launchDaemonGenerateTemp" > "$macOSeGPUDaemonPath"
+    sudo chown "$SUDO_USER" "$macOSeGPUDaemonPath"
+    sudo chmod 755 "$macOSeGPUDaemonPath"
+    echo "$plistGenerateTemp" > "$macOSeGPUdaemonPlistPath"
+    sudo chown root:wheel "$macOSeGPUdaemonPlistPath"
+}
+
+
+
+
+#   Subroutine L: CUDA drivers ##############################################################################################################
+##  Subroutine L1: Global variables
+##  Subroutine L2: Check functions
+##  Subroutine L3: Uninstaller
+##  Subroutine L4: Downloader
+##  Subroutine L5: Installer
+##  Subroutine L6: Helper functions
 
 
 #   Subroutine X: Option parsing ##############################################################################################################
@@ -2033,6 +2121,7 @@ help=false
 acceptLicense=false
 skipWarnings=false
 fullCheck=false
+thunderboltDaemon=false
 
 argumentsGiven=false
 
@@ -2146,6 +2235,14 @@ do
         fi
         unlockNvidia=true
         ;;
+    "--thunderboltDaemon" | "-E")
+        if "$check"
+        then
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
+        fi
+        thunderboltDaemon=true
+        ;;
     "--cudaDriver" | "-c")
         if [ "$scheduleCudaDeduction" != 0 ] || "$check"
         then
@@ -2251,6 +2348,7 @@ amdLegacyDriverRoutine=0
 t82UnblockerRoutine=0
 deactivateNVIDIAdGPURoutine=0
 thunderbolt12UnlockRoutine=0
+thunderboltDaemonRoutine=0
 
 
 
@@ -2392,6 +2490,7 @@ function gatherSystemInfo {
     checkT82Unblocker
     checkNvidiaDGPUdeactivator
     checkNvidiaUnlockWranglerPatchInstall
+    checkThunderboltDaemonInstall
     echoend "done"
 
     echoing "   installed programs"
@@ -2618,7 +2717,7 @@ function setStandards {
         setStandard=true
         install=true
     fi
-    if ( ! "$nvidiaDriver" ) && ( ! "$amdLegacyDriver" ) && ( ! "$nvidiaEnabler" ) && ( ! "$thunderbolt12Unlock" ) && ( ! "$t82Unblocker" ) && ( ! "$unlockNvidia" ) && ( ! "$deactivateNvidiaDGPU" ) && [ "$scheduleCudaDeduction" == 0 ]
+    if ( ! "$nvidiaDriver" ) && ( ! "$amdLegacyDriver" ) && ( ! "$nvidiaEnabler" ) && ( ! "$thunderbolt12Unlock" ) && ( ! "$t82Unblocker" ) && ( ! "$unlockNvidia" ) && ( ! "$deactivateNvidiaDGPU" ) && [ "$scheduleCudaDeduction" == 0 ] && ( ! "$thunderboltDaemon" )
     then
         determine=true
     fi
@@ -3068,6 +3167,44 @@ function thunderbolt12UnlockDeduction {
     fi
 }
 
+function thunderboltDaemonDeduction {
+    echoing "   thunderbolt daemon"
+    thunderboltDaemonRoutine=0
+    if "$thunderboltDaemon"
+    then
+        if "$install"
+        then
+            if "$reinstall" && "$thunderboltDaemonInstalled"
+            then
+                thunderboltDaemonRoutine=`binaryParser "$thunderboltDaemonRoutine" 1 1`
+                thunderboltDaemonRoutine=`binaryParser "$thunderboltDaemonRoutine" 2 1`
+                echoend "reinstall scheduled" 3
+            elif ! "$thunderboltDaemonInstalled"
+            then
+                thunderboltDaemonRoutine=`binaryParser "$thunderboltDaemonRoutine" 2 1`
+                echoend "install scheduled" 4
+            else
+                echoend "skip, already installed" 5
+                thunderboltDaemon=false
+            fi
+        elif "$uninstall"
+        then
+            if "$thunderboltDaemonInstalled"
+            then
+                thunderboltDaemonRoutine=`binaryParser "$thunderboltDaemonRoutine" 1 1`
+                echoend "uninstall scheduled" 4
+            else
+                echoend "skip, already uninstalled" 5
+                thunderboltDaemon=false
+            fi
+        else
+            irupt
+        fi
+    else
+        echoend "skip" 5
+    fi
+}
+
 function cudaDriverDeduction {
     echoing "      CUDA drivers"
     if [ `dc -e "$scheduleCudaDeduction 2 % n"` == 1 ]
@@ -3129,6 +3266,8 @@ function cudaDeveloperDriverDeduction {
                 echoend "reinstall scheduled" 3
             elif ! "$cudaDeveloperDriverInstalled"
             then
+                cudaRoutine=`binaryParser "$cudaRoutine" 0 1`
+                cudaRoutine=`binaryParser "$cudaRoutine" 2 1`
                 cudaRoutine=`binaryParser "$cudaRoutine" 4 1`
                 cudaRoutine=`binaryParser "$cudaRoutine" 6 1`
                 echoend "install scheduled" 4
@@ -3411,6 +3550,7 @@ function softwareDeduction {
     unlockNvidiaDeduction
     thunderbolt12UnlockDeduction
     cudaDeduction
+    thunderboltDaemonDeduction
 
     echoing "Checking if SIP is sufficently disabled..."
     checkSIPRequirement
@@ -3521,7 +3661,7 @@ function download {
     fi
     if [ `dc -e "$cudaRoutine 16 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 256 / 2 % n"` == 1 ] || [ `dc -e "$cudaRoutine 4096 / 2 % n"` == 1 ]
     then
-        echo "--- CUDA developer driver / CUDA tooolkit / CUDA samples ---"
+        echo "--- CUDA developer driver / CUDA toolkit / CUDA samples ---"
         downloadCudaToolkit
         if "$omitCuda"
         then
@@ -3593,6 +3733,12 @@ function uninstall {
         uninstallCuda
         echoend "done"
     fi
+    if [ `dc -e "$thunderboltDaemonRoutine 2 / 2 % n"` == 1 ]
+    then
+        echoing "   thunderbolt daemon"
+        uninstallThunderboltDaemon
+        echoend "done"
+    fi
 }
 
 
@@ -3653,6 +3799,12 @@ function install {
         installCuda
         echoend "done"
     fi
+    if [ `dc -e "$thunderboltDaemonRoutine 4 / 2 % n"` == 1 ]
+    then
+        echoing "   thunderbolt daemon"
+        installThunderboltDaemon
+        echoend "done"
+    fi
 }
 
 
@@ -3687,7 +3839,7 @@ nvidiaDriverUpdateLibPath="$HOME""/Library/Preferences/ByHost"
 nvidiaDriverUpdatePlistPath=""
 function deactivateNvidiaDriverUpdater {
     nvidiaDriverUpdatePlistPath=`find "$nvidiaDriverUpdateLibPath" -iname com.nvidia.nvagent*`
-    if [ `echo "$nvidiaDriverUpdatePlistPath" | wc -l | xargs` == 1 ]
+    if [ `echo "$nvidiaDriverUpdatePlistPath" | grep "nvagent" | wc -l | xargs` == 1 ]
     then
         elevatePrivileges
         updatePlistTemp=`"$pbuddy" -c "Print" "$nvidiaDriverUpdatePlistPath"`
@@ -3850,6 +4002,13 @@ function checkSystem {
         echoend "$nvidiaDGPU"
         echoing "   AGW version"
         echoend "$appleGPUWranglerVersion"
+        echoing "   thunderbolt daemon"
+        if "$thunderboltDaemonInstalled"
+        then
+            echoend "installed"
+        else
+            echoend "not installed"
+        fi
         echo "$systemProfilerTemp"
         exit
     fi
@@ -3871,6 +4030,8 @@ function macOSeGPU {
 
     if [ "$nvidiaDriverRoutine" != 0 ] || [ "$nvidiaEnablerRoutine" != 0 ] || [ "$unlockNvidiaRoutine" != 0 ] || [ "$amdLegacyDriverRoutine" != 0 ] || [ "$t82UnblockerRoutine" != 0 ] || [ "$deactivateNVIDIAdGPURoutine" != 0 ] || [ "$thunderbolt12UnlockRoutine" != 0 ] || [ "$cudaRoutine" != 0 ] 
     then
+        echo
+        echo
         echo "Checking for elevated privileges..."
         elevatePrivileges
     fi

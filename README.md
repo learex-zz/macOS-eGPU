@@ -1,6 +1,6 @@
 **THIS STILL IS A PRE-ALPHA BE PREPARED TO LOOSE ALL YOUR DATA!**
 
-# macOS-eGPU.sh (v0.1α)
+# macOS-eGPU.sh (v0.2α)
 ## Purpose
 Make your Mac compatible with NVIDIA and AMD eGPUs. Works on macOS High Sierra.
 
@@ -98,6 +98,11 @@ Not yet available. Only for AMD eGPU users. *patch by @mac\_editor*
 
 Specify that thunderbolt versions 1 and 2 shall be unlocked for use of an eGPU. *patch by @mac\_editor, @fricorico*  
 The unlock thunderbolt v1, v2 parameter tells the script to make older Macs with thunderbolt ports of version 1 or 2 compatible for eGPU use. This is not GPU vendor specific. This is only required for macOS 10.13.4.
+
+`--thunderboltDaemon | -A`
+
+Specify that thunderbolt options shall be applied.  
+The thunderbolt daemon parameter tells the script to create a launch daemon including the thunderbolt arguments. These arguments are reset after each boot which is why a daemon is necessary to keep them up to date. This is beneficial for NVIDIA dGPUs and multi eGPU setups.
 
 `--unlockNvidia | -N`
 
