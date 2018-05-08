@@ -4028,7 +4028,7 @@ function macOSeGPU {
     deactivateNVIDIAdGPURoutine=0
     deactivateNVIDIAdGPU=false
 
-    if [ "$nvidiaDriverRoutine" != 0 ] || [ "$nvidiaEnablerRoutine" != 0 ] || [ "$unlockNvidiaRoutine" != 0 ] || [ "$amdLegacyDriverRoutine" != 0 ] || [ "$t82UnblockerRoutine" != 0 ] || [ "$deactivateNVIDIAdGPURoutine" != 0 ] || [ "$thunderbolt12UnlockRoutine" != 0 ] || [ "$cudaRoutine" != 0 ] 
+    if [ "$nvidiaDriverRoutine" != 0 ] || [ "$nvidiaEnablerRoutine" != 0 ] || [ "$unlockNvidiaRoutine" != 0 ] || [ "$amdLegacyDriverRoutine" != 0 ] || [ "$t82UnblockerRoutine" != 0 ] || [ "$deactivateNVIDIAdGPURoutine" != 0 ] || [ "$thunderbolt12UnlockRoutine" != 0 ] || [ "$cudaRoutine" != 0 ] || [ "$thunderboltDaemonRoutine" != 0 ]
     then
         echo
         echo
