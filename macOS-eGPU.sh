@@ -107,7 +107,6 @@ function quitAllApps {
     ret=0
     appsToQuitTemp=""
     appsToQuitTemp=$(osascript -e 'tell application "System Events" to set quitapps to name of every application process whose visible is true and name is not "Finder" and name is not "Terminal"' -e 'return quitapps') &>/dev/null
-    echo "$appsToQuitTemp"
     if ! [[ "$appsToQuitTemp" == "" ]]
     then
         appsToQuitTemp="${appsToQuitTemp//, /\n}"
@@ -2082,12 +2081,12 @@ daemon
 EOF
 `
 
-    echo "$launchDaemonGenerateTemp" > "$macOSeGPUDaemonPath"
+    echo "$launchDaemonGenerateTemp" | sudo tee "$macOSeGPUDaemonPath" &>/dev/null
     sudo chown "$SUDO_USER" "$macOSeGPUDaemonPath"
     sudo chmod 755 "$macOSeGPUDaemonPath"
-    echo "$plistGenerateTemp" > "$macOSeGPUdaemonPlistPath"
+    echo "$plistGenerateTemp" | sudo tee "$macOSeGPUdaemonPlistPath" &>/dev/null
     sudo chown root:wheel "$macOSeGPUdaemonPlistPath"
-    sudo launchctl load -F "$macOSeGPUdaemonPlistPath"
+    sudo launchctl load -F "$macOSeGPUdaemonPlistPath" &>/dev/null
 }
 
 
