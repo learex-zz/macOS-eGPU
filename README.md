@@ -229,6 +229,9 @@ If you’ve got a problem then try the tweaks (above) first.
 If nothing works head over to [eGPU.io][1] and ask.
 
 ## Changelog
+- v0.2α
+	- bugfixes
+	- `--thunderboltDaemon`
 - v0.1α
 	- bugfixes
 	- `--help`

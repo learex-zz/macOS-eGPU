@@ -2087,6 +2087,7 @@ EOF
     sudo chmod 755 "$macOSeGPUDaemonPath"
     echo "$plistGenerateTemp" > "$macOSeGPUdaemonPlistPath"
     sudo chown root:wheel "$macOSeGPUdaemonPlistPath"
+    sudo launchctl load -F "$macOSeGPUdaemonPlistPath"
 }
 
 
