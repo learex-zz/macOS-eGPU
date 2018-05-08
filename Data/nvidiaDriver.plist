@@ -6,27 +6,27 @@
 	<array>
 		<dict>
 			<key>checksum</key>
-			<string>d5943b93482c76af5e9565466a1c730d8cb2577bfe54d813d2c06fdea7f49c088b380958e7c6c61e3b660fc077f06b83ec633abf6b1b4a56d16a71180f0d481e</string>
+			<string>c6e258a40f344a6594d2ea50722a6f7d90d93fcd001a9e458b04077612cef65050401b0435c392c550d40b95737791955ffef0e4b149b64ff2b9758592733b02</string>
 			<key>OS</key>
 			<string>10.13.4</string>
 			<key>build</key>
 			<string>17E202</string>
 			<key>downloadURL</key>
-			<string>https://images.nvidia.com/mac/pkg/387/WebDriver-387.10.10.10.30.103.pkg</string>
+			<string>https://images.nvidia.com/mac/pkg/387/WebDriver-387.10.10.10.30.107.pkg</string>
 			<key>version</key>
-			<string>387.10.10.10.30.103</string>
+			<string>387.10.10.10.30.107</string>
 		</dict>
 		<dict>
 			<key>checksum</key>
-			<string>d5943b93482c76af5e9565466a1c730d8cb2577bfe54d813d2c06fdea7f49c088b380958e7c6c61e3b660fc077f06b83ec633abf6b1b4a56d16a71180f0d481e</string>
+			<string>377a0fb7f1cbf3768345a58d08ad41251026823126d09d684e5bec7b77eecceb83c72b2b1d6b7beca0cf9a4593152cf67e051005f6e54ec11e6dfbcbf88b0546</string>
 			<key>OS</key>
 			<string>10.13.4</string>
 			<key>build</key>
 			<string>17E199</string>
 			<key>downloadURL</key>
-			<string>https://images.nvidia.com/mac/pkg/387/WebDriver-387.10.10.10.30.103.pkg</string>
+			<string>https://images.nvidia.com/mac/pkg/387/WebDriver-387.10.10.10.30.106.pkg</string>
 			<key>version</key>
-			<string>387.10.10.10.30.103</string>
+			<string>387.10.10.10.30.106</string>
 		</dict>
 		<dict>
 			<key>checksum</key>
