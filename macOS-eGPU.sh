@@ -2057,7 +2057,7 @@ function installThunderboltDaemon {
     <true/>
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/local/bin/macOS-eGPU</string>
+        <string>$macOSeGPUDaemonPath</string>
         <string>--launchDaemon</string>
     </array>
 </dict>
