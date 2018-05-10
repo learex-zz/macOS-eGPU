@@ -217,11 +217,12 @@ Print the help document.
 	- still researched
 - Macs with NVIDIA dGPU don't boot with TB3 enclosure and NVIDIA eGPU.
 	- still researched, plugin during boot
+- Mac owners with NVIDIA dGPU, please see [here][1].
 
 
 ### Unknown issues
 If you’ve got a problem then try the tweaks (above) first.  
-If nothing works head over to [eGPU.io][1] and ask.
+If nothing works head over to [eGPU.io][2] and ask.
 
 ## Changelog
 - v0.1α
@@ -231,16 +232,17 @@ If nothing works head over to [eGPU.io][1] and ask.
 	- `--checkSystemFull`
 
 ## Donate
-You think it’s amazing what we did? Then head over to [eGPU.io][2] and then say thanks.  
+You think it’s amazing what we did? Then head over to [eGPU.io][3] and then say thanks.  
   
 But because people have insisted:
 
-[![paypal][image-1]][3] (*@fr34k*)
+[![paypal][image-1]][4] (*@fr34k*)
 
 *@ shows that it’s the alias on eGPU.io*
 
-[1]:	https://egpu.io/forums/mac-setup/script-fr34ks-macos-egpu-sh-one-script-all-solutions-fully-automated/#post-35722 "Link to Thread"
+[1]:	https://egpu.io/forums/mac-setup/script-fr34ks-macos-egpu-sh-one-script-all-solutions-fully-automated/paged/7/#post-36223
 [2]:	https://egpu.io/forums/mac-setup/script-fr34ks-macos-egpu-sh-one-script-all-solutions-fully-automated/#post-35722 "Link to Thread"
-[3]:	https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=learex2@icloud.com&lc=US&item_name=learex&no_note=0&currency_code=EUR&bn=PP-DonationsBF:btn_donate_SM.gif:NonHostedGuest
+[3]:	https://egpu.io/forums/mac-setup/script-fr34ks-macos-egpu-sh-one-script-all-solutions-fully-automated/#post-35722 "Link to Thread"
+[4]:	https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=learex2@icloud.com&lc=US&item_name=learex&no_note=0&currency_code=EUR&bn=PP-DonationsBF:btn_donate_SM.gif:NonHostedGuest
 
 [image-1]:	https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif
