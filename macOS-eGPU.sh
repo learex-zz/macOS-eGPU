@@ -16,7 +16,7 @@
 #   2. You may continue development of this script at it's GitHub homepage.
 #   3. You may not redistribute this script or portions thereof from outside of it's GitHub homepage without explicit written permission.
 #   4. You may not compile, assemble or in any other way make the source code unreadable by a human.
-#   5. You may not implement this script or protions therof into other scripts and/or applications without explicit written permission.
+#   5. You may not implement this script or portions thereof into other scripts and/or applications without explicit written permission.
 #   6. You may not use this script, or portions thereof, for any commercial purposes.
 #   7. You accept the license terms of all downloaded and/or executed content, even content that has only indirectly been been downloaded and/or executed by macOS-eGPU.sh.
 #
@@ -343,7 +343,7 @@ USAGE TERMS of macOS-eGPU.sh
 #   2. You may continue development of this script at it's GitHub homepage.
 #   3. You may not redistribute this script or portions thereof from outside of it's GitHub homepage without explicit written permission.
 #   4. You may not compile, assemble or in any other way make the source code unreadable by a human.
-#   5. You may not implement this script or protions therof into other scripts and/or applications without explicit written permission.
+#   5. You may not implement this script or portions thereof into other scripts and/or applications without explicit written permission.
 #   6. You may not use this script, or portions thereof, for any commercial purposes.
 #   7. You accept the license terms of all downloaded and/or executed content, even content that has only indirectly been been downloaded and/or executed by macOS-eGPU.sh.
 #
