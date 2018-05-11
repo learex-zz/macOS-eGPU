@@ -106,7 +106,7 @@ function systemClean {
 function quitAllApps {
     ret=0
     appsToQuitTemp=""
-    appsToQuitTemp=$(osascript -e 'tell application "System Events" to set quitapps to name of every application process whose visible is true and name is not "Finder" and name is not "Terminal"' -e 'return quitapps') &>/dev/null
+    appsToQuitTemp=$(osascript -e 'tell application "System Events" to set quitapps to name of every application process whose visible is true and name is not "Finder" and name is not "Terminal" and name is not "iTerm"' -e 'return quitapps') &>/dev/null
     echo "$appsToQuitTemp"
     if ! [[ "$appsToQuitTemp" == "" ]]
     then
