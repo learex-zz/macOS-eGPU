@@ -6,6 +6,24 @@
 	<array>
 		<dict>
 			<key>name</key>
+			<string>*Maxwell*</string>
+			<key>requirement</key>
+			<string>driver</string>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>DaVinci Resolve*</string>
+			<key>requirement</key>
+			<string>driver</string>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>*Octane*</string>
+			<key>requirement</key>
+			<string>driver</string>
+		</dict>
+		<dict>
+			<key>name</key>
 			<string>Maya</string>
 			<key>requirement</key>
 			<string>driver</string>
