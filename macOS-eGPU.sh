@@ -421,7 +421,7 @@ function restorePrivileges {
 scheduleReboot=false
 noReboot=false
 function rebootSystem {
-    if "$scheduleReboot" && "$noReboot"
+    if "$scheduleReboot" || "$noReboot"
     then
         echo "A reboot of the system is recommended."
     else
@@ -1245,25 +1245,25 @@ function uninstallCudaDeveloperDriver {
     if [ -e "$cudaDeveloperDriverUnInstallScript" ]
     then
         elevatePrivileges
-        sudo perl "$cudaDeveloperDriverUnInstallScript" --silent
+        sudo perl "$cudaDeveloperDriverUnInstallScript" --silent &>/dev/null
         doneSomething=true
     fi
 }
 
 function uninstallCudaToolkit {
-    if [ -e "$cudaToolkitUnInstallScript" ]
+    if [ -e "$cudaToolkitUnInstallScriptPath" ]
     then
         elevatePrivileges
-        sudo perl "$cudaToolkitUnInstallScript" --silent
+        sudo perl "$cudaToolkitUnInstallScriptPath" --silent &>/dev/null
         doneSomething=true
     fi
 }
 
 function uninstallCudaSamples {
-    if [ -e "$cudaSamplesDir" ] && [ -e "$cudaToolkitUnInstallScript" ]
+    if [ -e "$cudaSamplesDir" ] && [ -e "$cudaToolkitUnInstallScriptPath" ]
     then
         elevatePrivileges
-        sudo perl "$cudaToolkitUnInstallScript" --manifest="$cudaToolkitUnInstallDir"".cuda_samples_uninstall_manifest_do_not_delete.txt" --silent
+        sudo perl "$cudaToolkitUnInstallScriptPath" --manifest="$cudaToolkitUnInstallDir"".cuda_samples_uninstall_manifest_do_not_delete.txt" --silent &>/dev/null
         doneSomething=true
     fi
 }
@@ -1274,7 +1274,7 @@ function uninstallCudaVersions {
         cudaVersion="$versionTemp"
         cudaToolkitUnInstallDir="/Developer/NVIDIA/CUDA-""$cudaVersion""/bin/"
         cudaToolkitUnInstallScriptName="uninstall_cuda_""$cudaVersion"".pl"
-        cudaToolkitUnInstallScript="$cudaToolkitUnInstallDir""$cudaToolkitUnInstallScriptName"
+        cudaToolkitUnInstallScriptPath="$cudaToolkitUnInstallDir""$cudaToolkitUnInstallScriptName"
         uninstallCudaToolkit
     done <<< "$cudaVersionsInstalledList"
     uninstallCudaDeveloperDriver
@@ -2160,7 +2160,6 @@ do
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
         fi
-        scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 1`
         scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
         ;;
     "--cudaToolkit" | "-t")
@@ -2169,8 +2168,6 @@ do
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
         fi
-        scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 1`
-        scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
         scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 2 1`
         ;;
     "--cudaSamples" | "-s")
@@ -2179,9 +2176,6 @@ do
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
         fi
-        scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 1`
-        scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
-        scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 2 1`
         scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 3 1`
         ;;
     "--full" | "-F")
@@ -3268,6 +3262,35 @@ function cudaDeduction {
         then
             downloadCudaDriverInformation
             downloadCudaToolkitInformation
+            if [ `dc -e "$scheduleCudaDeduction 8 / 2 % n"` == 1 ]
+            then
+                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 1`
+                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
+                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 2 1`
+            elif [ `dc -e "$scheduleCudaDeduction 4 / 2 % n"` == 1 ]
+            then
+                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 1`
+                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
+            elif [ `dc -e "$scheduleCudaDeduction 2 / 2 % n"` == 1 ]
+            then
+                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 1`
+            fi
+        elif "$uninstall"
+        then
+            if [ `dc -e "$scheduleCudaDeduction 2 % n"` == 1 ]
+            then
+                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
+                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 2 1`
+                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 3 1`
+            elif [ `dc -e "$scheduleCudaDeduction 2 / 2 % n"` == 1 ]
+            then
+                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 1`
+                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 2 1`
+                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 3 1`
+            elif [ `dc -e "$scheduleCudaDeduction 4 / 2 % n"` == 1 ]
+            then
+                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 3 1`
+            fi
         fi
         cudaDriverDeduction
         cudaDeveloperDriverDeduction
@@ -3396,7 +3419,7 @@ function softwareDeduction {
         fi
     fi
 
-    if [[ "$scheduleCudaDeduction" > 15 ]]
+    if [[ "$scheduleCudaDeduction" > 15 ]] && "$install"
     then
         echo "Fetching CUDA needs..."
         getCudaNeeds
@@ -3687,7 +3710,7 @@ nvidiaDriverUpdateLibPath="$HOME""/Library/Preferences/ByHost"
 nvidiaDriverUpdatePlistPath=""
 function deactivateNvidiaDriverUpdater {
     nvidiaDriverUpdatePlistPath=`find "$nvidiaDriverUpdateLibPath" -iname com.nvidia.nvagent*`
-    if [ `echo "$nvidiaDriverUpdatePlistPath" | wc -l | xargs` == 1 ]
+    if [ `echo "$nvidiaDriverUpdatePlistPath" | grep "nvagent" | wc -l | xargs` == 1 ]
     then
         elevatePrivileges
         updatePlistTemp=`"$pbuddy" -c "Print" "$nvidiaDriverUpdatePlistPath"`
