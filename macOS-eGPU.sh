@@ -1795,7 +1795,7 @@ function installAMDLegacyDriver {
     if [ -e "$dirName""/automate-eGPU.kext" ]
     then
         elevatePrivileges
-        sudo cp "$dirName""/automate-eGPU.kext" "$amdLegacyDriverKextPath"
+        sudo cp -r "$dirName""/automate-eGPU.kext" "$amdLegacyDriverKextPath"
         rm -rf "$dirName""/automate-eGPU.kext"
         scheduleReboot=true
         doneSomething=true
