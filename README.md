@@ -5,7 +5,7 @@
 Make your Mac compatible with NVIDIA and AMD eGPUs. Works on macOS High Sierra.
 
 ## Requirements
-- macOS 10.13.X ≤ 10.13.4 2018-001 (17E202)
+- macOS 10.13.X ≤ 10.13.5 (17F77)
 - a NVIDIA or an AMD graphics card
 - an eGPU enclosure (T82 & T83 controllers are supported)
 - a Mac (TB 1/2/3 are supported)
