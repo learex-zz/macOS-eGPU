@@ -2915,8 +2915,15 @@ function nvidiaDriverDeduction {
             downloadNvidiaDriverInformation
             if ! "$foundMatchNvidiaDriver"
             then
-                echoend "FAILURE, no match was found" 1
-                irupt
+                if "$beta"
+                then
+                    echoend "FAILURE, no match was found" 1
+                    echo "you must manually specify the version, automated matching failed, due to unknown build"
+                    irupt
+                else
+                    echoend "FAILURE, no match was found" 1
+                    irupt
+                fi
             fi
             if "$reinstall" && "$nvidiaDriversInstalled"
             then
@@ -2973,8 +2980,16 @@ function nvidiaEnablerDeduction {
             downloadNvidiaEGPUenabler1013Information
             if ! "$foundMatchNvidiaEGPUenabler1013"
             then
-                echoend "FAILURE, no match was found" 1
-                irupt
+                if "$beta"
+                then
+                    nvidiaEGPUenabler1013DownloadPKGName="NVDAEGPUSupport.pkg"
+                    nvidiaEGPUenabler1013DownloadLink="https://egpu.io/wp-content/uploads/wpforo/attachments/6469/5130-NVDAEGPUSupportUniversal.zip"
+                    nvidiaEGPUenabler1013DownloadChecksum="ed1dbef44a918d034b4c47ce996c62365871488de652fdd14104e79820daa54ecb63977bef6fbe5c6337918635224b32b607cb543cb1d5209080640ea2d6d377"
+                    foundMatchNvidiaEGPUenabler1013=true
+                else
+                    echoend "FAILURE, no match was found" 1
+                    irupt
+                fi
             fi
             if "$reinstall" && "$nvidiaEGPUenabler1013Installed"
             then
