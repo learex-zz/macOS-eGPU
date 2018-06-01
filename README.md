@@ -1,6 +1,6 @@
 **THIS STILL IS A PRE-ALPHA BE PREPARED TO LOOSE ALL YOUR DATA!**
 
-# macOS-eGPU.sh (v0.1α)
+# macOS-eGPU.sh (v0.2α)
 ## Purpose
 Make your Mac compatible with NVIDIA and AMD eGPUs. Works on macOS High Sierra.
 
@@ -11,7 +11,7 @@ Make your Mac compatible with NVIDIA and AMD eGPUs. Works on macOS High Sierra.
 - a Mac (TB 1/2/3 are supported)
 - ***BACKUP***
 - sufficiently disabled SIP; the script will abort with instructions otherwise
-- macOS’ terminal (iTerm does not work - see [closed issue][1] for more detail)
+- macOS Terminal (iTerm does not work - see [closed issue][1] for more detail)
 
 ## Howto
 **This script is still in pre-alpha stage it may damage your system.**  
@@ -100,6 +100,11 @@ Not yet available. Only for AMD eGPU users. *patch by @mac\_editor*
 Specify that thunderbolt versions 1 and 2 shall be unlocked for use of an eGPU. *patch by @mac\_editor, @fricorico*  
 The unlock thunderbolt v1, v2 parameter tells the script to make older Macs with thunderbolt ports of version 1 or 2 compatible for eGPU use. This is not GPU vendor specific. This is only required for macOS 10.13.4.
 
+`--thunderboltDaemon | -A`
+
+Specify that thunderbolt options shall be applied.  
+The thunderbolt daemon parameter tells the script to create a launch daemon including the thunderbolt arguments. These arguments are reset after each boot which is why a daemon is necessary to keep them up to date. This is beneficial for NVIDIA dGPUs and multi eGPU setups.
+
 `--unlockNvidia | -N`
 
 Specify that NVIDIA eGPU support shall be unlocked. *patch by @fr34k, @goalque*  
@@ -145,6 +150,11 @@ The force reinstall parameter tells the script to reinstall all software regardl
 Specify that the script shall install only newest software.  
 The force newest parameter tells the script to prefer newer instead of more stable software. This might resolve and/or cause issues.
 
+`--forceCacheRebuild | -h`
+
+Specify that the caches shall be rebuild.  
+The force cache rebuild flag rebuilds the kext, system and dyld cache. This option cannot be paired with other options.
+
 `--noReboot | -r`
 
 Specify that even if something has been done no reboot shall be performed.
@@ -156,6 +166,12 @@ Specify that the question of whether the license terms have been accepted shall 
 `--skipWarnings | -k`
 
 Specify that the initial warnings of the script shall be skipped.
+
+`--beta`
+
+Specify that an unsupported version of macOS in use.  
+The beta flag removes checks for script requirements. Therefore, it is useful for beta testers. However, since these versions weren't checked by experienced users, the risk of damaging the system is extremely high.  
+Only use with caution and backup.
 
 `--help | -h`
 
@@ -226,6 +242,14 @@ If you’ve got a problem then try the tweaks (above) first.
 If nothing works head over to [eGPU.io][3] and ask.
 
 ## Changelog
+- v0.2α
+	- tons of bugfixes
+	- `--beta`
+	- `--thunderboltDaemon`
+	- `--forceCacheRebuild`
+	- better error handling, especially with the old wrangler bug
+	- 10.13.5 support
+	- short command install
 - v0.1α
 	- bugfixes
 	- `--help`
