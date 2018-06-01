@@ -37,7 +37,7 @@
 
 
 #   script specific information
-branch="master"
+branch="v02"
 warningOS="10.13.6"
 currentOS="10.13.5"
 gitPath="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch"

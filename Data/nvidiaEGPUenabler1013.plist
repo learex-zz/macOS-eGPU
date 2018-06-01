@@ -8,6 +8,16 @@
 			<key>checksum</key>
 			<string>ed1dbef44a918d034b4c47ce996c62365871488de652fdd14104e79820daa54ecb63977bef6fbe5c6337918635224b32b607cb543cb1d5209080640ea2d6d377</string>
 			<key>build</key>
+			<string>17F77</string>
+			<key>downloadURL</key>
+			<string>https://egpu.io/wp-content/uploads/wpforo/attachments/6469/5130-NVDAEGPUSupportUniversal.zip</string>
+			<key>packageName</key>
+			<string>NVDAEGPUSupport.pkg</string>
+		</dict>
+		<dict>
+			<key>checksum</key>
+			<string>ed1dbef44a918d034b4c47ce996c62365871488de652fdd14104e79820daa54ecb63977bef6fbe5c6337918635224b32b607cb543cb1d5209080640ea2d6d377</string>
+			<key>build</key>
 			<string>17E202</string>
 			<key>downloadURL</key>
 			<string>https://egpu.io/wp-content/uploads/wpforo/attachments/6469/5130-NVDAEGPUSupportUniversal.zip</string>
