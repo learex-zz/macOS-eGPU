@@ -4199,6 +4199,7 @@ function installShortCommand {
         echo "--- installing short command ---"
         elevatePrivileges
         scriptGenerateTemp=`cat <<'EOF'
+#!/bin/bash
 ping 8.8.8.8 -c 1 -t 3 &> /dev/null
 if [ "$?" != 0 ]
 then
