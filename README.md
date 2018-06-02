@@ -249,12 +249,18 @@ If nothing works head over to [eGPU.io][3] and ask.
 	- `--forceCacheRebuild`
 	- better error handling, especially with the old wrangler bug
 	- 10.13.5 support
-	- short command install
+	- short command install `macos-egpu [parameter]` *needs internet*
+	- more restrictive program kill
 - v0.1α
 	- bugfixes
 	- `--help`
 	- `--checkSystem`
 	- `--checkSystemFull`
+
+
+## Upcoming features
+- improve `macos-egpu [parameter]` for offline use
+- iTerm support
 
 ## Donate
 You think it’s amazing what we did? Then head over to [eGPU.io][4] and then say thanks.  
