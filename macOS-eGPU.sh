@@ -4193,10 +4193,22 @@ function checkSystem {
 
 function installShortCommand {
     commandShortPathTemp="/usr/local/bin/macos-egpu"
+    installShortCommandTemp=false
     if ! [ -e "$commandShortPathTemp" ]
     then
         echo
         echo "--- installing short command ---"
+        installShortCommandTemp=true
+    elif [ `shasum -a 512 -b "$commandShortPathTemp" | awk '{ print $1 }'` != "27d065f25a3e933bd47d7413b3d328844b5f13f0a775a31f936b702eef340cf8a6287baec6de8b1be9c681503cce4d47c41fd6c4f0a77d55f4b80460f6051e31" ]
+    then
+        echo
+        echo "--- updating short command ---"
+        installShortCommandTemp=true
+    else
+        installShortCommandTemp=false
+    fi
+    if "$installShortCommandTemp"
+    then
         elevatePrivileges
         scriptGenerateTemp=`cat <<'EOF'
 #!/bin/bash
@@ -4212,10 +4224,10 @@ EOF
         echo "$scriptGenerateTemp" | sudo tee "$commandShortPathTemp" &>/dev/null
         sudo chown "$SUDO_USER" "$commandShortPathTemp"
         sudo chmod 755 "$commandShortPathTemp"
-        echo "now the script can be used like this:"
+        echo "now the script can be used like this (internet is required):"
         echo "macos-egpu [parameters]"
-        echo "--- installing short command end ---"
         waiter 7
+        echo "--- short command end ---"
         echo
     fi
 }
