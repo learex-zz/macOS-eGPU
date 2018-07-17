@@ -108,7 +108,7 @@ The thunderbolt daemon parameter tells the script to create a launch daemon incl
 `--unlockNvidia | -N`
 
 Specify that NVIDIA eGPU support shall be unlocked. *patch by @fr34k, @goalque*  
-The unlock NVIDIA parameter tells the script to make the Mac compatible with NVIDIA eGPUs. This is only required for macOS 10.13.4. This might cause issues/crashes with AMD graphics cards (external).
+The unlock NVIDIA parameter tells the script to make the Mac compatible with NVIDIA eGPUs. This is only required for macOS 10.13.4 and macOS 10.13.5. This might cause issues/crashes with AMD graphics cards (external).
 
 `--unlockT82 | -T`
 
@@ -182,12 +182,12 @@ Print the help document.
 
 ## I used the temporary script/@goalque's instructions, what should I do?
 -  I haven't upgraded yet. I'm still on 17E199. I have used the temporary script.  
-	-\> Use the uninstaller script. Reboot. Proceed with this script.
--  I have upgraded to 17E202.   
+	-\> Upgrade to 10.13.5≤. Proceed with this script.
+-  I have upgraded since.   
 	-\> Execute: `sudo rm -rfv "/Library/Application Support/nvidia10134/"`  
 	to remove the KEXT backup. Proceed with this script.
 - I have used @goalque’s instructions.  
-	-\> Upgrade to 17E202. Proceed with this script.
+	-\> Upgrade to 10.13.5≤. Proceed with this script.
 
 ## Problems
 ### Known issues
@@ -259,6 +259,7 @@ If nothing works head over to [eGPU.io][3] and ask.
 
 
 ## Upcoming features
+- 10.13.6 support (Should be available on Friday July 20th)
 - improve `macos-egpu [parameter]` for offline use
 - iTerm support
 
