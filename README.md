@@ -9,6 +9,24 @@
 ## Purpose
 Make your Mac compatible with NVIDIA and AMD eGPUs. Works on macOS High Sierra.
 
+## Table of Contents
+- [Requirements][2]
+- [Howto][3]
+	- [Important Information][4]
+	- [Step by Step Guide][5]
+- [Parameters][6]
+	- [Basic][7]
+	- [Packages][8]
+	- [Advanced][9]
+- [Example with parameters][10]
+- [I used the temporary script/@goalque's instructions, what should I do?][11]
+- [Problems][12]
+	- [Known issues][13]
+	- [Unknown issues][14]
+- [Changelog][15]
+- [Upcoming features][16]
+- [Thanks to][17]
+
 ## Requirements
 - macOS 10.13.X ≤ 10.13.6 (17G65)
 - a NVIDIA or an AMD graphics card
@@ -21,7 +39,7 @@ Make your Mac compatible with NVIDIA and AMD eGPUs. Works on macOS High Sierra.
 ## Howto
 Do not abort the script during uninstallation/installation/patch phase this *will* damage your system. 
 
-**Important Information:**
+### Important Information:
 - NVIDIA eGPUs must not be hot unplugged, otherwise a kernel panic will occur. Completely shut down first.
 - MacBook Pros (2016+) have automatic wake on power an lid opening. This will interfere with eGPU enclosures with power supply. To properly disconnect and shut down the MacBook Pro, choose *reboot* and unplug the moment the eGPU power shuts down. Then fully shutdown. It might help to disable wake (doesn’t work for all macOS’ and eGPU enclosures) by executing `sudo nvram AutoBoot=%00`. To reenable execute `sudo nvram AutoBoot=%03`.
 - If you haven’t used an eGPU, the script may ask you about about your setup.
@@ -35,7 +53,7 @@ Do not abort the script during uninstallation/installation/patch phase this *wil
 		For those, the script determines that a T82 unlock is necessary, must run the script once to unlock and then after a reboot a second time. The script would then not have been able to gather all information needed.
 
 
-**Step by Step Guide:**
+### Step by Step Guide:
 1. If you have used an eGPU on macOS Sierra (10.12) or earlier please remove all used eGPU solutions. If you have not, skip this step.
 2. Back up your system.
 3. Disable SIP. This can be done by booting into recovery mode (command + R during boot), opening the terminal window (Utilities -\> Terminal) and execute  
@@ -263,12 +281,12 @@ Print the help document.
 	- still researched
 - Macs with NVIDIA dGPU don't boot with TB3 enclosure and NVIDIA eGPU.
 	- still researched, plugin during boot
-- Mac owners with NVIDIA dGPU, please see [here][2].
+- Mac owners with NVIDIA dGPU, please see [here][18].
 
 
 ### Unknown issues
 If you’ve got a problem then try the tweaks (above) first.  
-If nothing works head over to [eGPU.io][3] and ask.
+If nothing works head over to [eGPU.io][19] and ask.
 
 ## Changelog
 - v1
@@ -304,7 +322,23 @@ The people above were crucial for the development of this script.
 *@ shows that it’s the alias on eGPU.io*
 
 [1]:	https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=learex2@icloud.com&lc=US&item_name=learex&no_note=0&currency_code=EUR&bn=PP-DonationsBF:btn_donate_SM.gif:NonHostedGuest
-[2]:	https://egpu.io/forums/mac-setup/script-fr34ks-macos-egpu-sh-one-script-all-solutions-fully-automated/paged/7/#post-36223
-[3]:	https://egpu.io/forums/mac-setup/script-fr34ks-macos-egpu-sh-one-script-all-solutions-fully-automated/#post-35722 "Link to Thread"
+[2]:	https://github.com/learex/macOS-eGPU#requirements
+[3]:	https://github.com/learex/macOS-eGPU#howto
+[4]:	https://github.com/learex/macOS-eGPU#important-information
+[5]:	https://github.com/learex/macOS-eGPU#step-by-step-guide
+[6]:	https://github.com/learex/macOS-eGPU#parameters
+[7]:	https://github.com/learex/macOS-eGPU#basic
+[8]:	https://github.com/learex/macOS-eGPU#packages
+[9]:	https://github.com/learex/macOS-eGPU#advanced
+[10]:	https://github.com/learex/macOS-eGPU#example-with-parameters
+[11]:	https://github.com/learex/macOS-eGPU#i-used-the-temporary-scriptgoalques-instructions-what-should-i-do
+[12]:	https://github.com/learex/macOS-eGPU#problems
+[13]:	https://github.com/learex/macOS-eGPU#known-issues
+[14]:	https://github.com/learex/macOS-eGPU#unknown-issues
+[15]:	https://github.com/learex/macOS-eGPU#changelog
+[16]:	https://github.com/learex/macOS-eGPU#upcoming-features
+[17]:	https://github.com/learex/macOS-eGPU#thanks-to
+[18]:	https://egpu.io/forums/mac-setup/script-fr34ks-macos-egpu-sh-one-script-all-solutions-fully-automated/paged/7/#post-36223
+[19]:	https://egpu.io/forums/mac-setup/script-fr34ks-macos-egpu-sh-one-script-all-solutions-fully-automated/#post-35722 "Link to Thread"
 
 [image-1]:	https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif

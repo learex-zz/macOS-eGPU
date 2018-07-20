@@ -3320,8 +3320,14 @@ function nvidiaEnablerDeduction {
                     irupt
                 fi
             else
-                echoend "skip, incompatible" 5
-                nvidiaEnabler=false
+                if "$nvidiaEGPUenabler1013Installed"
+                then
+                    nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 1 1`
+                    echoend "uninstall scheduled" 3
+                else
+                    echoend "skip, incompatible" 5
+                    nvidiaEnabler=false
+                fi
             fi
         else
             echoend "skip, dependencies" 5
