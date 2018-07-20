@@ -38,10 +38,11 @@
 
 #   script specific information
 branch="master"
-warningOS="10.13.6"
-currentOS="10.13.5"
+warningOS="10.13.7"
+currentOS="10.13.6"
 gitPath="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch"
-scriptVersion="v0.2α"
+scriptVersion="v1"
+debug=false
 
 #   external programs
 pbuddy="/usr/libexec/PlistBuddy"
@@ -105,34 +106,37 @@ function systemClean {
 #   quit all running apps
 function quitAllApps {
     ret=0
-    appsToQuitTemp=""
-    appsToQuitTemp=$(osascript -e 'tell application "System Events" to set quitapps to name of every application process whose visible is true and name is not "Finder" and name is not "Terminal"' -e 'return quitapps') &>/dev/null
-    if ( ! [[ "$appsToQuitTemp" == "" ]] ) || [[ `ps -A | grep "\-bash" | grep -v "grep" | wc -l | xargs` > 1 ]]
+    if ! "$debug"
     then
-        if [[ "$appsToQuitTemp" =~ "iTerm" ]]
+        appsToQuitTemp=""
+        appsToQuitTemp=$(osascript -e 'tell application "System Events" to set quitapps to name of every application process whose visible is true and name is not "Finder" and name is not "Terminal"' -e 'return quitapps') &>/dev/null
+        if ( ! [[ "$appsToQuitTemp" == "" ]] ) || [[ `ps -A | grep "\-bash" | grep -v "grep" | wc -l | xargs` > 1 ]]
         then
-            echo
-            echo "An open session of iTerm is detected. The script won't run with iTerm. Please use the Terminal app for now."
-            irupt
-        fi
-        if [[ `ps -A | grep "\-bash" | grep -v "grep" | wc -l | xargs` > 1 ]]
-        then
-            echo
-            echo
-            echo `ps -A | grep "\-bash" | grep -v "grep" | wc -l | xargs`" Terminal sessions have been detected. Please only leave one open with which the script is executed."
-            echo
-            irupt
-        fi
-        appsToQuitTemp="${appsToQuitTemp//, /\n}"
-        appsToQuitTemp="$(echo -e $appsToQuitTemp)"
-        while read -r appNameToQuitTemp
-        do
-            killall "$appNameToQuitTemp"
-            if [ "$?" != 0 ]
+            if [[ "$appsToQuitTemp" =~ "iTerm" ]]
             then
-                ret=1
+                echo
+                echo "An open session of iTerm is detected. The script won't run with iTerm. Please use the Terminal app for now."
+                irupt
             fi
-        done <<< "$appsToQuitTemp"
+            if [[ `ps -A | grep "\-bash" | grep -v "grep" | wc -l | xargs` > 1 ]]
+            then
+                echo
+                echo
+                echo `ps -A | grep "\-bash" | grep -v "grep" | wc -l | xargs`" Terminal sessions have been detected. Please only leave one open with which the script is executed."
+                echo
+                irupt
+            fi
+            appsToQuitTemp="${appsToQuitTemp//, /\n}"
+            appsToQuitTemp="$(echo -e $appsToQuitTemp)"
+            while read -r appNameToQuitTemp
+            do
+                killall "$appNameToQuitTemp"
+                if [ "$?" != 0 ]
+                then
+                    ret=1
+                fi
+            done <<< "$appsToQuitTemp"
+        fi
     fi
     return "$ret"
 }
@@ -152,7 +156,7 @@ Parameters are optional. If none are provided, the script will self determine wh
 
 --install | -i
 
-    Tells the script to install/update eGPU software. (internet required)
+    Tells the script to install/update eGPU software. (internet may be required)
     The install parameter tells the script to fetch your Mac’s parameters
     (such as installed software, installed patches, macOS version etc.)
     and to fetch the newest software versions. It then cross-references and
@@ -168,7 +172,9 @@ Parameters are optional. If none are provided, the script will self determine wh
     Tells the script to uninstall eGPU software.
     The uninstall parameter tells the script to search for eGPU software and 
     fully uninstall it. Note that earlier enablers for 10.12 won’t be touched. 
-    If you have used such software you must uninstall it yourself. 
+    If you have used such software you must uninstall it yourself. Note that
+    only one thing won’t be uninstalled: The short command. 
+    To uninstall this one as well execute: sudo rm /usr/local/bin/macos-egpu
     To override deductions use the #Package parameters below.
 
 --checkSystem | -C
@@ -212,8 +218,11 @@ Parameters are optional. If none are provided, the script will self determine wh
 
     Specify that the NVIDIA eGPU support shall be touched. (kext by yifanlu)
     The NVIDIA eGPU support parameter tells the script to make the
-    NVIDIA drivers compatible with an NVIDIA eGPU.
-    On macOS 10.13.4 an additional patch is necessary. See --unlockNvidia.
+    NVIDIA drivers compatible with an NVIDIA eGPU. Therefore NVIDIA drivers
+    must be installed in order to be applied.
+    This command is for 10.13.5≤ only.
+    On macOS 10.13.4/10.13.5 an additional patch is necessary.
+        See --unlockNvidia.
 
 --deactivateNvidiaDGPU | -d
 
@@ -225,7 +234,8 @@ Parameters are optional. If none are provided, the script will self determine wh
     for use of an eGPU. (patch by @mac_editor, @fricorico)
     The unlock thunderbolt v1, v2 parameter tells the script to make older Macs
     with thunderbolt ports of version 1 or 2 compatible for eGPU use.
-    This is not GPU vendor specific. This is only required for macOS 10.13.4.
+    For NVIDIA users this is required only for macOS 10.13.4/10.13.5.
+    For AMD users this is required for macOS 10.13.4+.
 
 --thunderboltDaemon | -A
 
@@ -239,8 +249,17 @@ Parameters are optional. If none are provided, the script will self determine wh
 
     Specify that NVIDIA eGPU support shall be unlocked.
     (patch by @fr34k, @goalque)
-    The unlock NVIDIA parameter tells the script to make the Mac compatible
-    with NVIDIA eGPUs. This is only required for macOS 10.13.4.
+    The unlock NVIDIA parameter tells the script to make the Mac
+    compatible with NVIDIA eGPUs.
+    This is only required for macOS 10.13.4 and macOS 10.13.5.
+    This might cause issues/crashes with AMD graphics cards (external).
+
+--iopcieTunneledPatch | -l
+
+    Specify that NVIDIA eGPU support shall be unlocked. (patch by @golaque)
+    The IOPCITunnelled Patch tells the script to make the Mac
+    compatible with NVIDIA eGPUs.
+    This is only required for macOS 10.3.6+.
     This might cause issues/crashes with AMD graphics cards (external).
 
 --unlockT82 | -T
@@ -254,8 +273,10 @@ Parameters are optional. If none are provided, the script will self determine wh
 
     Specify that CUDA drivers shall be touched.
     The CUDA driver parameter tells the script to perform either an install
-    or uninstall of the CUDA drivers. Note that the toolkit and samples are
-    depended on the drivers. Uninstalling them will cause the script
+    or uninstall of the CUDA drivers. Note that the CUDA driver is dependent
+    on the NVIDIA drivers and cannot be installed without latter. 
+    Note that the toolkit and samples are dependent on the drivers.
+    Uninstalling them will cause the script
     to uninstall the toolkit and samples as well.
 
 --cudaDeveloperDriver | -D
@@ -263,15 +284,17 @@ Parameters are optional. If none are provided, the script will self determine wh
     Specify that CUDA developer drivers shall be touched.
     The CUDA developer drivers parameter tells the script to perform either
     an install or uninstall of the CUDA developer drivers. Note that the
-    toolkit and samples are depended on the developer/drivers. Uninstalling
-    them will cause the script to uninstall the toolkit and samples as well.
+    CUDA driver is dependent on the NVIDIA drivers and cannot be installed
+    without latter. Note that the toolkit and samples are dependent on the
+    developer/drivers. Uninstalling them will cause the script
+    to uninstall the toolkit and samples as well.
     This should theoretically be identical to --cudaDriver
 
 --cudaToolkit | -t
 
     Specify that CUDA toolkit shall be touched.
     The CUDA toolkit parameter tells the script to perform either an install
-    or uninstall of the CUDA toolkit. Note that the samples are depended on
+    or uninstall of the CUDA toolkit. Note that the samples are dependent on
     the toolkit and the toolkit itself depends on the drivers. Uninstalling the
     toolkit will cause the script to uninstall the samples as well. Installing
     the toolkit will cause the script to install the drivers as well.
@@ -280,7 +303,7 @@ Parameters are optional. If none are provided, the script will self determine wh
 
     Specify that CUDA samples shall be touched.
     The CUDA samples parameter tells the script to perform either an install or
-    uninstall of the CUDA samples. Note that the samples are depended on the
+    uninstall of the CUDA samples. Note that the samples are dependent on the
     toolkit and drivers. Installing the samples will cause the script to
     install the drivers and toolkit as well.
 
@@ -340,6 +363,8 @@ Parameters are optional. If none are provided, the script will self determine wh
 
 bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) --install --nvidiaDriver 387.10.10.10.30.106
 
+macOS-eGPU  --install --nvidiaDriver 387.10.10.10.30.106
+
 --- Issues ---
 Please visit https://github.com/learex/macOS-eGPU#problems
 EOF
@@ -359,9 +384,9 @@ parameter:
     --nvidiaDriver [rev] | -n [rev] | --amdLegacyDriver | -a
     --nvidiaEGPUsupport | -e        | --deactivateNvidiaDGPU | -d
     --unlockThunderboltV12 | -V     | --unlockNvidia | -N
-    --unlockT82 | -T                | --cudaDriver | -c
-    --cudaDeveloperDriver | -D      | --cudaToolkit | -t
-    --thunderboltDaemon | -A
+    --unlockT82 | -T                | --iopcieTunneledPatch | -l
+    --cudaDriver | -c               | --cudaDeveloperDriver | -D
+    --cudaToolkit | -t              | --thunderboltDaemon | -A
 
     --full | -F                     | --forceReinstall | -R
     --forceNewest | -f              | --noReboot | -r
@@ -458,13 +483,13 @@ function restorePrivileges {
 scheduleReboot=false
 noReboot=false
 function rebootSystem {
-    if "$scheduleReboot" || "$noReboot"
+    if ! "$scheduleReboot" || "$noReboot" || "$debug"
     then
         echo "A reboot of the system is recommended."
     else
         echo "A reboot will soon be performed..."
         elevatePrivileges
-        trapWithoutWarning
+        trap '{ echo; echo "Abort..."; exit 1; }' INT
         waiter 5
         echo "reboot: / is busy updating, waiting for lock (this might take approx 15-30s)..."
         sudo reboot & &>/dev/null
@@ -492,7 +517,7 @@ function rebuildKextCache {
         echoing "   system cache"
         sudo touch /System/Library/Extensions &>/dev/null
         sudo kextcache -system-caches &>/dev/null
-        echoend "   done"
+        echoend "done"
         echoing "   dyld cache"
         sudo update_dyld_shared_cache -root / -force &>/dev/null
         sudo update_dyld_shared_cache -debug &>/dev/null
@@ -710,7 +735,7 @@ function fetchOSinfo {
 
 #   0: completely disabled, 127: fully enabled, 128: error, 31: --without KEXT
 #   Binary of: Apple Internal | Kext Signing | Filesystem Protections | Debugging Restrictions | DTrace Restrictions | NVRAM Protections | BaseSystem Verification
-statSIP=0
+statSIP=128
 function fetchSIPstat {
     SIPTemp="$(csrutil status)"
     if [[ "$SIPTemp[@]" =~ "Custom Configuration" ]]
@@ -722,7 +747,6 @@ function fetchSIPstat {
         dTraceRestrictionsTemp=`echo "$SIPTemp" | sed -n 8p`
         nvramProtectionsTemp=`echo "$SIPTemp" | sed -n 9p`
         baseSystemVerificationTemp=`echo "$SIPTemp" | sed -n 10p`
-
         appleInternalTemp="${appleInternalTemp##*: }"
         kextSigningTemp="${appleInternalTemp##*: }"
         fileSystemProtectionsTemp="${fileSystemProtectionsTemp##*: }"
@@ -741,8 +765,8 @@ function fetchSIPstat {
             pTemp="$(expr $pTemp \* 2)"
         done
     else
-        keyowordTemp="${SIPTemp#*: }"
-        if [[ "${keyowordTemp%% *}" == "enabled" ]]
+        keywordTemp="${SIPTemp#*: }"
+        if [[ "${keywordTemp%% *}" =~ "enabled" ]]
         then
             statSIP=127
         else
@@ -756,6 +780,10 @@ function fetchThunderboltInterface {
     thunderboltTemp=`ioreg | grep AppleThunderboltNHIType | sed -n 1p`
     thunderboltTemp="${thunderboltTemp##*+-o AppleThunderboltNHIType}"
     thunderboltInterface="${thunderboltTemp::1}"
+    if [ "$thunderboltInterface" == "" ]
+    then
+        thunderboltInterface=0
+    fi
 }
 
 nvidiaDGPU=false
@@ -857,6 +885,9 @@ function translateAppleGPUWranglerVersionHash {
     "88411a9cb7d0949fb2eb688281729edbd06f34e41e051a5fb37bf31bd3dbfe6f3d36bfb8917249a4717409417e761b588e7cabad0944602255836b2c1cce4849")
         appleGPUWranglerVersion="10.13.5:17F77"
         ;;
+    "51b5608fc6918f7a3b7edc263e721199109663739be260481ef9b6c14747736407cdfc61290f5ae9030aff35718944777828e5fdd0bb5da2674e998ea534f47c")
+        appleGPUWranglerVersion="10.13.6:17G65"
+        ;;
     esac
 }
 
@@ -880,6 +911,16 @@ function fetchInstalledPrograms {
     programList="$(echo -e -n $appListTemp)"
 }
 
+
+internet=false
+function checkInternetConnection {
+    internet=false
+    ping 8.8.8.8 -c 1 -t 3 &> /dev/null
+    if [ "$?" == 0 ]
+    then
+        internet=true
+    fi
+}
 
 
 
@@ -1082,7 +1123,7 @@ function patchNvidiaDriverNew {
 
 function patchNvidiaDriverOld {
     elevatePrivileges
-    sudo "$pbuddy" -c "Set IOKitPersonalities:NVDAStartup:NVDARequiredOS ""$build" "$nvidiaDriverVersionPath"
+    sudo "$pbuddy" -c "Set IOKitPersonalities:NVDAStartup:NVDARequiredOS ""$build" "$nvidiaDriverVersionPath" &>/dev/null
 }
 
 function installNvidiaDriver {
@@ -1438,7 +1479,7 @@ function downloadCudaDriver {
             downloadCudaDriverDownloadFallback
         fi
     else
-        echo "macOS vaerion match failed... Falling back to another download list..."
+        echo "macOS version match failed... Falling back to another download list..."
         downloadCudaDriverDownloadFallback
     fi
 }
@@ -1493,7 +1534,7 @@ function downloadCudaToolkitDownloadFallback {
     if "$foundMatchCudaToolkit"
     then
         mktmpdir
-        sudov curl -o "$dirName""/cudaToolkit.dmg" -L "$cudaToolkitDownloadLink" "-#" -m 1024
+        sudov curl -o "$dirName""/cudaToolkit.dmg" -L "$cudaToolkitDownloadLink" "-#" -m 2048
         hdiutil attach "$dirName""/cudaToolkit.dmg" -quiet -nobrowse
         if [ "$?" == 1 ]
         then
@@ -1508,7 +1549,7 @@ function downloadCudaToolkit {
     if "$foundMatchCudaToolkit"
     then
         mktmpdir
-        sudov curl -o "$dirName""/cudaToolkit.dmg" -L "$cudaToolkitDownloadLink" "-#" -m 1024
+        sudov curl -o "$dirName""/cudaToolkit.dmg" -L "$cudaToolkitDownloadLink" "-#" -m 2048
         hdiutil attach "$dirName""/cudaToolkit.dmg" -quiet -nobrowse
         if [ "$?" == 1 ]
         then
@@ -2002,7 +2043,7 @@ function installNvidiaDGPUdeactivator {
 
 
 
-#   Subroutine J: macOS 10.13.4 wrangler patch ##############################################################################################################
+#   Subroutine J: macOS 10.13.4/.5 wrangler patch ##############################################################################################################
 ##  Subroutine J1: Global variables
 nvidiaUnlockWranglerPatchHexBookmark="4989C7498B3C24E81DBDFFFF41F7C50000000"
 
@@ -2014,7 +2055,8 @@ nvidiaUnlockWranglerPatchInstallStatus=0
 
 ##  Subroutine J2: Check functions
 function checkNvidiaUnlockWranglerPatchInstall {
-    if [ -e "$appleGPUwranglerBinaryPath" ]
+    fetchAppleGPUWranglerVersion
+if [ -e "$appleGPUwranglerBinaryPath" ] && ( [[ "$appleGPUWranglerVersion" =~ "10.13.4" ]] || [[ "$appleGPUWranglerVersion" =~ "10.13.5" ]] )
     then
         nvidiaUnlockWranglerPatchInstallStatusTemp=`hexdump -ve '1/1 "%.2X"' "$appleGPUwranglerBinaryPath" | sed "s/.*""$nvidiaUnlockWranglerPatchHexBookmark""//g"`
         nvidiaUnlockWranglerPatchInstallStatus="${nvidiaUnlockWranglerPatchInstallStatusTemp::1}"
@@ -2150,14 +2192,159 @@ EOF
 
 
 
-##fn
-#   Subroutine L: CUDA drivers ##############################################################################################################
+#   Subroutine L: New IOPCITunnelled Patch 10.13.6+ ##############################################################################################################
 ##  Subroutine L1: Global variables
+ioGraphicsFamilyBinaryPath="/System/Library/Extensions/IOGraphicsFamily.kext/IOGraphicsFamily"
+iondrvPlistPath="/System/Library/Extensions/IONDRVSupport.kext/Info.plist"
+nvidiaDriverPlistPath="$nvidiaDriverVersionPath"
+
+
+iopciTunnelledPatchHexBookmark="494F50434954756E6E656C6C65"
+iopciTunnelledPatchHexBookmarkOld="494F50434954756E6E656C6C6564"
+iopciTunnelledPatchHexBookmarkNew="494F50434954756E6E656C6C6571"
+
+iopciTunnelledPatchInstalled=false
+iopciTunnelledPatchInstallStatus1=0
+iopciTunnelledPatchInstallStatus2=0
+
 ##  Subroutine L2: Check functions
+function checkIopciTunnelledPatchInstall {
+    fetchAppleGPUWranglerVersion
+    if [ -e "$appleGPUwranglerBinaryPath" ] && [ -e "$ioGraphicsFamilyBinaryPath" ]  && ( [[ "$appleGPUWranglerVersion" =~ "10.13.6" ]] || ( [ "$appleGPUWranglerVersion" == "" ] && "$beta" ) )
+    then
+        iopciTunnelledPatchInstallStatusTemp=`hexdump -ve '1/1 "%.2X"' "$appleGPUwranglerBinaryPath" | sed "s/.*""$iopciTunnelledPatchHexBookmark""//g"`
+        iopciTunnelledPatchInstallStatus1="${iopciTunnelledPatchInstallStatusTemp::2}"
+        iopciTunnelledPatchInstallStatusTemp=`hexdump -ve '1/1 "%.2X"' "$ioGraphicsFamilyBinaryPath" | sed "s/.*""$iopciTunnelledPatchHexBookmark""//g"`
+        iopciTunnelledPatchInstallStatus2="${iopciTunnelledPatchInstallStatusTemp::2}"
+        if [ "$iopciTunnelledPatchInstallStatus1" != "64" ] && [ "$iopciTunnelledPatchInstallStatus2" != "64" ]
+        then
+            iopciTunnelledPatchInstalled=true
+        elif ( [ "$iopciTunnelledPatchInstallStatus1" == "64" ] && [ "$iopciTunnelledPatchInstallStatus2" != "64" ] ) || ( [ "$iopciTunnelledPatchInstallStatus1" != "64" ] && [ "$iopciTunnelledPatchInstallStatus2" == "64" ] )
+        then
+            echo
+            echo
+            uninstallIopciTunnelledPatch
+            iopciTunnelledPatchInstalled=false
+        else
+            iopciTunnelledPatchInstalled=false
+        fi
+    fi
+}
+
+
+
+
 ##  Subroutine L3: Uninstaller
+function uninstallIopciTunnelledPatch {
+    checkIopciTunnelledPatchInstall
+    elevatePrivileges
+    if [ -e "$appleGPUwranglerBinaryPath" ]
+    then
+        inPlaceEditor "$iopciTunnelledPatchHexBookmark""$iopciTunnelledPatchInstallStatus1" "$iopciTunnelledPatchHexBookmarkOld" "$appleGPUwranglerBinaryPath"
+    fi
+    if [ -e "$ioGraphicsFamilyBinaryPath" ]
+    then
+        inPlaceEditor "$iopciTunnelledPatchHexBookmark""$iopciTunnelledPatchInstallStatus2" "$iopciTunnelledPatchHexBookmarkOld" "$ioGraphicsFamilyBinaryPath"
+    fi
+    if [ -e "$iondrvPlistPath" ]
+    then
+        sudo "$pbuddy" -c "Set :IOKitPersonalities:3:IOPCITunnelCompatible false" "$iondrvPlistPath" &>/dev/null
+        if [ "$?" == 1 ]
+        then
+            sudo "$pbuddy" -c "Add :IOKitPersonalities:3:IOPCITunnelCompatible bool false" "$iondrvPlistPath" &>/dev/null
+        fi
+    fi
+    if [ -e "$nvidiaDriverPlistPath" ]
+    then
+        sudo "$pbuddy" -c "Set :IOKitPersonalities:NVDAStartup:IOPCITunnelCompatible false" "$nvidiaDriverPlistPath" &>/dev/null
+        if [ "$?" == 1 ]
+        then
+            sudo "$pbuddy" -c "Add :IOKitPersonalities:NVDAStartup:IOPCITunnelCompatible bool false" "$nvidiaDriverPlistPath" &>/dev/null
+        fi
+    fi
+    scheduleReboot=true
+    doneSomething=true
+    scheduleKextTouch=true
+}
+
+
+
+
 ##  Subroutine L4: Downloader
+
+
+
+
 ##  Subroutine L5: Installer
+function installIopciTunnelledPatch {
+    checkIopciTunnelledPatchInstall
+    elevatePrivileges
+    if "$debug"
+    then
+        echo
+        if [ -e "$appleGPUwranglerBinaryPath" ]
+        then
+            echo "yes"
+        else
+            echo "no"
+        fi
+        if [ -e "$ioGraphicsFamilyBinaryPath" ]
+        then
+            echo "yes"
+        else
+            echo "no"
+        fi
+        if [ -e "$iondrvPlistPath" ]
+        then
+            echo "yes"
+        else
+            echo "no"
+        fi
+        if [ -e "$nvidiaDriverPlistPath" ]
+        then
+            echo "yes"
+        else
+            echo "no"
+        fi
+        echo "$appleGPUWranglerVersion"
+    fi
+    if [ -e "$appleGPUwranglerBinaryPath" ] && [ -e "$ioGraphicsFamilyBinaryPath" ] && [ -e "$iondrvPlistPath" ] && [ -e "$nvidiaDriverPlistPath" ] && ( [[ "$appleGPUWranglerVersion" =~ "10.13.6" ]] || ( [ "$appleGPUWranglerVersion" == "" ] && "$beta" ) )
+    then
+        trapLock
+        inPlaceEditor "$iopciTunnelledPatchHexBookmark""$iopciTunnelledPatchInstallStatus1" "$iopciTunnelledPatchHexBookmarkNew" "$appleGPUwranglerBinaryPath"
+        inPlaceEditor "$iopciTunnelledPatchHexBookmark""$iopciTunnelledPatchInstallStatus2" "$iopciTunnelledPatchHexBookmarkNew" "$ioGraphicsFamilyBinaryPath"
+        sudo "$pbuddy" -c "Set :IOKitPersonalities:3:IOPCITunnelCompatible true" "$iondrvPlistPath" &>/dev/null
+        if [ "$?" == 1 ]
+        then
+            sudo "$pbuddy" -c "Add :IOKitPersonalities:3:IOPCITunnelCompatible bool true" "$iondrvPlistPath" &>/dev/null
+        fi
+        sudo "$pbuddy" -c "Set :IOKitPersonalities:NVDAStartup:IOPCITunnelCompatible true" "$nvidiaDriverPlistPath" &>/dev/null
+        if [ "$?" == 1 ]
+        then
+            sudo "$pbuddy" -c "Add :IOKitPersonalities:NVDAStartup:IOPCITunnelCompatible bool true" "$nvidiaDriverPlistPath" &>/dev/null
+        fi
+        trapWithWarning
+        scheduleReboot=true
+        doneSomething=true
+        scheduleKextTouch=true
+    fi
+}
+
+
+
+
 ##  Subroutine L6: Helper functions
+
+
+
+##fn
+#   Subroutine M: CUDA drivers ##############################################################################################################
+##  Subroutine M1: Global variables
+##  Subroutine M2: Check functions
+##  Subroutine M3: Uninstaller
+##  Subroutine M4: Downloader
+##  Subroutine M5: Installer
+##  Subroutine M6: Helper functions
 
 
 #   Subroutine X: Option parsing ##############################################################################################################
@@ -2174,6 +2361,7 @@ thunderbolt12Unlock=false
 thunderboltDaemon=false
 t82Unblocker=false
 unlockNvidia=false
+iopcieTunnelPatch=false
 deactivateNvidiaDGPU=false
 fullInstall=false
 #noReboot=false - defined at Subroutine A: Basic functions
@@ -2188,9 +2376,11 @@ beta=false
 argumentsGiven=false
 
 ##fn
+scriptParameterList=""
 lastParam=""
 for options in "$@"
 do
+    scriptParameterList="$scriptParameterList"" ""$options"
     case "$options"
     in
     "--install" | "-i")
@@ -2210,7 +2400,7 @@ do
         uninstall=true
         ;;
     "--checkSystem" | "-C")
-        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$fullCheck" || "$thunderboltDaemon" || "$forceCacheRebuild"
+        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$fullCheck" || "$thunderboltDaemon" || "$forceCacheRebuild" || "$iopcieTunnelPatch"
         then
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
@@ -2218,7 +2408,7 @@ do
         check=true
         ;;
     "--checkSystemFull")
-        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$check" || "$thunderboltDaemon" || "$forceCacheRebuild"
+        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$check" || "$thunderboltDaemon" || "$forceCacheRebuild" || "$iopcieTunnelPatch"
         then
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
@@ -2259,7 +2449,7 @@ do
         forceNewest=true
         ;;
     "--nvidiaEGPUsupport" | "-e")
-        if "$check" || "$forceCacheRebuild"
+        if "$check" || "$forceCacheRebuild" || "$iopcieTunnelPatch"
         then
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
@@ -2291,12 +2481,20 @@ do
         t82Unblocker=true
         ;;
     "--unlockNvidia" | "-N")
-        if "$check" || "$forceCacheRebuild"
+        if "$check" || "$forceCacheRebuild" || "$iopcieTunnelPatch"
         then
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
         fi
         unlockNvidia=true
+        ;;
+    "-iopcieTunneledPatch" | "-l")
+        if "$check" || "$forceCacheRebuild" || "$nvidiaEnabler" || "$unlockNvidia"
+        then
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
+        fi
+        iopcieTunnelPatch=true
         ;;
    "--thunderboltDaemon" | "-E")
         if "$check" || "$forceCacheRebuild"
@@ -2359,7 +2557,7 @@ do
         beta=true
         ;;
     "--forceCacheRebuild" | "-h")
-        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$check" || "$thunderboltDaemon" || "$forceCacheRebuild"
+        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$check" || "$thunderboltDaemon" || "$forceCacheRebuild" || "$iopcieTunnelPatch"
         then
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
@@ -2392,6 +2590,17 @@ do
     lastParam="$options"
 done
 
+if [ -e "/usr/local/bin/macos-egpu" ]
+then
+    skipWarnings=true
+    acceptLicense=true
+fi
+
+if "$debug"
+then
+    echo "Parameters:"
+    echo "$scriptParameterList"
+fi
 
 
 #   Subroutine Y: Script execution algorithm ##############################################################################################################
@@ -2418,6 +2627,7 @@ t82UnblockerRoutine=0
 deactivateNVIDIAdGPURoutine=0
 thunderbolt12UnlockRoutine=0
 thunderboltDaemonRoutine=0
+iopcieTunnelPatchRoutine=0
 
 
 
@@ -2428,7 +2638,7 @@ function printHeader {
 }
 
 function askLicenseQuestion {
-    if ! "$acceptLicense"
+    if ! "$acceptLicense" && ! "$debug"
     then
         printLicense
         echo
@@ -2446,7 +2656,7 @@ function askLicenseQuestion {
 }
 
 function printWarnings {
-    if ! "$skipWarnings"
+    if ! "$skipWarnings" && ! "$debug"
     then
         echo "The script will now close (kill) all programs."
         echo "Please abort the script now should you wish to do it manually and save your work."
@@ -2466,7 +2676,10 @@ function printWarnings {
         echo "To safely abort the script now, press ^C."
         echo "Continuing in"
         trapWithoutWarning
-        waiter 15
+        if ! "$debug"
+        then
+            waiter 15
+        fi
         trapWithWarning
     fi
 }
@@ -2477,17 +2690,20 @@ function printWarnings {
 ##  Subroutine Y3: System properties enforcer
 function enforceEGPUdisconnect {
     fetchConnectedEGPU
-    if [ "$?" == 1 ]
+    if ! "$debug"
     then
-        echo
-        echo "Please disconnect all thunderbolt devices. Should this problem persist, please file an issue."
-        irupt
-    fi
-    if "$connectedEGPU"
-    then
-        echo
-        echo "Please disconnect your eGPU. The script does not allow installations with a connected eGPU."
-        irupt
+        if [ "$?" == 1 ]
+        then
+            echo
+            echo "Please disconnect all thunderbolt devices. Should this problem persist, please file an issue."
+            irupt
+        fi
+        if "$connectedEGPU"
+        then
+            echo
+            echo "Please disconnect your eGPU. The script does not allow installations with a connected eGPU."
+            irupt
+        fi
     fi
 }
 
@@ -2521,6 +2737,14 @@ function preparations {
         irupt
     fi
     echoend "OK" 2
+    echoing "Internet connection established..."
+    checkInternetConnection
+    if "$internet"
+    then
+        echoend "YES" 2
+    else
+        echoend "NO" 1
+    fi
 }
 
 
@@ -2560,6 +2784,7 @@ function gatherSystemInfo {
     checkNvidiaDGPUdeactivator
     checkNvidiaUnlockWranglerPatchInstall
     checkThunderboltDaemonInstall
+    checkIopciTunnelledPatchInstall
     echoend "done"
 
     echoing "   installed programs"
@@ -2622,6 +2847,54 @@ function moveDriverFromBackup {
     fi
 }
 
+function manualGetEGPUInformation {
+        echo "   please select your eGPU brand:"
+        echo "    [1]: NVIDIA"
+        echo "    [2]: AMD"
+        read -p "Number: " -r -n 1
+        echo
+        case "$REPLY"
+        in
+        "1")
+            nvidiaEnabler=true
+            nvidiaDriver=true
+            unlockNvidia=true
+            iopcieTunnelPatch=true
+            ;;
+        "2")
+            amdLegacyDriver=true
+            deactivateNvidiaDGPU=true
+            ;;
+        *)
+            echo
+            echo "ERROR: Unrecoginzed answer"
+            irupt
+            ;;
+        esac
+        echo "Do you use an 'unsupported' eGPU enclosure (T82 chip)"
+        echo "Most eGPU enclosures are supported. If you don't know the answer"
+        echo "abort and read the documentation for more information."
+        echo "   please select your answer:"
+        echo "    [1]: YES"
+        echo "    [2]: no"
+        read -p "Number: " -r -n 1
+        echo
+        case "$REPLY"
+        in
+        "1")
+            t82Unblocker=true
+            ;;
+        "2")
+            t82Unblocker=false
+            ;;
+        *)
+            echo
+            echo "ERROR: Unrecoginzed answer"
+            irupt
+            ;;
+        esac
+}
+
 function secureGetEGPUInformation {
     echoing "   locking script execution"
     trapLock
@@ -2656,69 +2929,72 @@ function secureGetEGPUInformation {
     then
         echo
         moveDriverFromBackup
-        echo "--- eGPU has not been connected ---"
-        irupt
-    fi
-    echoing "   preparing secure eGPU disconnection"
-    SafeEjectGPU Eject &>/dev/null
-    echoend "done"
-    echo "   waiting 20 seconds for user to disconnect eGPU"
-    echo -n "   "
-    waiter 20
-    sudo -v
-    connectedEGPUTemp="$connectedEGPU"
-    connectedEGPUVendorTemp="$connectedEGPUVendor"
-    fetchConnectedEGPU
-    moveDriverFromBackup
-    if "$connectedEGPU"
-    then
-        echo
-        echo "--- eGPU has not been disconnected ---"
-        echo "Do not diconnect now!"
-        echo "The script enters panic mode..."
-        echo "Trying to halt in order to avoid kernel panic..."
-        echo "Only disconnect the eGPU once the Mac has shut down."
-        echo "Re-run the script afterwards."
-        systemClean
-        echo "The script has failed."
-        sudo halt & &>/dev/null
-        exit
-    fi
-    echoing "   stetting switches"
-    connectedEGPU="$connectedEGPUTemp"
-    connectedEGPUVendor="$connectedEGPUVendorTemp"
-    if [ "$connectedEGPUVendor" == "NVIDIA" ]
-    then
-        nvidiaEnabler=true
-        nvidiaDriver=true
-        unlockNvidia=true
-    elif [ "$connectedEGPUVendor" == "AMD" ]
-    then
-        typesTemp=`echo "$pciTemp" | grep "Type"`
-        usedSlotsTemp=`echo "$pciTemp" | grep "Slot"`
-        countTemp=`echo "$typeTemp" | wc -l | xargs`
-        countTemp2=`echo "$usedSlotsTemp" | wc -l | xargs`
-        if [ "$countTemp" == "$countTemp2" ]
-        then
-            for i in `seq 1 "$countTemp"`
-            do
-                typeTemp=`echo "$typesTemp" | sed -n "$i"p`
-                usedSlotTemp=`echo "$usedSlotsTemp" | sed -n "$i"p`
-                if [[ "$typeTemp" =~ "VGA" ]] || [[ "$typeTemp" =~ "Display" ]] || [[ "$typeTemp" =~ "gpu" ]] && [[ "$typeTemp" != *"Type: Display Controller" ]] && [[ "$usedSlotTemp" =~ "Thunderbolt" ]]
-                then
-                    amdLegacyDriver=true
-                    deactivateNvidiaDGPU=true
-                fi
-            done
-        else
-            amdLegacyDriver=true
-            deactivateNvidiaDGPU=true
-        fi
+        echo "--- Automatic eGPU information fetching has failed ---"
+        echo "Proceeding with manual eGPU information fetching..."
+        manualGetEGPUInformation
     else
-        echoend "FAILURE" 1
-        irupt
+        echoing "   preparing secure eGPU disconnection"
+        SafeEjectGPU Eject &>/dev/null
+        echoend "done"
+        echo "   waiting 20 seconds for user to disconnect eGPU"
+        echo -n "   "
+        waiter 20
+        sudo -v
+        connectedEGPUTemp="$connectedEGPU"
+        connectedEGPUVendorTemp="$connectedEGPUVendor"
+        fetchConnectedEGPU
+        moveDriverFromBackup
+        if "$connectedEGPU"
+        then
+            echo
+            echo "--- eGPU has not been disconnected ---"
+            echo "Do not diconnect now!"
+            echo "The script enters panic mode..."
+            echo "Trying to halt in order to avoid a fatal kernel panic..."
+            echo "Only disconnect the eGPU once the Mac has shut down."
+            echo "Re-run the script afterwards."
+            systemClean
+            echo "The script has failed."
+            sudo halt & &>/dev/null
+            exit
+        fi
+        echoing "   stetting switches"
+        connectedEGPU="$connectedEGPUTemp"
+        connectedEGPUVendor="$connectedEGPUVendorTemp"
+        if [ "$connectedEGPUVendor" == "NVIDIA" ]
+        then
+            nvidiaEnabler=true
+            nvidiaDriver=true
+            unlockNvidia=true
+            iopcieTunnelPatch=true
+        elif [ "$connectedEGPUVendor" == "AMD" ]
+        then
+            typesTemp=`echo "$pciTemp" | grep "Type"`
+            usedSlotsTemp=`echo "$pciTemp" | grep "Slot"`
+            countTemp=`echo "$typeTemp" | wc -l | xargs`
+            countTemp2=`echo "$usedSlotsTemp" | wc -l | xargs`
+            if [ "$countTemp" == "$countTemp2" ]
+            then
+                for i in `seq 1 "$countTemp"`
+                do
+                    typeTemp=`echo "$typesTemp" | sed -n "$i"p`
+                    usedSlotTemp=`echo "$usedSlotsTemp" | sed -n "$i"p`
+                    if [[ "$typeTemp" =~ "VGA" ]] || [[ "$typeTemp" =~ "Display" ]] || [[ "$typeTemp" =~ "gpu" ]] && [[ "$typeTemp" != *"Type: Display Controller" ]] && [[ "$usedSlotTemp" =~ "Thunderbolt" ]]
+                    then
+                        amdLegacyDriver=true
+                        deactivateNvidiaDGPU=true
+                    fi
+                done
+            else
+                amdLegacyDriver=true
+                deactivateNvidiaDGPU=true
+            fi
+        else
+            echoend "FAILURE" 1
+            irupt
+        fi
+        echoend "done"
     fi
-    echoend "done"
     scheduleKextTouch=true
     echoing "   opening script execution lock"
     trapWithoutWarning
@@ -2787,7 +3063,7 @@ function setStandards {
         setStandard=true
         install=true
     fi
-    if ( ! "$nvidiaDriver" ) && ( ! "$amdLegacyDriver" ) && ( ! "$nvidiaEnabler" ) && ( ! "$thunderbolt12Unlock" ) && ( ! "$t82Unblocker" ) && ( ! "$unlockNvidia" ) && ( ! "$deactivateNvidiaDGPU" ) && [ "$scheduleCudaDeduction" == 0 ] && ( ! "$thunderboltDaemon" )
+    if ( ! "$nvidiaDriver" ) && ( ! "$amdLegacyDriver" ) && ( ! "$nvidiaEnabler" ) && ( ! "$thunderbolt12Unlock" ) && ( ! "$t82Unblocker" ) && ( ! "$unlockNvidia" ) && ( ! "$deactivateNvidiaDGPU" ) && [ "$scheduleCudaDeduction" == 0 ] && ( ! "$thunderboltDaemon" ) && ( ! "$iopcieTunnelPatch" )
     then
         determine=true
     fi
@@ -2806,6 +3082,7 @@ function setStandards {
                 deactivateNvidiaDGPU=true
                 scheduleCudaDeduction=15
                 thunderboltDaemon=true
+                iopcieTunnelPatch=true
             else
                 irupt
             fi
@@ -2817,12 +3094,14 @@ function setStandards {
                     nvidiaEnabler=true
                     nvidiaDriver=true
                     unlockNvidia=true
+                    iopcieTunnelPatch=true
                 fi
                 if "$nvidiaEGPUenabler1013Installed"
                 then
                     nvidiaEnabler=true
                     nvidiaDriver=true
                     unlockNvidia=true
+                    iopcieTunnelPatch=true
                 fi
                 if "$amdLegacyDriversInstalled"
                 then
@@ -2842,6 +3121,14 @@ function setStandards {
                     nvidiaEnabler=true
                     nvidiaDriver=true
                     unlockNvidia=true
+                    iopcieTunnelPatch=true
+                fi
+                if "$iopciTunnelledPatchInstalled"
+                then
+                    nvidiaEnabler=true
+                    nvidiaDriver=true
+                    unlockNvidia=true
+                    iopcieTunnelPatch=true
                 fi
                 if "$cudaDriverInstalled"
                 then
@@ -2849,6 +3136,7 @@ function setStandards {
                     nvidiaEnabler=true
                     nvidiaDriver=true
                     unlockNvidia=true
+                    iopcieTunnelPatch=true
                 fi
                 if "$cudaDeveloperDriverInstalled"
                 then
@@ -2856,6 +3144,7 @@ function setStandards {
                     nvidiaEnabler=true
                     nvidiaDriver=true
                     unlockNvidia=true
+                    iopcieTunnelPatch=true
                 fi
                 if "$cudaToolkitInstalled"
                 then
@@ -2864,6 +3153,7 @@ function setStandards {
                     nvidiaEnabler=true
                     nvidiaDriver=true
                     unlockNvidia=true
+                    iopcieTunnelPatch=true
                 fi
                 if "$cudaSamplesInstalled"
                 then
@@ -2873,6 +3163,7 @@ function setStandards {
                     nvidiaEnabler=true
                     nvidiaDriver=true
                     unlockNvidia=true
+                    iopcieTunnelPatch=true
                 fi
                 if ( ! "$nvidiaDriver" ) && ( ! "$amdLegacyDriver" )
                 then
@@ -2894,6 +3185,7 @@ function setStandards {
                 thunderbolt12Unlock=true
                 scheduleCudaDeduction=15
                 thunderboltDaemon=true
+                iopcieTunnelPatch=true
             else
                 irupt
             fi
@@ -2970,71 +3262,152 @@ function nvidiaDriverDeduction {
 
 function nvidiaEnablerDeduction {
     echoing "   NVIDIA eGPU enabler"
-    sipRequirement=`binaryParser "$sipRequirement" 6 0`
-    sipRequirement=`binaryParser "$sipRequirement" 5 0`
     nvidiaEnablerRoutine=0
-    if "$nvidiaEnabler" && ( "$nvidiaDriver" || "$nvidiaDriversInstalled" )
+    if "$nvidiaEnabler"
     then
-        if "$install"
+        if "$nvidiaDriver" || "$nvidiaDriversInstalled"
         then
-            downloadNvidiaEGPUenabler1013Information
-            if ! "$foundMatchNvidiaEGPUenabler1013"
+            if ( [ "$os" == "10.13.0" ] && [ "$os" == "10.13.1" ] && [ "$os" == "10.13.2" ] && [ "$os" == "10.13.3" ] && [ "$os" == "10.13.4" ] && [ "$os" == "10.13.5" ] ) || ( "$beta" && ( ! "$determine" ) )
             then
-                if "$beta"
+                if "$install"
                 then
-                    nvidiaEGPUenabler1013DownloadPKGName="NVDAEGPUSupport.pkg"
-                    nvidiaEGPUenabler1013DownloadLink="https://egpu.io/wp-content/uploads/wpforo/attachments/6469/5130-NVDAEGPUSupportUniversal.zip"
-                    nvidiaEGPUenabler1013DownloadChecksum="ed1dbef44a918d034b4c47ce996c62365871488de652fdd14104e79820daa54ecb63977bef6fbe5c6337918635224b32b607cb543cb1d5209080640ea2d6d377"
-                    foundMatchNvidiaEGPUenabler1013=true
+                    downloadNvidiaEGPUenabler1013Information
+                    if ! "$foundMatchNvidiaEGPUenabler1013"
+                    then
+                        if "$beta"
+                        then
+                            nvidiaEGPUenabler1013DownloadPKGName="NVDAEGPUSupport.pkg"
+                            nvidiaEGPUenabler1013DownloadLink="https://egpu.io/wp-content/uploads/wpforo/attachments/6469/5130-NVDAEGPUSupportUniversal.zip"
+                            nvidiaEGPUenabler1013DownloadChecksum="ed1dbef44a918d034b4c47ce996c62365871488de652fdd14104e79820daa54ecb63977bef6fbe5c6337918635224b32b607cb543cb1d5209080640ea2d6d377"
+                            foundMatchNvidiaEGPUenabler1013=true
+                        else
+                            echoend "FAILURE, no match was found" 1
+                            irupt
+                        fi
+                    fi
+                    if "$reinstall" && "$nvidiaEGPUenabler1013Installed"
+                    then
+                        nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 0 1`
+                        nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 1 1`
+                        nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 2 1`
+                        echoend "reinstall scheduled" 3
+                    elif ! "$nvidiaEGPUenabler1013Installed"
+                    then
+                        nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 0 1`
+                        nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 2 1`
+                        echoend "install scheduled" 4
+                    elif [ "$nvidiaEGPUenabler1013BuildVersion" != "$build" ]
+                    then
+                        nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 0 1`
+                        nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 1 1`
+                        nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 2 1`
+                        echoend "update scheduled" 4
+                    else
+                        echoend "skip, up to date" 5
+                        nvidiaEnabler=false
+                    fi
+                elif "$uninstall"
+                then
+                    if "$nvidiaEGPUenabler1013Installed"
+                    then
+                        nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 1 1`
+                        echoend "uninstall scheduled" 3
+                    else
+                        echoend "skip, not installed" 5
+                        nvidiaEnabler=false
+                    fi
                 else
-                    echoend "FAILURE, no match was found" 1
                     irupt
                 fi
-            fi
-            if "$reinstall" && "$nvidiaEGPUenabler1013Installed"
-            then
-                nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 0 1`
-                nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 1 1`
-                nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 2 1`
-                echoend "reinstall scheduled" 3
-            elif ! "$nvidiaEGPUenabler1013Installed"
-            then
-                nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 0 1`
-                nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 2 1`
-                echoend "install scheduled" 4
-            elif [ "$nvidiaEGPUenabler1013BuildVersion" != "$build" ]
-            then
-                nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 0 1`
-                nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 1 1`
-                nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 2 1`
-                echoend "update scheduled" 4
             else
-                echoend "skip, up to date" 5
-                nvidiaEnabler=false
-            fi
-        elif "$uninstall"
-        then
-            if "$nvidiaEGPUenabler1013Installed"
-            then
-                nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 1 1`
-                echoend "uninstall scheduled" 3
-            else
-                echoend "skip, not installed" 5
+                echoend "skip, incompatible" 5
                 nvidiaEnabler=false
             fi
         else
-            irupt
+            echoend "skip, dependencies" 5
+            nvidiaEnabler=false
         fi
     else
-        echoend "skip" 5
+        if [ "$os" != "10.13.0" ] && [ "$os" != "10.13.1" ] && [ "$os" != "10.13.2" ] && [ "$os" != "10.13.3" ] && [ "$os" != "10.13.4" ] && [ "$os" != "10.13.5" ] && "$nvidiaEGPUenabler1013Installed" && ( ! "$beta" ) && "$determine"
+        then
+            nvidiaEnabler=true
+            nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 1 1`
+            echoend  "uninstall scheduled" 3
+        else
+            echoend "skip" 5
+        fi
+    fi
+    if [ "$nvidiaEnablerRoutine" != 0 ]
+    then
+        sipRequirement=`binaryParser "$sipRequirement" 6 0`
+        sipRequirement=`binaryParser "$sipRequirement" 5 0`
+    fi
+}
+
+function iopcieTunnelPatchDeduction {
+    echoing "   IO PCIE Tunnelled patch"
+    iopcieTunnelPatchRoutine=0
+    if "$iopcieTunnelPatch"
+    then
+        if "$nvidiaDriver" || "$nvidiaDriversInstalled"
+        then
+            if ( [ "$os" != "10.13.0" ] && [ "$os" != "10.13.1" ] && [ "$os" != "10.13.2" ] && [ "$os" != "10.13.3" ] && [ "$os" != "10.13.4" ] && [ "$os" != "10.13.5" ] ) || ( "$beta" && ( ! "$determine" ) )
+            then
+                if "$install"
+                then
+                    if "$reinstall" && "$iopciTunnelledPatchInstalled"
+                    then
+                        iopcieTunnelPatchRoutine=`binaryParser "$iopcieTunnelPatchRoutine" 1 1`
+                        iopcieTunnelPatchRoutine=`binaryParser "$iopcieTunnelPatchRoutine" 2 1`
+                        echoend "reinstall scheduled" 3
+                    elif ! "$iopciTunnelledPatchInstalled"
+                    then
+                        iopcieTunnelPatchRoutine=`binaryParser "$iopcieTunnelPatchRoutine" 2 1`
+                        echoend "install scheduled" 4
+                    else
+                        echoend "skip, already installed" 5
+                        iopcieTunnelPatch=false
+                    fi
+                elif "$uninstall"
+                then
+                    if "$iopciTunnelledPatchInstalled"
+                    then
+                        iopcieTunnelPatchRoutine=`binaryParser "$iopcieTunnelPatchRoutine" 1 1`
+                        echoend "uninstall scheduled" 3
+                    else
+                        echoend "skip, not installed" 5
+                        iopcieTunnelPatch=false
+                    fi
+                else
+                    irupt
+                fi
+            else
+                iopcieTunnelPatch=false
+                echoend "skip, incompatible" 5
+            fi
+        else
+            iopcieTunnelPatch=false
+            echoend "skip, dependencies" 5
+        fi
+    else
+        if [ "$os" == "10.13.0" ] && [ "$os" == "10.13.1" ] && [ "$os" == "10.13.2" ] && [ "$os" == "10.13.3" ] && [ "$os" == "10.13.4" ] && [ "$os" == "10.13.5" ] && "$iopciTunnelledPatchInstalled" && ( ! "$beta" ) && "$determine"
+        then
+            iopcieTunnelPatch=true
+            iopcieTunnelPatch=`binaryParser "$iopcieTunnelPatch" 1 1`
+            echoend  "uninstall scheduled" 3
+        else
+            echoend "skip" 5
+        fi
+    fi
+    if [ "$iopcieTunnelPatchRoutine" != 0 ]
+    then
+        sipRequirement=0
     fi
 }
 
 function amdLegacyDriversDeduction {
     echoing "   AMD legacy drivers"
     amdLegacyDriverRoutine=0
-    sipRequirement=`binaryParser "$sipRequirement" 6 0`
-    sipRequirement=`binaryParser "$sipRequirement" 5 0`
     if "$amdLegacyDriver"
     then
         if "$install"
@@ -3070,12 +3443,15 @@ function amdLegacyDriversDeduction {
     else
         echoend "skip" 5
     fi
+    if [ "$amdLegacyDriverRoutine" != 0 ]
+    then
+        sipRequirement=`binaryParser "$sipRequirement" 6 0`
+        sipRequirement=`binaryParser "$sipRequirement" 5 0`
+    fi
 }
 
 function t82UnblockerDeduction {
     echoing "   T82 unblocker"
-    sipRequirement=`binaryParser "$sipRequirement" 6 0`
-    sipRequirement=`binaryParser "$sipRequirement" 5 0`
     t82UnblockerRoutine=0
     if "$t82Unblocker"
     then
@@ -3112,11 +3488,15 @@ function t82UnblockerDeduction {
     else
         echoend "skip" 5
     fi
+    if [ "$t82UnblockerRoutine" != 0 ]
+    then
+        sipRequirement=`binaryParser "$sipRequirement" 6 0`
+        sipRequirement=`binaryParser "$sipRequirement" 5 0`
+    fi
 }
 
 function deactivateNvidiaDGPUDeduction {
     echoing "   NVIDIA dGPU deactivator"
-    sipRequirement=0
     deactivateNVIDIAdGPURoutine=0
     if "$deactivateNvidiaDGPU"
     then
@@ -3162,15 +3542,18 @@ function deactivateNvidiaDGPUDeduction {
     else
         echoend "skip" 5
     fi
+    if [ "$deactivateNVIDIAdGPURoutine" != 0 ]
+    then
+        sipRequirement=0
+    fi
 }
 
 function unlockNvidiaDeduction {
-    echoing "   macOS 10.13.4 NVIDIA patch"
-    sipRequirement=0
+    echoing "   macOS 10.13.4/.5 NVIDIA patch"
     unlockNvidiaRoutine=0
     if "$unlockNvidia"
     then
-        if [ "$os" != "10.13.0" ] && [ "$os" != "10.13.1" ] && [ "$os" != "10.13.2" ] && [ "$os" != "10.13.3" ]
+        if ( [ "$os" == "10.13.4" ] || [ "$os" == "10.13.5" ] ) || ( "$beta" && ( ! "$determine" ) )
         then
             if "$install"
             then
@@ -3201,21 +3584,24 @@ function unlockNvidiaDeduction {
                 irupt
             fi
         else
-            echoend "skip, not needed" 5
+            echoend "skip, incompatible" 5
             unlockNvidia=false
         fi
     else
         echoend "skip" 5
     fi
+    if [ "$unlockNvidiaRoutine" != 0 ]
+    then
+        sipRequirement=0
+    fi
 }
 
 function thunderbolt12UnlockDeduction {
-    echoing "   macOS 10.13.4 thunderbolt 1/2 unlock"
-    sipRequirement=0
+    echoing "   macOS 10.13.4+ thunderbolt 1/2 unlock"
     thunderbolt12UnlockRoutine=0
     if "$thunderbolt12Unlock"
     then
-        if [ "$os" != "10.13.0" ] && [ "$os" != "10.13.1" ] && [ "$os" != "10.13.2" ] && [ "$os" != "10.13.3" ] && [ "$thunderboltInterface" != 3 ]
+        if [ "$os" != "10.13.0" ] && [ "$os" != "10.13.1" ] && [ "$os" != "10.13.2" ] && [ "$os" != "10.13.3" ] && ( [ "$thunderboltInterface" == 1 ] || [ "$thunderboltInterface" == 2 ] )
         then
             if "$install"
             then
@@ -3246,11 +3632,15 @@ function thunderbolt12UnlockDeduction {
                 irupt
             fi
         else
-            echoend "skip, not needed" 5
+            echoend "skip, incompatible" 5
             thunderbolt12Unlock=false
         fi
     else
         echoend "skip" 5
+    fi
+    if [ "$thunderbolt12UnlockRoutine" != 0 ]
+    then
+        sipRequirement=0
     fi
 }
 
@@ -3487,25 +3877,32 @@ function cudaSamplesDeduction {
 
 function cudaDeduction {
     cudaRoutine=0
-    if [ "$scheduleCudaDeduction" != 0 ] && ( "$nvidiaDriver" || "$nvidiaDriversInstalled" )
+    if [ "$scheduleCudaDeduction" != 0 ]
     then
-        echo "   CUDA software"
         if "$install"
         then
-            downloadCudaDriverInformation
-            downloadCudaToolkitInformation
-            if [ `dc -e "$scheduleCudaDeduction 8 / 2 % n"` == 1 ]
+            if "$nvidiaDriver" || "$nvidiaDriversInstalled"
             then
-                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 1`
-                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
-                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 2 1`
-            elif [ `dc -e "$scheduleCudaDeduction 4 / 2 % n"` == 1 ]
-            then
-                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 1`
-                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
-            elif [ `dc -e "$scheduleCudaDeduction 2 / 2 % n"` == 1 ]
-            then
-                scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 1`
+                echo "   CUDA software"
+                downloadCudaDriverInformation
+                downloadCudaToolkitInformation
+                if [ `dc -e "$scheduleCudaDeduction 8 / 2 % n"` == 1 ]
+                then
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 1`
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 2 1`
+                elif [ `dc -e "$scheduleCudaDeduction 4 / 2 % n"` == 1 ]
+                then
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 1`
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 1 1`
+                elif [ `dc -e "$scheduleCudaDeduction 2 / 2 % n"` == 1 ]
+                then
+                    scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 0 1`
+                fi
+            else
+                echoing "   CUDA software"
+                echoend "skip, dependecies" 5
+                scheduleCudaDeduction=0
             fi
         elif "$uninstall"
         then
@@ -3586,6 +3983,12 @@ function checkSIPRequirement {
         fi
     done
     echoend "OK" 2
+    if "$debug"
+    then
+        echo
+        echo "$sipRequirement"
+        echo "$statSIP"
+    fi
 }
 
 
@@ -3607,48 +4010,7 @@ function softwareDeduction {
             fi
         else
             echo "Manual eGPU information fetching..."
-            echo "   please select your eGPU brand:"
-            echo "    [1]: NVIDIA"
-            echo "    [2]: AMD"
-            read -p "Number: " -r -n 1
-            echo
-            case "$REPLY"
-            in
-            "1")
-                nvidiaEnabler=true
-                nvidiaDriver=true
-                unlockNvidia=true
-                ;;
-            "2")
-                amdLegacyDriver=true
-                deactivateNvidiaDGPU=true
-                ;;
-            *)
-                echo
-                echo "ERROR: Unrecoginzed answer"
-                irupt
-                ;;
-            esac
-            echo "Do you use an 'unsupported' eGPU enclosure (T82 chip)"
-            echo "   please select your answer:"
-            echo "    [1]: YES"
-            echo "    [2]: no"
-            read -p "Number: " -r -n 1
-            echo
-            case "$REPLY"
-            in
-            "1")
-                t82Unblocker=true
-                ;;
-            "2")
-                t82Unblocker=false
-                ;;
-            *)
-                echo
-                echo "ERROR: Unrecoginzed answer"
-                irupt
-                ;;
-            esac
+            manualGetEGPUInformation
         fi
     fi
 
@@ -3668,6 +4030,7 @@ function softwareDeduction {
     thunderbolt12UnlockDeduction
     cudaDeduction
     thunderboltDaemonDeduction
+    iopcieTunnelPatchDeduction
 
     echoing "Checking if SIP is sufficently disabled..."
     checkSIPRequirement
@@ -3712,9 +4075,28 @@ function checkScriptRequirement {
         waiter 10
     fi
     fetchAppleGPUWranglerVersion
-    if ! [[ "$appleGPUWranglerVersion" =~ "$build" ]]
+    if "$debug"
     then
-        echo "You use the old wrangler patch. Please follow instructions on GitHub."
+        echo
+        echo "$os"
+        echo "$build"
+        echo "$binaryHashReturn"
+        echo
+    fi
+    if ! [[ "$appleGPUWranglerVersion" =~ "$build" ]] && [ "$appleGPUWranglerVersion" != "" ]
+    then
+        echo "A system file (wrangler), has been replaced and does not fit to the system. You must revert those changes in order to continue. You can also upgrade to the latest supported release or reinstall macOS."
+        if "$beta"
+        then
+            echo "Continuation might result in failure and/or system crash. (seriously!)"
+            echo "continuing due to beta flag..."
+            waiter 4
+        else
+            irupt
+        fi
+    elif [ "$appleGPUWranglerVersion" == "" ]
+    then
+        echo "Your system hasn't yet been approved. The system may be unbootable or unstable."
         if "$beta"
         then
             echo "Continuation might result in failure and/or system crash. (seriously!)"
@@ -3828,9 +4210,17 @@ function uninstall {
     fi
     if [ `dc -e "$unlockNvidiaRoutine 2 / 2 % n"` == 1 ]
     then
-        echoing "   NVIDIA macOS 10.13.4 unlock"
+        echoing "   NVIDIA macOS 10.13.4/.5 unlock"
         trapLock
         uninstallNvidiaUnlockWranglerPatch
+        trapWithWarning
+        echoend "done"
+    fi
+    if [ `dc -e "$iopcieTunnelPatchRoutine 2 / 2 % n"` == 1 ]
+    then
+        echoing "   IO PCIE Tunnelled patch"
+        trapLock
+        uninstallIopciTunnelledPatch
         trapWithWarning
         echoend "done"
     fi
@@ -3894,9 +4284,17 @@ function install {
     fi
     if [ `dc -e "$unlockNvidiaRoutine 4 / 2 % n"` == 1 ]
     then
-        echoing "   NVIDIA macOS 10.13.4 unlock"
+        echoing "   NVIDIA macOS 10.13.4/.5 unlock"
         trapLock
         installNvidiaUnlockWranglerPatch
+        trapWithWarning
+        echoend "done"
+    fi
+    if [ `dc -e "$iopcieTunnelPatchRoutine 4 / 2 % n"` == 1 ]
+    then
+        echoing "   IO PCIE Tunnelled patch"
+        trapLock
+        installIopciTunnelledPatch
         trapWithWarning
         echoend "done"
     fi
@@ -3966,6 +4364,7 @@ function deactivateCUDAupdater {
         echoing "   CUDA"
         sudo rm -f "$cudaUpdateDaemonPath"
         echoend "done"
+        doneSomething=true
     fi
 }
 
@@ -4008,6 +4407,7 @@ function deactivateNvidiaDriverUpdater {
                 sudo "$pbuddy" -c "Remove downloadInBackground" "$nvidiaDriverUpdatePlistPath"
             fi
             echoend "done"
+            doneSomething=true
         fi
     fi
 }
@@ -4120,8 +4520,15 @@ function checkSystem {
                 echoend "not available"
             fi
         fi
-        echoing "   NVIDIA macOS 10.13.4 patch"
+        echoing "   NVIDIA macOS 10.13.4/.5 patch"
         if "$nvidiaUnlockWranglerPatchInstalled"
+        then
+            echoend "installed"
+        else
+            echoend "not installed"
+        fi
+        echoing "   IO PCIE Tunnelled patch"
+        if "$iopciTunnelledPatchInstalled"
         then
             echoend "installed"
         else
@@ -4194,41 +4601,51 @@ function checkSystem {
 function installShortCommand {
     commandShortPathTemp="/usr/local/bin/macos-egpu"
     installShortCommandTemp=false
-    if ! [ -e "$commandShortPathTemp" ]
+    checkInternetConnection
+    if "$internet"
     then
-        echo
-        echo "--- installing short command ---"
-        installShortCommandTemp=true
-    elif [ `shasum -a 512 -b "$commandShortPathTemp" | awk '{ print $1 }'` != "27d065f25a3e933bd47d7413b3d328844b5f13f0a775a31f936b702eef340cf8a6287baec6de8b1be9c681503cce4d47c41fd6c4f0a77d55f4b80460f6051e31" ]
-    then
-        echo
-        echo "--- updating short command ---"
-        installShortCommandTemp=true
-    else
-        installShortCommandTemp=false
-    fi
-    if "$installShortCommandTemp"
-    then
-        elevatePrivileges
-        scriptGenerateTemp=`cat <<'EOF'
-#!/bin/bash
-ping 8.8.8.8 -c 1 -t 3 &> /dev/null
-if [ "$?" != 0 ]
-then
-    echo "an internet connection is required"
-    exit
-fi
-bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) "$@"
-EOF
-`
-        echo "$scriptGenerateTemp" | sudo tee "$commandShortPathTemp" &>/dev/null
-        sudo chown "$SUDO_USER" "$commandShortPathTemp"
-        sudo chmod 755 "$commandShortPathTemp"
-        echo "now the script can be used like this (internet is required):"
-        echo "macos-egpu [parameters]"
-        waiter 7
-        echo "--- short command end ---"
-        echo
+        if ! [ -e "$commandShortPathTemp" ]
+        then
+            echo
+            echo "--- installing short command ---"
+            installShortCommandTemp=true
+        elif [ `shasum -a 512 -b "$commandShortPathTemp" | awk '{ print $1 }'` != `curl -s "$gitPath""/Data/checksum.txt"` ]
+        then
+            echo
+            echo "--- updating short command ---"
+            installShortCommandTemp=true
+        else
+            installShortCommandTemp=false
+        fi
+        if "$debug"
+        then
+            echo `shasum -a 512 -b "$commandShortPathTemp" | awk '{ print $1 }'`
+            echo `curl -s "$gitPath""/Data/checksum.txt"`
+        fi
+        if "$installShortCommandTemp"
+        then
+            elevatePrivileges
+            sudo mkdir -p /usr/local/bin
+            scriptGenerateTemp=`curl -s "$gitPath""/macOS-eGPU.sh"`
+            echo "$scriptGenerateTemp" | sudo tee "$commandShortPathTemp" &>/dev/null
+            sudo chown "$SUDO_USER" "$commandShortPathTemp"
+            sudo chmod 755 "$commandShortPathTemp"
+            echo "now the script can be used like this (internet may be required):"
+            echo "macos-egpu [parameters]"
+            if "$debug"
+            then
+                echo "Parameters:"
+                echo "$scriptParameterList"
+            fi
+            waiter 7
+            echo "--- short command end ---"
+            echo
+            echo "--- restarting ---"
+            echo
+            echo
+            sudo macos-egpu$scriptParameterList
+            exit 0
+        fi
     fi
 }
 
@@ -4243,14 +4660,24 @@ function macOSeGPU {
     preparations
 
     installShortCommand
+    if ( ! "$uninstall" ) && ( "$nvidiaDriver" || "$amdLegacyDriver" || "$nvidiaEnabler" || "$t82Unblocker" || [ "$scheduleCudaDeduction" != 0 ] )
+    then
+        checkInternetConnection
+        if ! "$internet"
+        then
+            echo
+            echo "--- internet connection required ---"
+            echo
+            irupt
+        fi
+    fi
 
     determination
-
     download
     deactivateNVIDIAdGPURoutine=0
     deactivateNVIDIAdGPU=false
 
-    if [ "$nvidiaDriverRoutine" != 0 ] || [ "$nvidiaEnablerRoutine" != 0 ] || [ "$unlockNvidiaRoutine" != 0 ] || [ "$amdLegacyDriverRoutine" != 0 ] || [ "$t82UnblockerRoutine" != 0 ] || [ "$deactivateNVIDIAdGPURoutine" != 0 ] || [ "$thunderbolt12UnlockRoutine" != 0 ] || [ "$cudaRoutine" != 0 ] || [ "$thunderboltDaemonRoutine" != 0 ]
+    if [ "$nvidiaDriverRoutine" != 0 ] || [ "$nvidiaEnablerRoutine" != 0 ] || [ "$unlockNvidiaRoutine" != 0 ] || [ "$amdLegacyDriverRoutine" != 0 ] || [ "$t82UnblockerRoutine" != 0 ] || [ "$deactivateNVIDIAdGPURoutine" != 0 ] || [ "$thunderbolt12UnlockRoutine" != 0 ] || [ "$cudaRoutine" != 0 ] || [ "$thunderboltDaemonRoutine" != 0 ] || [ "$iopcieTunnelPatchRoutine" != 0 ]
     then
         echo
         echo
