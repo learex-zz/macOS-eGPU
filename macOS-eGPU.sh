@@ -256,7 +256,7 @@ Parameters are optional. If none are provided, the script will self determine wh
 
 --iopcieTunneledPatch | -l
 
-    Specify that NVIDIA eGPU support shall be unlocked. (patch by @golaque)
+    Specify that NVIDIA eGPU support shall be unlocked. (patch by @goalque)
     The IOPCITunnelled Patch tells the script to make the Mac
     compatible with NVIDIA eGPUs.
     This is only required for macOS 10.3.6+.
