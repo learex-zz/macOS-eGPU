@@ -151,7 +151,7 @@ This is only required for macOS 10.13.4 and macOS 10.13.5. This might cause issu
 
 `--iopcieTunneledPatch | -l`
 
-Specify that NVIDIA eGPU support shall be unlocked. **patch by @golaque**  
+Specify that NVIDIA eGPU support shall be unlocked. **patch by @goalque**  
 The IOPCITunnelled Patch tells the script to make the Mac compatible with NVIDIA eGPUs.  
 This is only required for macOS 10.3.6+. This might cause issues/crashes with AMD graphics cards (external).
 
