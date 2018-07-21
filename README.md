@@ -66,7 +66,7 @@ Do not abort the script during uninstallation/installation/patch phase this *wil
 	`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`  
 	*It is not needed to customize the script with parameters. The script will then determine itself what the system needs.  
 	Please follow the instructions given by the script.  
-	If you have already used the script once the command `macos-egpu ` is available to quicken access. The offline script will be automatically updated if executed with internet access.*
+	If you have already used the script once the command `macos-egpu` is available to quicken access. The offline script will be automatically updated if executed with internet access.*
 
 *A quick note to all the pros out there: the #sh shell does not support the syntax given above. You need a #bash shell.*
 
