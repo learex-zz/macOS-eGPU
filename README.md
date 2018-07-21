@@ -66,13 +66,13 @@ Do not abort the script during uninstallation/installation/patch phase this *wil
 	`bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`  
 	*It is not needed to customize the script with parameters. The script will then determine itself what the system needs.  
 	Please follow the instructions given by the script.  
-	If you have already used the script once the command `macOS-eGPU` is available to quicken access. The offline script will be automatically updated if executed with internet access.*
+	If you have already used the script once the command `macos-egpu ` is available to quicken access. The offline script will be automatically updated if executed with internet access.*
 
 *A quick note to all the pros out there: the #sh shell does not support the syntax given above. You need a #bash shell.*
 
 ## Parameters
 `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`  
-For second time users: `macOS-eGPU`
+For second time users: `macos-egpu`
 
 
 Parameters are optional. If none are provided, the script will self determine what to do.
@@ -291,7 +291,7 @@ If nothing works head over to [eGPU.io][19] and ask.
 ## Changelog
 - v1
 	- 10.13.6 support
-	- true offline short command
+	- true offline short command `macos-egpu [parameter]` *internet not mandatory if not needed*
 	- tons of bugfixes
 - v0.2α
 	- tons of bugfixes
