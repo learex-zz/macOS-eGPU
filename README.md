@@ -195,7 +195,7 @@ The force reinstall parameter tells the script to reinstall all software regardl
 Specify that the script shall install only newest software.  
 The force newest parameter tells the script to prefer newer instead of more stable software. This might resolve and/or cause issues.
 
-`--forceCacheRebuild | -h`
+`--forceCacheRebuild | -E`
 
 Specify that the caches shall be rebuild.  
 The force cache rebuild flag rebuilds the kext, system and dyld cache. This option cannot be paired with other options.

@@ -328,7 +328,7 @@ Parameters are optional. If none are provided, the script will self determine wh
     The force newest parameter tells the script to prefer newer instead of more
     stable software. This might resolve and/or cause issues.
 
---forceCacheRebuild | -h
+--forceCacheRebuild | -E
 
     Specify that the caches shall be rebuild.
     The force cache rebuild flag rebuilds the kext, system and dyld cache.
@@ -363,7 +363,7 @@ Parameters are optional. If none are provided, the script will self determine wh
 
 bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) --install --nvidiaDriver 387.10.10.10.30.106
 
-macOS-eGPU  --install --nvidiaDriver 387.10.10.10.30.106
+macos-egpu  --install --nvidiaDriver 387.10.10.10.30.106
 
 --- Issues ---
 Please visit https://github.com/learex/macOS-eGPU#problems
@@ -386,13 +386,14 @@ parameter:
     --unlockThunderboltV12 | -V     | --unlockNvidia | -N
     --unlockT82 | -T                | --iopcieTunneledPatch | -l
     --cudaDriver | -c               | --cudaDeveloperDriver | -D
-    --cudaToolkit | -t              | --thunderboltDaemon | -A
+    --cudaToolkit | -t              | --cudaSamples | -s
+    --thunderboltDaemon | -A
 
     --full | -F                     | --forceReinstall | -R
     --forceNewest | -f              | --noReboot | -r
     --acceptLicenseTerms            | --skipWarnings | -k
     --help | -h                     | --beta
-    --forceCacheRebuild | -h
+    --forceCacheRebuild | -E
 EOF
 `
     echo "$printVariableTemp"
@@ -2496,7 +2497,7 @@ do
         fi
         iopcieTunnelPatch=true
         ;;
-   "--thunderboltDaemon" | "-E")
+   "--thunderboltDaemon" | "-A")
         if "$check" || "$forceCacheRebuild"
         then
             echo "ERROR: Conflicting arguments with ""$options"
@@ -2556,7 +2557,7 @@ do
     "--beta")
         beta=true
         ;;
-    "--forceCacheRebuild" | "-h")
+    "--forceCacheRebuild" | "-E")
         if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$check" || "$thunderboltDaemon" || "$forceCacheRebuild" || "$iopcieTunnelPatch"
         then
             echo "ERROR: Conflicting arguments with ""$options"
