@@ -225,7 +225,7 @@ Print the help document.
 ## Example with parameters
 `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) --install --nvidiaDriver 387.10.10.10.30.106`
 
-`macOS-eGPU --install --nvidiaDriver 387.10.10.10.30.106 `
+`macos-egpu --install --nvidiaDriver 387.10.10.10.30.106 `
 
 ## I used the temporary script/@goalque's instructions, what should I do?
 -  I haven't upgraded yet. I'm still on 17E199. I have used the temporary script.  
