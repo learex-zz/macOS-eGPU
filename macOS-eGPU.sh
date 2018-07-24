@@ -41,7 +41,7 @@ branch="master"
 warningOS="10.13.7"
 currentOS="10.13.6"
 gitPath="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch"
-scriptVersion="v1"
+scriptVersion="v1.1"
 debug=false
 
 #   external programs
@@ -888,6 +888,9 @@ function translateAppleGPUWranglerVersionHash {
         ;;
     "51b5608fc6918f7a3b7edc263e721199109663739be260481ef9b6c14747736407cdfc61290f5ae9030aff35718944777828e5fdd0bb5da2674e998ea534f47c")
         appleGPUWranglerVersion="10.13.6:17G65"
+        ;;
+    "379e758646c6000fc337ff6b8d88db82eb45d321a6f36e40dfa3354755504abcc7460ff0fe96a97aa2ae58ffce6b4cf5ea98f3ba008900591e481692547956e6")
+        appleGPUWranglerVersion="10.13.6:17G2112"
         ;;
     esac
 }

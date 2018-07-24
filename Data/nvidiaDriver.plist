@@ -10,6 +10,18 @@
 			<key>OS</key>
 			<string>10.13.6</string>
 			<key>build</key>
+			<string>17G2112</string>
+			<key>downloadURL</key>
+			<string>https://images.nvidia.com/mac/pkg/387/WebDriver-387.10.10.10.30.107.pkg</string>
+			<key>version</key>
+			<string>387.10.10.10.30.107</string>
+		</dict>
+		<dict>
+			<key>checksum</key>
+			<string>c6e258a40f344a6594d2ea50722a6f7d90d93fcd001a9e458b04077612cef65050401b0435c392c550d40b95737791955ffef0e4b149b64ff2b9758592733b02</string>
+			<key>OS</key>
+			<string>10.13.6</string>
+			<key>build</key>
 			<string>17G65</string>
 			<key>downloadURL</key>
 			<string>https://images.nvidia.com/mac/pkg/387/WebDriver-387.10.10.10.30.107.pkg</string>

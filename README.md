@@ -1,5 +1,5 @@
 # macOS-eGPU.sh
-**Version: v1**
+**Version: v1.1**
 ## Foreword
 - You just stumbled across: Read the whole README.md.
 - You want it: Get it, it’s free.
@@ -289,8 +289,10 @@ If you’ve got a problem then try the tweaks (above) first.
 If nothing works head over to [eGPU.io][19] and ask.
 
 ## Changelog
+- v1.1
+	- 10.13.6 (17G2112) support
 - v1
-	- 10.13.6 support
+	- 10.13.6 (17G65) support
 	- true offline short command `macos-egpu [parameter]` *internet not mandatory if not needed*
 	- tons of bugfixes
 - v0.2α
