@@ -1,5 +1,5 @@
 # macOS-eGPU.sh
-**Version: v1.1**
+**Version: v1.2**
 ## Foreword
 - You just stumbled across: Read the whole README.md.
 - You want it: Get it, it’s free.
@@ -289,6 +289,8 @@ If you’ve got a problem then try the tweaks (above) first.
 If nothing works head over to [eGPU.io][19] and ask.
 
 ## Changelog
+- v1.2
+	- update short command first -\> enable seamless updates
 - v1.1
 	- 10.13.6 (17G2112) support
 - v1

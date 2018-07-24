@@ -41,7 +41,7 @@ branch="master"
 warningOS="10.13.7"
 currentOS="10.13.6"
 gitPath="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch"
-scriptVersion="v1.1"
+scriptVersion="v1.2"
 debug=false
 
 #   external programs
@@ -2662,7 +2662,7 @@ function askLicenseQuestion {
 function printWarnings {
     if ! "$skipWarnings" && ! "$debug"
     then
-        echo "The script will now close (kill) all programs."
+        echo "The script will soon close (kill) all programs."
         echo "Please abort the script now should you wish to do it manually and save your work."
         echo "Please do not, under any circumstances abort the script later during the execution."
         echo "This might break your system."
@@ -2715,7 +2715,7 @@ function enforceEGPUdisconnect {
 
 
 ##  Subroutine Y4: Preparations
-function preparations {
+function licenseAndWarnings {
     trapWithoutWarning
     if ! "$acceptLicense"
     then
@@ -2731,6 +2731,9 @@ function preparations {
 
     createSpace 5
     printHeader
+}
+
+function preparations {
     echoing "Accept license terms..."
     echoend "done"
     echoing "Killing all other running programs..."
@@ -4661,6 +4664,9 @@ function installShortCommand {
 
 ###  Subroutine Y10: Base function
 function macOSeGPU {
+    licenseAndWarnings
+    installShortCommand
+
     checkScriptRequirement
     printHelp
     forceCacheRebuildPreBranch
@@ -4669,7 +4675,6 @@ function macOSeGPU {
     enforceEGPUdisconnect
     preparations
 
-    installShortCommand
     if ( ! "$uninstall" ) && ( "$nvidiaDriver" || "$amdLegacyDriver" || "$nvidiaEnabler" || "$t82Unblocker" || [ "$scheduleCudaDeduction" != 0 ] )
     then
         checkInternetConnection
