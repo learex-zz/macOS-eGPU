@@ -4528,9 +4528,6 @@ function checkSystem {
             createSpace 3
             printHeader
             askLicenseQuestion
-        else
-            createSpace 3
-            printHeader
         fi
         createSpace 3
         echo "Fetching system information..."
