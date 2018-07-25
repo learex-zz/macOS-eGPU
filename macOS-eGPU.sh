@@ -4605,7 +4605,18 @@ function checkSystem {
         echoing "   NVIDIA dGPU"
         echoend "$nvidiaDGPU"
         echoing "   AGW version"
-        echoend "$appleGPUWranglerVersion"
+        if [ "$appleGPUWranglerVersion" != "" ]
+        then
+            echoend "Unrecognized"
+            echo
+            echo "--- developer Information ---"
+            fetchAppleGPUWranglerVersion
+            echo "$binaryHashReturn"
+            echo "--- end developer Information ---"
+            echo
+        else
+            echoend "$appleGPUWranglerVersion"
+        fi
         echo "$systemProfilerTemp"
         exit
     fi
