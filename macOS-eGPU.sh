@@ -2210,6 +2210,7 @@ iopciTunnelledPatchHexBookmarkNew="494F50434954756E6E656C6C6571"
 iopciTunnelledPatchInstalled=false
 iopciTunnelledPatchInstallStatus1=0
 iopciTunnelledPatchInstallStatus2=0
+iopciTunnelledPatchInstallStatusTotal=0
 
 ##  Subroutine L2: Check functions
 function checkIopciTunnelledPatchInstall {
@@ -2220,15 +2221,50 @@ function checkIopciTunnelledPatchInstall {
         iopciTunnelledPatchInstallStatus1="${iopciTunnelledPatchInstallStatusTemp::2}"
         iopciTunnelledPatchInstallStatusTemp=`hexdump -ve '1/1 "%.2X"' "$ioGraphicsFamilyBinaryPath" | sed "s/.*""$iopciTunnelledPatchHexBookmark""//g"`
         iopciTunnelledPatchInstallStatus2="${iopciTunnelledPatchInstallStatusTemp::2}"
-        if [ "$iopciTunnelledPatchInstallStatus1" != "64" ] && [ "$iopciTunnelledPatchInstallStatus2" != "64" ]
+        iopciTunnelledPatchInstallStatusTotal=0
+        if [ "$iopciTunnelledPatchInstallStatus1" != "64" ]
+        then
+            iopciTunnelledPatchInstallStatusTotal=`binaryParser "$iopciTunnelledPatchInstallStatusTotal" 0 1`
+        fi
+        if [ "$iopciTunnelledPatchInstallStatus2" != "64" ]
+        then
+            iopciTunnelledPatchInstallStatusTotal=`binaryParser "$iopciTunnelledPatchInstallStatusTotal" 1 1`
+        fi
+        if [ -e "$iondrvPlistPath" ]
+        then
+            if [[ `"$pbuddy" -c "Print :IOKitPersonalities:3" "$iondrvPlistPath" | grep "IOPCITunnelCompatible"` =~ "true" ]]
+            then
+                iopciTunnelledPatchInstallStatusTotal=`binaryParser "$iopciTunnelledPatchInstallStatusTotal" 2 1`
+            fi
+        fi
+        if [ -e "$nvidiaDriverPlistPath" ]
+        then
+            if [[ `"$pbuddy" -c "Print :IOKitPersonalities:NVDAStartup" "$nvidiaDriverPlistPath" | grep "IOPCITunnelCompatible"` =~ "true" ]]
+            then
+                iopciTunnelledPatchInstallStatusTotal=`binaryParser "$iopciTunnelledPatchInstallStatusTotal" 3 1`
+            fi
+        fi
+        if "$debug"
+        then
+            echo "$iopciTunnelledPatchInstallStatusTotal"
+        fi
+        if [ "$iopciTunnelledPatchInstallStatusTotal" == 15 ]
         then
             iopciTunnelledPatchInstalled=true
-        elif ( [ "$iopciTunnelledPatchInstallStatus1" == "64" ] && [ "$iopciTunnelledPatchInstallStatus2" != "64" ] ) || ( [ "$iopciTunnelledPatchInstallStatus1" != "64" ] && [ "$iopciTunnelledPatchInstallStatus2" == "64" ] )
+        elif [ "$iopciTunnelledPatchInstallStatusTotal" != 0 ] && ( ! "$iopcieTunnelPatch" )
         then
             echo
             echo
-            uninstallIopciTunnelledPatch
-            iopciTunnelledPatchInstalled=false
+            trapWithoutWarning
+            echo "--- corrupt IO PCIE Tunnelled patch found ---"
+            echo "The script cannot continue with corrupt installations."
+            echo "Execute 'macos-egpu -U -l' to remove the patch or"
+            echo "execute 'macos-egpu -i -l' to repair the patch."
+            echo
+            irupt
+        elif [ "$iopciTunnelledPatchInstallStatusTotal" != 0 ] && "$uninstall" && "$iopcieTunnelPatch"
+        then
+            iopciTunnelledPatchInstalled=true
         else
             iopciTunnelledPatchInstalled=false
         fi
@@ -3197,6 +3233,18 @@ function setStandards {
                 irupt
             fi
         fi
+        else
+            if "$install"
+            then
+                if "$nvidiaDriver"
+                then
+                    if [ "$iopciTunnelledPatchInstallStatusTotal" != 0 ]
+                    then
+                        iopcieTunnelPatch=true
+                        
+                    fi
+                fi
+            fi
     fi
 }
 
@@ -3377,6 +3425,10 @@ function iopcieTunnelPatchDeduction {
                     then
                         iopcieTunnelPatchRoutine=`binaryParser "$iopcieTunnelPatchRoutine" 2 1`
                         echoend "install scheduled" 4
+                    elif "$nvidiaDriver"
+                    then
+                        iopcieTunnelPatchRoutine=`binaryParser "$iopcieTunnelPatchRoutine" 2 1`
+                        echoend "update scheduled" 4
                     else
                         echoend "skip, already installed" 5
                         iopcieTunnelPatch=false
