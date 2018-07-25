@@ -4494,8 +4494,6 @@ function deactivateAutoUpdaters {
 function printHelp {
     if "$help"
     then
-        createSpace 3
-        printHeader
         printUsage
         createSpace 3
         exit
