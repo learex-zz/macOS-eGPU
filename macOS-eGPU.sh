@@ -41,7 +41,7 @@ branch="master"
 warningOS="10.13.7"
 currentOS="10.13.6"
 gitPath="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch"
-scriptVersion="v1.2"
+scriptVersion="v1.3"
 debug=false
 
 #   external programs
@@ -891,6 +891,9 @@ function translateAppleGPUWranglerVersionHash {
         ;;
     "379e758646c6000fc337ff6b8d88db82eb45d321a6f36e40dfa3354755504abcc7460ff0fe96a97aa2ae58ffce6b4cf5ea98f3ba008900591e481692547956e6")
         appleGPUWranglerVersion="10.13.6:17G2112"
+        ;;
+    "befcbf75dbb4f0c3a9e79d333fef6b6c25a42b929878a572c73c448c01ff8dfdb66eabd02397e9fd1f8f3d4c0fc0c844f7cd0b29e4730314814f657fd20f544e")
+        appleGPUWranglerVersion="10.13.6:17G2208"
         ;;
     esac
 }
@@ -2261,7 +2264,10 @@ function checkIopciTunnelledPatchInstall {
             echo "Execute 'macos-egpu -U -l' to remove the patch or"
             echo "execute 'macos-egpu -i -l' to repair the patch."
             echo
-            irupt
+            if ! "$check"
+            then
+                irupt
+            fi
         elif [ "$iopciTunnelledPatchInstallStatusTotal" != 0 ] && "$uninstall" && "$iopcieTunnelPatch"
         then
             iopciTunnelledPatchInstalled=true
@@ -4730,10 +4736,11 @@ function macOSeGPU {
     licenseAndWarnings
     installShortCommand
 
-    checkScriptRequirement
     printHelp
     forceCacheRebuildPreBranch
     checkSystem
+
+    checkScriptRequirement
 
     enforceEGPUdisconnect
     preparations

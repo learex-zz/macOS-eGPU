@@ -1,5 +1,5 @@
 # macOS-eGPU.sh
-**Version: v1.2**
+**Version: v1.3**
 ## Foreword
 - You just stumbled across: Read the whole README.md.
 - You want it: Get it, it’s free.
@@ -289,28 +289,33 @@ If you’ve got a problem then try the tweaks (above) first.
 If nothing works head over to [eGPU.io][19] and ask.
 
 ## Changelog
-- v1.2
-	- update short command first -\> enable seamless updates
-- v1.1
-	- 10.13.6 (17G2112) support
-- v1
-	- 10.13.6 (17G65) support
-	- true offline short command `macos-egpu [parameter]` *internet not mandatory if not needed*
-	- tons of bugfixes
-- v0.2α
-	- tons of bugfixes
-	- `--beta`
-	- `--thunderboltDaemon`
-	- `--forceCacheRebuild`
-	- better error handling, especially with the old wrangler bug
-	- 10.13.5 support
-	- short command install `macos-egpu [parameter]` *needs internet*
-	- more restrictive program kill
-- v0.1α
-	- bugfixes
-	- `--help`
-	- `--checkSystem`
-	- `--checkSystemFull`
+- version 1
+	- v1.3
+		- 10.13.6 (17G2208) support
+		- rearranged script requirement checks
+	- v1.2
+		- update short command first -\> enable seamless updates
+	- v1.1
+		- 10.13.6 (17G2112) support
+	- v1
+		- 10.13.6 (17G65) support
+		- true offline short command `macos-egpu [parameter]` *internet not mandatory if not needed*
+		- tons of bugfixes
+- alpha
+	- v0.2α
+		- tons of bugfixes
+		- `--beta`
+		- `--thunderboltDaemon`
+		- `--forceCacheRebuild`
+		- better error handling, especially with the old wrangler bug
+		- 10.13.5 support
+		- short command install `macos-egpu [parameter]` *needs internet*
+		- more restrictive program kill
+	- v0.1α
+		- bugfixes
+		- `--help`
+		- `--checkSystem`
+		- `--checkSystemFull`
 
 
 ## Upcoming features
