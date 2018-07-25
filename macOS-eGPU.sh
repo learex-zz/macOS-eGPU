@@ -4605,7 +4605,7 @@ function checkSystem {
         echoing "   NVIDIA dGPU"
         echoend "$nvidiaDGPU"
         echoing "   AGW version"
-        if [ "$appleGPUWranglerVersion" != "" ]
+        if [ "$appleGPUWranglerVersion" == "" ]
         then
             echoend "Unrecognized"
             echo
