@@ -290,6 +290,8 @@ If nothing works head over to [eGPU.io][19] and ask.
 
 ## Changelog
 - version 1
+	- v1.4
+		- bugfixes
 	- v1.3
 		- 10.13.6 (17G2208) support
 		- rearranged script requirement checks

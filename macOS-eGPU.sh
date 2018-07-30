@@ -41,7 +41,7 @@ branch="master"
 warningOS="10.13.7"
 currentOS="10.13.6"
 gitPath="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch"
-scriptVersion="v1.3"
+scriptVersion="v1.4"
 debug=false
 
 #   external programs
@@ -2262,7 +2262,7 @@ function checkIopciTunnelledPatchInstall {
             echo "--- corrupt IO PCIE Tunnelled patch found ---"
             echo "The script cannot continue with corrupt installations."
             echo "Execute 'macos-egpu -U -l' to remove the patch or"
-            echo "execute 'macos-egpu -i -l' to repair the patch."
+            echo "execute 'macos-egpu -n -i -l' to repair the patch."
             echo
             if ! "$check"
             then
@@ -2759,6 +2759,30 @@ function enforceEGPUdisconnect {
 ##  Subroutine Y4: Preparations
 function licenseAndWarnings {
     trapWithoutWarning
+    if "$debug"
+    then
+        createSpace 3
+        debugModeText=`cat <<'EOF'
+╔╦╗╔═╗╔╗ ╦ ╦╔═╗  ╔╦╗╔═╗╔╦╗╔═╗
+ ║║║╣ ╠╩╗║ ║║ ╦  ║║║║ ║ ║║║╣ 
+═╩╝╚═╝╚═╝╚═╝╚═╝  ╩ ╩╚═╝═╩╝╚═╝                                    
+EOF
+`
+        echo "$debugModeText"
+        createSpace 3
+    fi
+    if "$beta"
+    then
+        createSpace 3
+        debugModeText=`cat <<'EOF'
+╔╗ ╔═╗╔╦╗╔═╗  ╔╦╗╔═╗╔╦╗╔═╗
+╠╩╗║╣  ║ ╠═╣  ║║║║ ║ ║║║╣ 
+╚═╝╚═╝ ╩ ╩ ╩  ╩ ╩╚═╝═╩╝╚═╝                             
+EOF
+`
+        echo "$debugModeText"
+        createSpace 3
+    fi
     if ! "$acceptLicense"
     then
         createSpace 3
@@ -2916,7 +2940,7 @@ function manualGetEGPUInformation {
             ;;
         *)
             echo
-            echo "ERROR: Unrecoginzed answer"
+            echo "ERROR: Unrecognized answer"
             irupt
             ;;
         esac
@@ -2938,7 +2962,7 @@ function manualGetEGPUInformation {
             ;;
         *)
             echo
-            echo "ERROR: Unrecoginzed answer"
+            echo "ERROR: Unrecognized answer"
             irupt
             ;;
         esac
@@ -3239,18 +3263,18 @@ function setStandards {
                 irupt
             fi
         fi
-        else
-            if "$install"
+    else
+        if "$install"
+        then
+            if "$nvidiaDriver"
             then
-                if "$nvidiaDriver"
+                if [ "$iopciTunnelledPatchInstallStatusTotal" != 0 ]
                 then
-                    if [ "$iopciTunnelledPatchInstallStatusTotal" != 0 ]
-                    then
-                        iopcieTunnelPatch=true
-                        
-                    fi
+                    iopcieTunnelPatch=true
+                    
                 fi
             fi
+        fi
     fi
 }
 
@@ -3326,11 +3350,11 @@ function nvidiaEnablerDeduction {
     nvidiaEnablerRoutine=0
     if "$nvidiaEnabler"
     then
-        if "$nvidiaDriver" || "$nvidiaDriversInstalled"
+        if "$install"
         then
-            if ( [ "$os" == "10.13.0" ] && [ "$os" == "10.13.1" ] && [ "$os" == "10.13.2" ] && [ "$os" == "10.13.3" ] && [ "$os" == "10.13.4" ] && [ "$os" == "10.13.5" ] ) || ( "$beta" && ( ! "$determine" ) )
+            if "$nvidiaDriver" || "$nvidiaDriversInstalled"
             then
-                if "$install"
+                if ( [ "$os" == "10.13.0" ] && [ "$os" == "10.13.1" ] && [ "$os" == "10.13.2" ] && [ "$os" == "10.13.3" ] && [ "$os" == "10.13.4" ] && [ "$os" == "10.13.5" ] ) || ( "$beta" && ( ! "$determine" ) )
                 then
                     downloadNvidiaEGPUenabler1013Information
                     if ! "$foundMatchNvidiaEGPUenabler1013"
@@ -3367,32 +3391,30 @@ function nvidiaEnablerDeduction {
                         echoend "skip, up to date" 5
                         nvidiaEnabler=false
                     fi
-                elif "$uninstall"
-                then
+                else
                     if "$nvidiaEGPUenabler1013Installed"
                     then
                         nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 1 1`
                         echoend "uninstall scheduled" 3
                     else
-                        echoend "skip, not installed" 5
+                        echoend "skip, incompatible" 5
                         nvidiaEnabler=false
                     fi
-                else
-                    irupt
                 fi
             else
-                if "$nvidiaEGPUenabler1013Installed"
-                then
-                    nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 1 1`
-                    echoend "uninstall scheduled" 3
-                else
-                    echoend "skip, incompatible" 5
-                    nvidiaEnabler=false
-                fi
+                echoend "skip, dependencies" 5
+                nvidiaEnabler=false
             fi
-        else
-            echoend "skip, dependencies" 5
-            nvidiaEnabler=false
+        elif "$uninstall"
+        then
+            if "$nvidiaEGPUenabler1013Installed"
+            then
+                nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 1 1`
+                echoend "uninstall scheduled" 3
+            else
+                echoend "skip, not installed" 5
+                nvidiaEnabler=false
+            fi
         fi
     else
         if [ "$os" != "10.13.0" ] && [ "$os" != "10.13.1" ] && [ "$os" != "10.13.2" ] && [ "$os" != "10.13.3" ] && [ "$os" != "10.13.4" ] && [ "$os" != "10.13.5" ] && "$nvidiaEGPUenabler1013Installed" && ( ! "$beta" ) && "$determine"
@@ -3416,11 +3438,11 @@ function iopcieTunnelPatchDeduction {
     iopcieTunnelPatchRoutine=0
     if "$iopcieTunnelPatch"
     then
-        if "$nvidiaDriver" || "$nvidiaDriversInstalled"
+        if "$install"
         then
-            if ( [ "$os" != "10.13.0" ] && [ "$os" != "10.13.1" ] && [ "$os" != "10.13.2" ] && [ "$os" != "10.13.3" ] && [ "$os" != "10.13.4" ] && [ "$os" != "10.13.5" ] ) || ( "$beta" && ( ! "$determine" ) )
+            if "$nvidiaDriver" || "$nvidiaDriversInstalled"
             then
-                if "$install"
+                if ( [ "$os" != "10.13.0" ] && [ "$os" != "10.13.1" ] && [ "$os" != "10.13.2" ] && [ "$os" != "10.13.3" ] && [ "$os" != "10.13.4" ] && [ "$os" != "10.13.5" ] ) || ( "$beta" && ( ! "$determine" ) )
                 then
                     if "$reinstall" && "$iopciTunnelledPatchInstalled"
                     then
@@ -3439,26 +3461,26 @@ function iopcieTunnelPatchDeduction {
                         echoend "skip, already installed" 5
                         iopcieTunnelPatch=false
                     fi
-                elif "$uninstall"
-                then
-                    if "$iopciTunnelledPatchInstalled"
-                    then
-                        iopcieTunnelPatchRoutine=`binaryParser "$iopcieTunnelPatchRoutine" 1 1`
-                        echoend "uninstall scheduled" 3
-                    else
-                        echoend "skip, not installed" 5
-                        iopcieTunnelPatch=false
-                    fi
                 else
-                    irupt
+                    iopcieTunnelPatch=false
+                    echoend "skip, incompatible" 5
                 fi
             else
                 iopcieTunnelPatch=false
-                echoend "skip, incompatible" 5
+                echoend "skip, dependencies" 5
+            fi
+        elif "$uninstall"
+        then
+            if "$iopciTunnelledPatchInstalled"
+            then
+                iopcieTunnelPatchRoutine=`binaryParser "$iopcieTunnelPatchRoutine" 1 1`
+                echoend "uninstall scheduled" 3
+            else
+                echoend "skip, not installed" 5
+                iopcieTunnelPatch=false
             fi
         else
-            iopcieTunnelPatch=false
-            echoend "skip, dependencies" 5
+            irupt
         fi
     else
         if [ "$os" == "10.13.0" ] && [ "$os" == "10.13.1" ] && [ "$os" == "10.13.2" ] && [ "$os" == "10.13.3" ] && [ "$os" == "10.13.4" ] && [ "$os" == "10.13.5" ] && "$iopciTunnelledPatchInstalled" && ( ! "$beta" ) && "$determine"
