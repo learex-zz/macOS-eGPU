@@ -286,7 +286,10 @@ Print the help document.
 
 ### Unknown issues
 If you’ve got a problem then try the tweaks (above) first.  
-If nothing works head over to [eGPU.io][19] and ask.
+If nothing works  open an issue on GitHub or head over to [eGPU.io][19] and ask.  
+**BUT** please include the output of the script when executing, as well as as much information about the issue as possible:  
+`macos-egpu -C`  
+(or `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh) -C`)
 
 ## Changelog
 - version 1
