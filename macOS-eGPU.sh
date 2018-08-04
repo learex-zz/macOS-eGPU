@@ -41,7 +41,7 @@ branch="master"
 warningOS="10.13.7"
 currentOS="10.13.6"
 gitPath="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch"
-scriptVersion="v1.4"
+scriptVersion="v1.5"
 debug=false
 
 #   external programs
@@ -310,7 +310,7 @@ Parameters are optional. If none are provided, the script will self determine wh
 
 --- Advanced ---
 
---full | -F
+--fullInstall | -F
 
     Select all #Packages. This might cause issues.
     Read the descriptions of the #Packages as well.
@@ -321,6 +321,15 @@ Parameters are optional. If none are provided, the script will self determine wh
     The force reinstall parameter tells the script to reinstall all software
     regardless if it already is up to date.
     This does not influence deductions or other installations.
+
+--useForce | -o
+
+    Specify that force shall be used.
+    In some rare cases the script might not detect the presence of
+    installed software. This is most likely due to faulty installations. Using
+    force skips security checks for uninstalls.
+    Therefore use with highest caution.
+    It must be used in conjunction with a package name and --uninstall.
 
 --forceNewest | -f
 
@@ -389,11 +398,11 @@ parameter:
     --cudaToolkit | -t              | --cudaSamples | -s
     --thunderboltDaemon | -A
 
-    --full | -F                     | --forceReinstall | -R
-    --forceNewest | -f              | --noReboot | -r
-    --acceptLicenseTerms            | --skipWarnings | -k
-    --help | -h                     | --beta
-    --forceCacheRebuild | -E
+    --fullInstall | -F              | --forceReinstall | -R
+    --forceNewest | -f              | --useForce | -o
+    --noReboot | -r                 | --acceptLicenseTerms
+    --skipWarnings | -k             | --help | -h
+    --beta                          | --forceCacheRebuild | -E
 EOF
 `
     echo "$printVariableTemp"
@@ -490,7 +499,7 @@ function rebootSystem {
     else
         echo "A reboot will soon be performed..."
         elevatePrivileges
-        trap '{ echo; echo "Abort..."; exit 1; }' INT
+        trap '{ echo; echo "Abort..."; systemClean; restorePrivileges; exit 1; }' INT
         waiter 5
         echo "reboot: / is busy updating, waiting for lock (this might take approx 15-30s)..."
         sudo reboot & &>/dev/null
@@ -506,11 +515,13 @@ function rebootSystem {
 
 ##  Subroutine A8: Rebuild Kexts
 scheduleKextTouch=false
+forceCacheRebuild=false
 function rebuildKextCache {
     if "$scheduleKextTouch"
     then
         echo "Rebuilding caches"
         elevatePrivileges
+        trapIrupt2
         echoing "   kext cache"
         sudo touch /System/Library/Extensions &>/dev/null
         sudo kextcache -q -update-volume / &>/dev/null
@@ -518,12 +529,16 @@ function rebuildKextCache {
         echoing "   system cache"
         sudo touch /System/Library/Extensions &>/dev/null
         sudo kextcache -system-caches &>/dev/null
+        sudo kextcache -clear-staging
         echoend "done"
-        echoing "   dyld cache"
-        sudo update_dyld_shared_cache -root / -force &>/dev/null
-        sudo update_dyld_shared_cache -debug &>/dev/null
-        sudo update_dyld_shared_cache &>/dev/null
-        echoend "done"
+        if "$forceCacheRebuild"
+        then
+            echoing "   dyld cache"
+            sudo update_dyld_shared_cache -root / -force &>/dev/null
+            sudo update_dyld_shared_cache -debug &>/dev/null
+            sudo update_dyld_shared_cache &>/dev/null
+            echoend "done"
+        fi
     fi
 }
 
@@ -585,6 +600,19 @@ function trapIrupt {
     fi
 }
 
+function trapIrupt2 {
+    if ! "$exitScript"
+    then
+        exitScript=true
+        echo "You pressed ^C. Exiting the script during execution might render your system unrepairable."
+        echo "Recommendation: Let the script finish and then run again with uninstall parameter."
+        echo "Press again to force quit. Beware of the consequenses."
+        sleep 5
+    else
+        trap '{ echo; echo "Abort..."; systemClean; restorePrivileges; exit 1; }' INT
+    fi
+}
+
 function trapWithWarning {
     trap trapIrupt INT
 }
@@ -602,22 +630,25 @@ function trapLock {
 
 ##  Subroutine A12: Custom uninstaller
 function genericUninstaller {
-    elevatePrivileges
     fileListUninstallTemp="$1"
     genericUninstalledTemp=false
-    while read -r genericFileTemp
-    do
-        if [ -e "$genericFileTemp" ]
-        then
-            genericUninstalledTemp=true
-            sudo rm -r -f "$genericFileTemp"
-        fi
-    done <<< "$fileListUninstallTemp"
-    if "$genericUninstalledTemp"
+    if [ "$fileListUninstallTemp" != "" ]
     then
-        return 0
-    else
-        return 1
+        elevatePrivileges
+        while read -r genericFileTemp
+        do
+            if [ -e "$genericFileTemp" ]
+            then
+                genericUninstalledTemp=true
+                sudo rm -r -f "$genericFileTemp" &>/dev/null
+            fi
+        done <<< "$fileListUninstallTemp"
+        if "$genericUninstalledTemp"
+        then
+            return 0
+        else
+            return 1
+        fi
     fi
 }
 
@@ -978,13 +1009,88 @@ function checkNvidiaDriverInstall {
 
 ##  Subroutine C3: Uninstaller
 function uninstallNvidiaDriver {
-    if "$nvidiaDriversInstalled"
+    if "$nvidiaDriversInstalled" || "$enforce"
     then
         elevatePrivileges
-        sudo installer -pkg "$nvidiaDriverUnInstallPKG" -target / &>/dev/null
-        scheduleReboot=true
-        doneSomething=true
-        scheduleKextTouch=true
+        fileDump=`cat <<EOF
+/Library/LaunchAgents/com.nvidia.nvagent.plist
+/Library/LaunchDaemons/com.nvidia.nvroothelper.plist
+/Library/Application Support/NVIDIA/NVIDIA Driver Restore.mpkg
+/usr/bin/NVIDIARecovery
+EOF
+`
+        genericUninstaller "$fileDump"
+        if [ "$?" == 0 ]
+        then
+            doneSomething=true
+            scheduleReboot=true
+            checkCudaDriverInstall
+        fi
+
+        tempDirTemp=`find /var/tmp -iname "com.nvidia"*`
+        genericUninstaller "$tempDirTemp"
+        if [ "$?" == 0 ]
+        then
+            doneSomething=true
+            scheduleReboot=true
+            checkCudaDriverInstall
+        fi
+
+        libExtListNVDATemp=`find /Library/Extensions -iname "*NVDA*Web*" -maxdepth 1`
+        genericUninstaller "$libExtListNVDATemp"
+        if [ "$?" == 0 ]
+        then
+            doneSomething=true
+            scheduleReboot=true
+            checkCudaDriverInstall
+        fi
+
+        libExtListGeForceTemp=`find /Library/Extensions -iname "*GeForce*Web*" -maxdepth 1`
+        genericUninstaller "$libExtListGeForceTemp"
+        if [ "$?" == 0 ]
+        then
+            doneSomething=true
+            scheduleReboot=true
+            checkCudaDriverInstall
+        fi
+
+        sysLibExtListNVDATemp=`find /System/Library/Extensions -iname "*NVDA*Web*" -maxdepth 1`
+        genericUninstaller "$sysLibExtListNVDATemp"
+        if [ "$?" == 0 ]
+        then
+            doneSomething=true
+            scheduleReboot=true
+            checkCudaDriverInstall
+        fi
+
+        sysLibExtListGeForceTemp=`find /System/Library/Extensions -iname "*GeForce*Web*" -maxdepth 1`
+        genericUninstaller "$sysLibExtListGeForceTemp"
+        if [ "$?" == 0 ]
+        then
+            doneSomething=true
+            scheduleReboot=true
+            checkCudaDriverInstall
+        fi
+
+        prefTemp=`find "$nvidiaDriverUpdateLibPath" -iname com.nvidia.nvagent*`
+        genericUninstaller "$prefTemp"
+        if [ "$?" == 0 ]
+        then
+            doneSomething=true
+            scheduleReboot=true
+            checkCudaDriverInstall
+        fi
+
+        prefPaneTemp=`find /Library/PreferencePanes -iname "*Web*" | sed "s/prefPane.*//g" | sed -n 1p`"prefPane"
+        genericUninstaller "$prefPaneTemp"
+        if [ "$?" == 0 ]
+        then
+            doneSomething=true
+            scheduleReboot=true
+            checkCudaDriverInstall
+        fi
+        sudo nvram -d nvda_drv &>/dev/null
+        pkgutil --forget com.nvidia.web-driver &>/dev/null
     fi
 }
 
@@ -1131,6 +1237,7 @@ function patchNvidiaDriverNew {
 function patchNvidiaDriverOld {
     elevatePrivileges
     sudo "$pbuddy" -c "Set IOKitPersonalities:NVDAStartup:NVDARequiredOS ""$build" "$nvidiaDriverVersionPath" &>/dev/null
+    sudo nvram nvda_drv=1
 }
 
 function installNvidiaDriver {
@@ -1140,6 +1247,7 @@ function installNvidiaDriver {
         patchNvidiaDriverNew
         sudo installer -pkg "$dirName""/nvidiaDriver.pkg" -target / &>/dev/null
         sudov rm -f "$dirName""/nvidiaDriver.pkg"
+        sudo nvram nvda_drv=1
         scheduleReboot=true
         doneSomething=true
         scheduleKextTouch=true
@@ -1284,7 +1392,7 @@ function checkCudaInstall {
     if [ -e "$cudaDeveloperDir" ]
     then
         versionPathTemp=`find "$cudaDeveloperDir" -iname "version.txt" -maxdepth 2`
-        if [ `echo "$versionPathTemp" | wc -l | xargs` != 0 ]
+        if [ "$versionPathTemp" != "" ]
         then
             cudaVersionPath=`echo "$versionPathTemp" | sed -n 1p`
             cudaVersionInstalled=true
@@ -1370,6 +1478,13 @@ function uninstallCudaSamples {
         elevatePrivileges
         sudo perl "$cudaToolkitUnInstallScriptPath" --manifest="$cudaToolkitUnInstallDir"".cuda_samples_uninstall_manifest_do_not_delete.txt" --silent &>/dev/null
         doneSomething=true
+    fi
+    fileDumpTemp=`find "$cudaDeveloperDir" -iname samples -type d`
+    genericUninstaller "$fileDumpTemp"
+    if [ "$?" == 0 ]
+    then
+        doneSomething=true
+        scheduleReboot=true
     fi
 }
 
@@ -1541,7 +1656,7 @@ function downloadCudaToolkitDownloadFallback {
     if "$foundMatchCudaToolkit"
     then
         mktmpdir
-        sudov curl -o "$dirName""/cudaToolkit.dmg" -L "$cudaToolkitDownloadLink" "-#" -m 2048
+        sudov curl -o "$dirName""/cudaToolkit.dmg" -L "$cudaToolkitDownloadLink" "-#" -m 1024
         hdiutil attach "$dirName""/cudaToolkit.dmg" -quiet -nobrowse
         if [ "$?" == 1 ]
         then
@@ -1556,7 +1671,7 @@ function downloadCudaToolkit {
     if "$foundMatchCudaToolkit"
     then
         mktmpdir
-        sudov curl -o "$dirName""/cudaToolkit.dmg" -L "$cudaToolkitDownloadLink" "-#" -m 2048
+        sudov curl -o "$dirName""/cudaToolkit.dmg" -L "$cudaToolkitDownloadLink" "-#" -m 1024
         hdiutil attach "$dirName""/cudaToolkit.dmg" -quiet -nobrowse
         if [ "$?" == 1 ]
         then
@@ -2416,7 +2531,8 @@ help=false
 acceptLicense=false
 skipWarnings=false
 fullCheck=false
-forceCacheRebuild=false
+enforce=false
+#forceCacheRebuild=false - defined at Subroutine A8: Rebuild Kexts
 beta=false
 
 argumentsGiven=false
@@ -2430,7 +2546,7 @@ do
     case "$options"
     in
     "--install" | "-i")
-        if "$uninstall" || "$check" || "$forceCacheRebuild"
+        if "$uninstall" || "$check" || "$forceCacheRebuild" || "$enforce"
         then
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
@@ -2446,7 +2562,7 @@ do
         uninstall=true
         ;;
     "--checkSystem" | "-C")
-        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$fullCheck" || "$thunderboltDaemon" || "$forceCacheRebuild" || "$iopcieTunnelPatch"
+        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$fullCheck" || "$thunderboltDaemon" || "$forceCacheRebuild" || "$iopcieTunnelPatch" || "$enforce"
         then
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
@@ -2454,7 +2570,7 @@ do
         check=true
         ;;
     "--checkSystemFull")
-        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$check" || "$thunderboltDaemon" || "$forceCacheRebuild" || "$iopcieTunnelPatch"
+        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$check" || "$thunderboltDaemon" || "$forceCacheRebuild" || "$iopcieTunnelPatch" || "$enforce"
         then
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
@@ -2479,7 +2595,7 @@ do
         amdLegacyDriver=true
         ;;
     "--forceReinstall" | "-R")
-        if "$uninstall" || "$check" || "$forceCacheRebuild"
+        if "$uninstall" || "$check" || "$forceCacheRebuild" || "$enforce"
         then
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
@@ -2487,12 +2603,20 @@ do
         reinstall=true
         ;;
     "--forceNewest" | "-f")
-        if "$uninstall" || "$check" || "$forceCacheRebuild"
+        if "$uninstall" || "$check" || "$forceCacheRebuild" || "$enforce"
         then
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
         fi
         forceNewest=true
+        ;;
+    "--useForce" | "-o")
+        if "$install" || "$check" || "$forceNewest" || "$reinstall" || "$fullInstall" || "$forceCacheRebuild"
+        then
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
+        fi
+        enforce=true
         ;;
     "--nvidiaEGPUsupport" | "-e")
         if "$check" || "$forceCacheRebuild" || "$iopcieTunnelPatch"
@@ -2582,8 +2706,8 @@ do
         fi
         scheduleCudaDeduction=`binaryParser "$scheduleCudaDeduction" 3 1`
         ;;
-    "--full" | "-F")
-        if "$check" || "$uninstall" || "$forceCacheRebuild"
+    "--fullInstall" | "-F")
+        if "$check" || "$uninstall" || "$forceCacheRebuild" || "$enforce"
         then
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
@@ -2603,7 +2727,7 @@ do
         beta=true
         ;;
     "--forceCacheRebuild" | "-E")
-        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$check" || "$thunderboltDaemon" || "$forceCacheRebuild" || "$iopcieTunnelPatch"
+        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$check" || "$thunderboltDaemon" || "$forceCacheRebuild" || "$iopcieTunnelPatch" || "$enforce"
         then
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
@@ -2617,7 +2741,7 @@ do
         case "$lastParam"
         in
         "--nvidiaDriver" | "-n")
-            if "$forceNewest"
+            if "$forceNewest" || "$uninstall" || "$check" || "$forceCacheRebuild" || "$enforce"
             then
                 echo "ERROR: Conflicting arguments with ""$options"" [revision]"
                 irupt
@@ -2774,13 +2898,25 @@ EOF
     if "$beta"
     then
         createSpace 3
-        debugModeText=`cat <<'EOF'
+        betaModeText=`cat <<'EOF'
 ╔╗ ╔═╗╔╦╗╔═╗  ╔╦╗╔═╗╔╦╗╔═╗
 ╠╩╗║╣  ║ ╠═╣  ║║║║ ║ ║║║╣ 
 ╚═╝╚═╝ ╩ ╩ ╩  ╩ ╩╚═╝═╩╝╚═╝                             
 EOF
 `
-        echo "$debugModeText"
+        echo "$betaModeText"
+        createSpace 3
+    fi
+    if "$enforce"
+    then
+        createSpace 3
+        forceModeText=`cat <<'EOF'
+╔═╗╔═╗╦═╗╔═╗╔═╗  ╔╦╗╔═╗╔╦╗╔═╗
+╠╣ ║ ║╠╦╝║  ║╣   ║║║║ ║ ║║║╣ 
+╚  ╚═╝╩╚═╚═╝╚═╝  ╩ ╩╚═╝═╩╝╚═╝                         
+EOF
+`
+        echo "$forceModeText"
         createSpace 3
     fi
     if ! "$acceptLicense"
@@ -3142,7 +3278,12 @@ function setStandards {
     fi
     if "$determine"
     then
-        if "$fullInstall"
+        if "$enforce"
+        then
+            createSpace 3
+            echo "When force in use, automatic determainations cannot be performed."
+            irupt
+        elif "$fullInstall"
         then
             if "$install"
             then
@@ -3266,13 +3407,29 @@ function setStandards {
     else
         if "$install"
         then
-            if "$nvidiaDriver"
+            if "$enforce"
+            then
+                createSpace 3
+                echo "Installations cannot be enforced."
+                irupt
+            elif "$nvidiaDriver"
             then
                 if [ "$iopciTunnelledPatchInstallStatusTotal" != 0 ]
                 then
                     iopcieTunnelPatch=true
                     
                 fi
+            fi
+        elif "$uninstall"
+        then
+            if "$nvidiaDriver"
+            then
+                if [ "$iopciTunnelledPatchInstallStatusTotal" != 0 ]
+                then
+                    iopcieTunnelPatch=true
+                fi
+                scheduleCudaDeduction=15
+                nvidiaEnabler=true
             fi
         fi
     fi
@@ -3329,7 +3486,7 @@ function nvidiaDriverDeduction {
             fi
         elif "$uninstall"
         then
-            if "$nvidiaDriversInstalled"
+            if "$nvidiaDriversInstalled" || "$enforce"
             then
                 nvidiaDriverRoutine=`binaryParser "$nvidiaDriverRoutine" 1 1`
                 echoend "uninstall scheduled" 3
@@ -3354,7 +3511,7 @@ function nvidiaEnablerDeduction {
         then
             if "$nvidiaDriver" || "$nvidiaDriversInstalled"
             then
-                if ( [ "$os" == "10.13.0" ] && [ "$os" == "10.13.1" ] && [ "$os" == "10.13.2" ] && [ "$os" == "10.13.3" ] && [ "$os" == "10.13.4" ] && [ "$os" == "10.13.5" ] ) || ( "$beta" && ( ! "$determine" ) )
+                if ( [ "$os" == "10.13.0" ] || [ "$os" == "10.13.1" ] || [ "$os" == "10.13.2" ] || [ "$os" == "10.13.3" ] || [ "$os" == "10.13.4" ] || [ "$os" == "10.13.5" ] ) || ( "$beta" && ( ! "$determine" ) )
                 then
                     downloadNvidiaEGPUenabler1013Information
                     if ! "$foundMatchNvidiaEGPUenabler1013"
@@ -3407,7 +3564,7 @@ function nvidiaEnablerDeduction {
             fi
         elif "$uninstall"
         then
-            if "$nvidiaEGPUenabler1013Installed"
+            if "$nvidiaEGPUenabler1013Installed" || "$enforce"
             then
                 nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 1 1`
                 echoend "uninstall scheduled" 3
@@ -3417,7 +3574,7 @@ function nvidiaEnablerDeduction {
             fi
         fi
     else
-        if [ "$os" != "10.13.0" ] && [ "$os" != "10.13.1" ] && [ "$os" != "10.13.2" ] && [ "$os" != "10.13.3" ] && [ "$os" != "10.13.4" ] && [ "$os" != "10.13.5" ] && "$nvidiaEGPUenabler1013Installed" && ( ! "$beta" ) && "$determine"
+        if [ "$os" != "10.13.0" ] && [ "$os" != "10.13.1" ] && [ "$os" != "10.13.2" ] && [ "$os" != "10.13.3" ] && [ "$os" != "10.13.4" ] && [ "$os" != "10.13.5" ] && "$nvidiaEGPUenabler1013Installed" && ( ! "$beta" )
         then
             nvidiaEnabler=true
             nvidiaEnablerRoutine=`binaryParser "$nvidiaEnablerRoutine" 1 1`
@@ -3471,7 +3628,7 @@ function iopcieTunnelPatchDeduction {
             fi
         elif "$uninstall"
         then
-            if "$iopciTunnelledPatchInstalled"
+            if "$iopciTunnelledPatchInstalled" || "$enforce"
             then
                 iopcieTunnelPatchRoutine=`binaryParser "$iopcieTunnelPatchRoutine" 1 1`
                 echoend "uninstall scheduled" 3
@@ -3483,7 +3640,7 @@ function iopcieTunnelPatchDeduction {
             irupt
         fi
     else
-        if [ "$os" == "10.13.0" ] && [ "$os" == "10.13.1" ] && [ "$os" == "10.13.2" ] && [ "$os" == "10.13.3" ] && [ "$os" == "10.13.4" ] && [ "$os" == "10.13.5" ] && "$iopciTunnelledPatchInstalled" && ( ! "$beta" ) && "$determine"
+        if ( [ "$os" == "10.13.0" ] || [ "$os" == "10.13.1" ] || [ "$os" == "10.13.2" ] || [ "$os" == "10.13.3" ] || [ "$os" == "10.13.4" ] || [ "$os" == "10.13.5" ] ) && "$iopciTunnelledPatchInstalled" && ( ! "$beta" )
         then
             iopcieTunnelPatch=true
             iopcieTunnelPatch=`binaryParser "$iopcieTunnelPatch" 1 1`
@@ -3522,7 +3679,7 @@ function amdLegacyDriversDeduction {
             fi
         elif "$uninstall"
         then
-            if "$amdLegacyDriversInstalled"
+            if "$amdLegacyDriversInstalled" || "$enforce"
             then
                 amdLegacyDriverRoutine=`binaryParser "$amdLegacyDriverRoutine" 1 1`
                 echoend "uninstall scheduled" 3
@@ -3567,7 +3724,7 @@ function t82UnblockerDeduction {
             fi
         elif "$uninstall"
         then
-            if "$t82UnblockerInstalled"
+            if "$t82UnblockerInstalled" || "$enforce"
             then
                 t82UnblockerRoutine=`binaryParser "$t82UnblockerRoutine" 1 1`
                 echoend "uninstall scheduled" 3
@@ -3616,7 +3773,7 @@ function deactivateNvidiaDGPUDeduction {
             fi
         elif "$uninstall"
         then
-            if "$nvidiaDGPUdeactivatorInstalled"
+            if "$nvidiaDGPUdeactivatorInstalled" || "$enforce"
             then
                 deactivateNVIDIAdGPURoutine=`binaryParser "$deactivateNVIDIAdGPURoutine" 1 1`
                 echoend "uninstall scheduled" 3
@@ -3665,7 +3822,7 @@ function unlockNvidiaDeduction {
                 fi
             elif "$uninstall"
             then
-                if "$nvidiaUnlockWranglerPatchInstalled"
+                if "$nvidiaUnlockWranglerPatchInstalled" || "$enforce"
                 then
                     unlockNvidiaRoutine=`binaryParser "$unlockNvidiaRoutine" 1 1`
                     echoend "uninstall scheduled" 3
@@ -3713,7 +3870,7 @@ function thunderbolt12UnlockDeduction {
                 fi
             elif "$uninstall"
             then
-                if "$thunderbolt12UnlockInstalled"
+                if "$thunderbolt12UnlockInstalled" || "$enforce"
                 then
                     thunderbolt12UnlockRoutine=`binaryParser "$thunderbolt12UnlockRoutine" 1 1`
                     echoend "uninstall scheduled" 3
@@ -3759,7 +3916,7 @@ function thunderboltDaemonDeduction {
             fi
         elif "$uninstall"
         then
-            if "$thunderboltDaemonInstalled"
+            if "$thunderboltDaemonInstalled" || "$enforce"
             then
                 thunderboltDaemonRoutine=`binaryParser "$thunderboltDaemonRoutine" 1 1`
                 echoend "uninstall scheduled" 4
@@ -3806,7 +3963,7 @@ function cudaDriverDeduction {
             fi
         elif "$uninstall"
         then
-            if "$cudaDriverInstalled"
+            if "$cudaDriverInstalled" || "$enforce"
             then
                 cudaRoutine=`binaryParser "$cudaRoutine" 1 1`
                 echoend "uninstall scheduled" 3
@@ -3858,7 +4015,7 @@ function cudaDeveloperDriverDeduction {
             fi
         elif "$uninstall"
         then
-            if "$cudaDeveloperDriverInstalled"
+            if "$cudaDeveloperDriverInstalled" || "$enforce"
             then
                 cudaRoutine=`binaryParser "$cudaRoutine" 5 1`
                 echoend "uninstall scheduled" 3
@@ -3905,7 +4062,7 @@ function cudaToolkitDeduction {
             fi
         elif "$uninstall"
         then
-            if "$cudaToolkitInstalled"
+            if "$cudaToolkitInstalled" || "$enforce"
             then
                 cudaRoutine=`binaryParser "$cudaRoutine" 9 1`
                 echoend "uninstall scheduled" 3
@@ -3952,7 +4109,7 @@ function cudaSamplesDeduction {
             fi
         elif "$uninstall"
         then
-            if "$cudaSamplesInstalled"
+            if "$cudaSamplesInstalled" || "$enforce"
             then
                 cudaRoutine=`binaryParser "$cudaRoutine" 13 1`
                 echoend "uninstall scheduled" 3

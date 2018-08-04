@@ -1,5 +1,5 @@
 # macOS-eGPU.sh
-**Version: v1.4**
+**Version: v1.5**
 ## Foreword
 - You just stumbled across: Read the whole README.md.
 - You want it: Get it, it’s free.
@@ -181,7 +181,7 @@ Specify that CUDA samples shall be touched.
 The CUDA samples parameter tells the script to perform either an install or uninstall of the CUDA samples. Note that the samples are dependent on the toolkit and drivers. Installing the samples will cause the script to install the drivers and toolkit as well.
 
 ### Advanced
-`--full | -F`
+`--fullInstall | -F`
 
 Select all #Packages. This might cause issues. Read the descriptions of the #Packages as well.
 
@@ -194,6 +194,12 @@ The force reinstall parameter tells the script to reinstall all software regardl
 
 Specify that the script shall install only newest software.  
 The force newest parameter tells the script to prefer newer instead of more stable software. This might resolve and/or cause issues.
+
+`--useForce | -o`
+
+Specify that force shall be used.  
+In some rare cases the script might not detect the presence of installed software. This is most likely due to faulty installations. Using force skips security checks for uninstalls. Therefore use with highest caution.  
+It must be used in conjunction with a package name and `--uninstall`.
 
 `--forceCacheRebuild | -E`
 
@@ -268,6 +274,13 @@ Print the help document.
 		- hot plug monitor
 		- wait 15 sec
 		- log in
+	- Step set 3
+		- boot without eGPU
+		- log out
+		- hot plug eGPU
+	- Step set 4 (no FileVault)
+		- boot without eGPU
+		- hot plug before first login
 - I must use a headless HDMI to power my thunderbolt monitor (steps by @robert\_avram)
 	- boot without any peripherals
 	- hot plug eGPU only
@@ -293,6 +306,10 @@ If nothing works  open an issue on GitHub or head over to [eGPU.io][19] and ask.
 
 ## Changelog
 - version 1
+	- 1.5
+		- custom NVIDIA driver uninstaller
+		- `--useForce`
+		-  tons of bugfixes
 	- v1.4
 		- bugfixes
 	- v1.3
