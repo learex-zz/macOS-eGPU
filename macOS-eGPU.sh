@@ -1539,9 +1539,9 @@ function downloadCudaDriverInformation {
         if [ "$?" == 0 ]
         then
             cudaDriverDownloadLink=$(cat "$cudaWebsiteLocalTemp" | grep -e download)
-            cudaDriverDownloadLink="${cudaDriverDownloadLink##*http}"
+            cudaDriverDownloadLink="${cudaDriverDownloadLink##*url=}"
             cudaDriverDownloadLink="${cudaDriverDownloadLink%%.dmg*}"
-            cudaDriverDownloadLink="http""$cudaDriverDownloadLink"".dmg"
+            cudaDriverDownloadLink="http://us.download.nvidia.com""$cudaDriverDownloadLink"".dmg"
             cudaDriverDownloadVersion="${cudaDriverDownloadLink%_*}"
             cudaDriverDownloadVersion="${cudaDriverDownloadVersion##*_}"
             rm "$cudaWebsiteLocalTemp"
