@@ -521,7 +521,7 @@ function rebuildKextCache {
     then
         echo "Rebuilding caches"
         elevatePrivileges
-        trapIrupt2
+        trapWithWarning2
         echoing "   kext cache"
         sudo touch /System/Library/Extensions &>/dev/null
         sudo kextcache -q -update-volume / &>/dev/null
@@ -615,6 +615,9 @@ function trapIrupt2 {
 
 function trapWithWarning {
     trap trapIrupt INT
+}
+function trapWithWarning2 {
+    trap trapIrupt2 INT
 }
 
 function trapWithoutWarning {
