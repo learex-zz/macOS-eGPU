@@ -956,7 +956,7 @@ function fetchInstalledPrograms {
 internet=false
 function checkInternetConnection {
     internet=false
-    ping 8.8.8.8 -c 1 -t 3 &> /dev/null
+    /sbin/ping 8.8.8.8 -c 1 -t 3 &> /dev/null
     if [ "$?" == 0 ]
     then
         internet=true
