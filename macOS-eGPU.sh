@@ -2661,7 +2661,7 @@ do
         fi
         unlockNvidia=true
         ;;
-    "-iopcieTunneledPatch" | "-l")
+    "--iopcieTunneledPatch" | "-l")
         if "$check" || "$forceCacheRebuild" || "$nvidiaEnabler" || "$unlockNvidia"
         then
             echo "ERROR: Conflicting arguments with ""$options"
