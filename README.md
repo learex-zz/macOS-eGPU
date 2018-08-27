@@ -306,6 +306,8 @@ If nothing works  open an issue on GitHub or head over to [eGPU.io][19] and ask.
 
 ## Changelog
 - version 1
+	- 1.6
+		- bugfix by @rxwei (GitHub)
 	- 1.5
 		- custom NVIDIA driver uninstaller
 		- `--useForce`

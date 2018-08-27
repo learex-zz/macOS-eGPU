@@ -41,7 +41,7 @@ branch="master"
 warningOS="10.13.7"
 currentOS="10.13.6"
 gitPath="https://raw.githubusercontent.com/learex/macOS-eGPU/""$branch"
-scriptVersion="v1.5"
+scriptVersion="v1.6"
 debug=false
 
 #   external programs
@@ -2661,7 +2661,7 @@ do
         fi
         unlockNvidia=true
         ;;
-    "-iopcieTunneledPatch" | "-l")
+    "--iopcieTunneledPatch" | "-l")
         if "$check" || "$forceCacheRebuild" || "$nvidiaEnabler" || "$unlockNvidia"
         then
             echo "ERROR: Conflicting arguments with ""$options"
