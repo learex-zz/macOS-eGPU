@@ -1,5 +1,5 @@
 # macOS-eGPU.sh
-**Version: v1.5**
+**Version: v1.6**
 ## Foreword
 - You just stumbled across: Read the whole README.md.
 - You want it: Get it, it’s free.
