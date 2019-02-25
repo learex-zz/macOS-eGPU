@@ -72,7 +72,7 @@ Do not abort the script during uninstallation/installation/patch phase this *wil
 
 ## Parameters
 `bash <(curl -s https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)`  
-For second time users: `macos-egpu`
+For second time use: `macos-egpu`
 
 
 Parameters are optional. If none are provided, the script will self determine what to do.
