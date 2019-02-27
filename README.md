@@ -1,5 +1,13 @@
 # macOS-eGPU.sh
 **Version: v1.6**
+
+*A notice to all users:*
+This script will not be updated, until new NVIDIA drivers are released (for 10.14.X or 10.15.X).
+Should you update your system with new security patches use the command 
+`bash <(curl -s  https://raw.githubusercontent.com/learex/macOS-eGPU/master/macOS-eGPU.sh)  --beta --nvidiaDriver 387.10.10.10.40.105 --iopcieTunneledPatch`
+
+An update is in the works with new features, better security and much more, however due to heavy time constraints it will take a long time until it's finished. 
+
 ## Foreword
 - You just stumbled across: Read the whole README.md.
 - You want it: Get it, it’s free.
