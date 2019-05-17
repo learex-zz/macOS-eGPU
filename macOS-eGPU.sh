@@ -262,6 +262,10 @@ Parameters are optional. If none are provided, the script will self determine wh
     This is only required for macOS 10.3.6+.
     This might cause issues/crashes with AMD graphics cards (external).
 
+--nvidiaClosedClamshellPatch | -L
+
+    Enables support for closed-clamshell mode when running with an NVIDIA eGPU. (patch by @sashavol)
+
 --unlockT82 | -T
 
     Specify that the T82 chipsets shall be unlocked.
@@ -2499,16 +2503,86 @@ function installIopciTunnelledPatch {
 
 ##  Subroutine L6: Helper functions
 
+#   Subroutine M: Enable closed-clamshell mode on NVIDIA cards patch 10.13.6+ ##############################################################################################################
 
+#   Subroutine M1: Global variables (inherits ioGraphicsFamilyBinaryPath from Subroutine L)
+nvidiaClamshellPatchStatusUninstalled="89358DDA0200"
+nvidiaClamshellPatchStatusInstalled="909090909090"
+
+nvidiaClamshellPatchHexBookmark="3D7119000074073DDE100000751FBE000200000B3593DA0200"
+nvidiaClamshellPatchHexBookmarkOld="3D7119000074073DDE100000751FBE000200000B3593DA0200$nvidiaClamshellPatchStatusUninstalled"
+nvidiaClamshellPatchHexBookmarkNew="3D7119000074073DDE100000751FBE000200000B3593DA0200$nvidiaClamshellPatchStatusInstalled"
+
+nvidiaClamshellPatchInstalled=false
+nvidiaClamshellPatchInstallStatus=0
+
+# Subroutine M2: Check functions
+function checkNvidiaClamshellPatchInstall {
+    fetchAppleGPUWranglerVersion
+    if [ -e "$appleGPUwranglerBinaryPath" ] && [ -e "$ioGraphicsFamilyBinaryPath" ]  && ( [[ "$appleGPUWranglerVersion" =~ "10.13.6" ]] || ( [ "$appleGPUWranglerVersion" == "" ] && "$beta" ) )
+    then
+        nvidiaClamshellPatchInstallStatusTemp=`hexdump -ve '1/1 "%.2X"' "$ioGraphicsFamilyBinaryPath" | sed "s/.*""$nvidiaClamshellPatchHexBookmark""//g"`
+        nvidiaClamshellPatchInstallStatus="${nvidiaClamshellPatchInstallStatusTemp::12}"
+
+        if [ "$nvidiaClamshellPatchInstallStatus" = "$nvidiaClamshellPatchStatusInstalled" ]
+        then
+            nvidiaClamshellPatchInstalled=true
+        elif [ "$nvidiaClamshellPatchInstallStatus" = "$nvidiaClamshellPatchStatusUninstalled" ]
+        then
+            nvidiaClamshellPatchInstalled=false
+        else
+            echo
+            echo
+            echo "--- corrupt NVIDIA closed-clamshell patch found ---"
+            echo "Execute 'macos-egpu -U -L' to remove the patch or"
+            echo "execute 'macos-egpu -n -i -L' to repair the patch."
+            echo
+            if ! "$check"
+            then
+                irupt
+            fi
+        fi
+    fi
+}
+
+# Subroutine M3: Uninstaller
+function uninstallNvidiaClamshellPatch {
+    checkNvidiaClamshellPatchInstall
+    elevatePrivileges
+    if [ -e "$ioGraphicsFamilyBinaryPath" ]
+    then
+        inPlaceEditor "$nvidiaClamshellPatchHexBookmark""$nvidiaClamshellPatchInstallStatus" "$nvidiaClamshellPatchHexBookmarkOld" "$ioGraphicsFamilyBinaryPath"
+    fi
+    scheduleReboot=true
+    doneSomething=true
+    scheduleKextTouch=true
+}
+
+# Subroutine M4: Downloader
+
+# Subroutine M5: Installer
+function installNvidiaClamshellPatch {
+    checkNvidiaClamshellPatchInstall
+    elevatePrivileges
+    if [ -e "$ioGraphicsFamilyBinaryPath" ] && ( [[ "$appleGPUWranglerVersion" =~ "10.13.6" ]] || ( [ "$appleGPUWranglerVersion" == "" ] && "$beta" ) )
+    then
+        trapLock
+        inPlaceEditor "$nvidiaClamshellPatchHexBookmark""$nvidiaClamshellPatchInstallStatus" "$nvidiaClamshellPatchHexBookmarkNew" "$ioGraphicsFamilyBinaryPath"
+        trapWithWarning
+        scheduleReboot=true
+        doneSomething=true
+        scheduleKextTouch=true
+    fi
+}
 
 ##fn
-#   Subroutine M: CUDA drivers ##############################################################################################################
-##  Subroutine M1: Global variables
-##  Subroutine M2: Check functions
-##  Subroutine M3: Uninstaller
-##  Subroutine M4: Downloader
-##  Subroutine M5: Installer
-##  Subroutine M6: Helper functions
+#   Subroutine N: CUDA drivers ##############################################################################################################
+##  Subroutine N1: Global variables
+##  Subroutine N2: Check functions
+##  Subroutine N3: Uninstaller
+##  Subroutine N4: Downloader
+##  Subroutine N5: Installer
+##  Subroutine N6: Helper functions
 
 
 #   Subroutine X: Option parsing ##############################################################################################################
@@ -2526,6 +2600,7 @@ thunderboltDaemon=false
 t82Unblocker=false
 unlockNvidia=false
 iopcieTunnelPatch=false
+nvidiaClamshellPatch=false
 deactivateNvidiaDGPU=false
 fullInstall=false
 #noReboot=false - defined at Subroutine A: Basic functions
@@ -2565,7 +2640,7 @@ do
         uninstall=true
         ;;
     "--checkSystem" | "-C")
-        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$fullCheck" || "$thunderboltDaemon" || "$forceCacheRebuild" || "$iopcieTunnelPatch" || "$enforce"
+        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$fullCheck" || "$thunderboltDaemon" || "$forceCacheRebuild" || "$iopcieTunnelPatch" || "$nvidiaClamshellPatch" || "$enforce"
         then
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
@@ -2573,7 +2648,7 @@ do
         check=true
         ;;
     "--checkSystemFull")
-        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$check" || "$thunderboltDaemon" || "$forceCacheRebuild" || "$iopcieTunnelPatch" || "$enforce"
+        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$check" || "$thunderboltDaemon" || "$forceCacheRebuild" || "$iopcieTunnelPatch" || "$nvidiaClamshellPatch" || "$enforce"
         then
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
@@ -2669,6 +2744,14 @@ do
         fi
         iopcieTunnelPatch=true
         ;;
+    "--nvidiaClosedClamshellPatch" | "-L")
+        if "$check" || "$forceCacheRebuild"
+        then
+            echo "ERROR: Conflicting arguments with ""$options"
+            irupt
+        fi
+        nvidiaClamshellPatch=true
+        ;;
    "--thunderboltDaemon" | "-A")
         if "$check" || "$forceCacheRebuild"
         then
@@ -2730,7 +2813,7 @@ do
         beta=true
         ;;
     "--forceCacheRebuild" | "-E")
-        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$check" || "$thunderboltDaemon" || "$forceCacheRebuild" || "$iopcieTunnelPatch" || "$enforce"
+        if "$install" || "$uninstall" || "$nvidiaDriver" || "$amdLegacyDriver" || "$reinstall" || "$forceNewest" || "$nvidiaEnabler" || "$thunderbolt12Unlock" || "$t82Unblocker" || "$unlockNvidia" || [ "$scheduleCudaDeduction" != 0 ] || "$fullInstall" || "$check" || "$thunderboltDaemon" || "$forceCacheRebuild" || "$iopcieTunnelPatch" || "$nvidiaClamshellPatch" || "$enforce"
         then
             echo "ERROR: Conflicting arguments with ""$options"
             irupt
@@ -2801,7 +2884,7 @@ deactivateNVIDIAdGPURoutine=0
 thunderbolt12UnlockRoutine=0
 thunderboltDaemonRoutine=0
 iopcieTunnelPatchRoutine=0
-
+nvidiaClamshellPatchRoutine=0
 
 
 ##  Subroutine Y2: Print functions
@@ -2997,6 +3080,7 @@ function gatherSystemInfo {
     checkNvidiaUnlockWranglerPatchInstall
     checkThunderboltDaemonInstall
     checkIopciTunnelledPatchInstall
+    checkNvidiaClamshellPatchInstall
     echoend "done"
 
     echoing "   installed programs"
@@ -3275,7 +3359,7 @@ function setStandards {
         setStandard=true
         install=true
     fi
-    if ( ! "$nvidiaDriver" ) && ( ! "$amdLegacyDriver" ) && ( ! "$nvidiaEnabler" ) && ( ! "$thunderbolt12Unlock" ) && ( ! "$t82Unblocker" ) && ( ! "$unlockNvidia" ) && ( ! "$deactivateNvidiaDGPU" ) && [ "$scheduleCudaDeduction" == 0 ] && ( ! "$thunderboltDaemon" ) && ( ! "$iopcieTunnelPatch" )
+    if ( ! "$nvidiaDriver" ) && ( ! "$amdLegacyDriver" ) && ( ! "$nvidiaEnabler" ) && ( ! "$thunderbolt12Unlock" ) && ( ! "$t82Unblocker" ) && ( ! "$unlockNvidia" ) && ( ! "$deactivateNvidiaDGPU" ) && [ "$scheduleCudaDeduction" == 0 ] && ( ! "$thunderboltDaemon" ) && ( ! "$iopcieTunnelPatch" ) && ( ! "$nvidiaClamshellPatch" )
     then
         determine=true
     fi
@@ -3300,6 +3384,7 @@ function setStandards {
                 scheduleCudaDeduction=15
                 thunderboltDaemon=true
                 iopcieTunnelPatch=true
+                nvidiaClamshellPatch=true
             else
                 irupt
             fi
@@ -3403,6 +3488,7 @@ function setStandards {
                 scheduleCudaDeduction=15
                 thunderboltDaemon=true
                 iopcieTunnelPatch=true
+                nvidiaClamshellPatch=true
             else
                 irupt
             fi
@@ -4184,6 +4270,61 @@ function cudaDeduction {
     fi
 }
 
+function nvidiaClamshellPatchDeduction {
+    echoing "   NVIDIA closed-clamshell patch"
+    nvidiaClamshellPatchRoutine=0
+    if "$nvidiaClamshellPatch"
+    then
+        if "$install"
+        then
+            if [ "$os" = "10.13.6" ] || ( "$beta" && ( ! "$determine" ) )
+            then
+                if "$reinstall" && "$nvidiaClamshellPatchInstalled"
+                then
+                    nvidiaClamshellPatchRoutine=`binaryParser "$nvidiaClamshellPatchRoutine" 1 1`
+                    nvidiaClamshellPatchRoutine=`binaryParser "$nvidiaClamshellPatchRoutine" 2 1`
+                    echoend "reinstall scheduled" 3
+                elif ! "$nvidiaClamshellPatchInstalled"
+                then
+                    nvidiaClamshellPatchRoutine=`binaryParser "$nvidiaClamshellPatchRoutine" 2 1`
+                    echoend "install scheduled" 4
+                else
+                    echoend "skip, already installed" 5
+                    nvidiaClamshellPatch=false
+                fi
+            else
+                nvidiaClamshellPatch=false
+                echoend "skip, incompatible" 5
+            fi
+        elif "$uninstall"
+        then
+            if "$nvidiaClamshellPatchInstalled" || "$enforce"
+            then
+                nvidiaClamshellPatchRoutine=`binaryParser "$nvidiaClamshellPatchRoutine" 1 1`
+                echoend "uninstall scheduled" 3
+            else
+                echoend "skip, not installed" 5
+                nvidiaClamshellPatch=false
+            fi
+        else
+            irupt
+        fi
+    else
+        if [ "$os" != "10.13.6" ] && "$nvidiaClamshellPatchInstalled" && ( ! "$beta" )
+        then
+            nvidiaClamshellPatch=true
+            nvidiaClamshellPatchRoutine="`binaryParser "$nvidiaClamshellPatchRoutine" 1 1`"
+            echoend "uninstall scheduled" 5
+        else
+            echoend "skip" 5
+        fi
+    fi
+    if [ "$nvidiaClamshellPatchRoutine" != 0 ]
+    then
+        sipRequirement=0
+    fi
+}
+
 
 ###  Subroutine Y6'5: sufficent disabled SIP
 function checkSIPRequirement {
@@ -4284,6 +4425,7 @@ function softwareDeduction {
     cudaDeduction
     thunderboltDaemonDeduction
     iopcieTunnelPatchDeduction
+    nvidiaClamshellPatchDeduction
 
     echoing "Checking if SIP is sufficently disabled..."
     checkSIPRequirement
@@ -4477,6 +4619,14 @@ function uninstall {
         trapWithWarning
         echoend "done"
     fi
+    if [ `dc -e "$nvidiaClamshellPatchRoutine 2 / 2 % n"` == 1 ]
+    then
+        echoing "   NVIDIA closed-chamshell patch"
+        trapLock
+        uninstallNvidiaClamshellPatch
+        trapWithWarning
+        echoend "done"
+    fi
     if [ `dc -e "$amdLegacyDriverRoutine 2 / 2 % n"` == 1 ]
     then
         echoing "   AMD legacy drivers"
@@ -4548,6 +4698,14 @@ function install {
         echoing "   IO PCIE Tunnelled patch"
         trapLock
         installIopciTunnelledPatch
+        trapWithWarning
+        echoend "done"
+    fi
+    if [ `dc -e "$nvidiaClamshellPatchRoutine 4 / 2 % n"` == 1 ]
+    then
+        echoing "   NVIDIA closed-chamshell patch"
+        trapLock
+        installNvidiaClamshellPatch
         trapWithWarning
         echoend "done"
     fi
@@ -4782,6 +4940,13 @@ function checkSystem {
         else
             echoend "not installed"
         fi
+        echoing "   NVIDIA Closed-chamshell patch"
+        if "$nvidiaClamshellPatchInstalled"
+        then
+            echoend "installed"
+        else
+            echoend "not installed"
+        fi
         echoing "   unlocked thunderbolt version"
         echoend "$thunderbolt12UnlockInstallStatus"
         echoing "   thunderbolt daemon"
@@ -4939,7 +5104,7 @@ function macOSeGPU {
     deactivateNVIDIAdGPURoutine=0
     deactivateNVIDIAdGPU=false
 
-    if [ "$nvidiaDriverRoutine" != 0 ] || [ "$nvidiaEnablerRoutine" != 0 ] || [ "$unlockNvidiaRoutine" != 0 ] || [ "$amdLegacyDriverRoutine" != 0 ] || [ "$t82UnblockerRoutine" != 0 ] || [ "$deactivateNVIDIAdGPURoutine" != 0 ] || [ "$thunderbolt12UnlockRoutine" != 0 ] || [ "$cudaRoutine" != 0 ] || [ "$thunderboltDaemonRoutine" != 0 ] || [ "$iopcieTunnelPatchRoutine" != 0 ]
+    if [ "$nvidiaDriverRoutine" != 0 ] || [ "$nvidiaEnablerRoutine" != 0 ] || [ "$unlockNvidiaRoutine" != 0 ] || [ "$amdLegacyDriverRoutine" != 0 ] || [ "$t82UnblockerRoutine" != 0 ] || [ "$deactivateNVIDIAdGPURoutine" != 0 ] || [ "$thunderbolt12UnlockRoutine" != 0 ] || [ "$cudaRoutine" != 0 ] || [ "$thunderboltDaemonRoutine" != 0 ] || [ "$iopcieTunnelPatchRoutine" != 0 ] || [ "$nvidiaClamshellPatchRoutine" != 0 ]
     then
         echo
         echo

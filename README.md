@@ -163,6 +163,10 @@ Specify that NVIDIA eGPU support shall be unlocked. **patch by @goalque**
 The IOPCITunnelled Patch tells the script to make the Mac compatible with NVIDIA eGPUs.  
 This is only required for macOS 10.3.6+. This might cause issues/crashes with AMD graphics cards (external).
 
+`--nvidiaClosedClamshellPatch | -L`
+
+Enables support for closed-clamshell mode when running with an NVIDIA eGPU. **patch by @sashavol**
+
 `--unlockT82 | -T`
 
 Specify that the T82 chipsets shall be unlocked.  
